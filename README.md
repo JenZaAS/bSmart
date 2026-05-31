@@ -46,23 +46,47 @@ excludes:
 
 Use this when a Hermes container already has a persistent `/workspace` mount and should start loading bSmart on new sessions.
 
-### Generic copy/paste
+### Generic copy/paste installer
 
-Run from the VPS host. Replace `SERVICE`, `AGENT_NAME`, `AGENT_ROLE`, and `OPERATOR` before running.
+Run this from the Docker/VPS host. It prompts for the local container/service values, so you can copy/paste it unchanged.
+
+The `git clone` uses the public HTTPS URL. No JenZaAI/GitHub login is required as long as the bSmart repo is public and the host has outbound HTTPS access.
 
 ```bash
 sudo bash - <<'BASH'
 set -euo pipefail
 
-SERVICE="hermes-digtech"
-AGENT_NAME="DigTech"
-AGENT_ROLE="Constrained Hermes work assistant for Dig Technology company work."
-OPERATOR="Erling H Jensen"
+ask() {
+  local prompt="$1"
+  local default="$2"
+  local value
+  if [ -n "$default" ]; then
+    read -r -p "$prompt [$default]: " value || value=""
+    printf '%s' "${value:-$default}"
+  else
+    while true; do
+      read -r -p "$prompt: " value || value=""
+      if [ -n "$value" ]; then
+        printf '%s' "$value"
+        return 0
+      fi
+      echo "This value is required."
+    done
+  fi
+}
 
-WS="/opt/docker-workspace/${SERVICE}/workspace"
-UID_GID="10000:10000"
+SERVICE="$(ask 'Container/service name' '')"
+AGENT_NAME="$(ask 'Agent display name' "$SERVICE")"
+AGENT_ROLE="$(ask 'Short agent role/purpose' 'Constrained Hermes work assistant')"
+OPERATOR="$(ask 'Operator/user name' 'operator')"
+WORKSPACE_HOST_PATH="$(ask 'Host path for the persistent workspace' "/opt/docker-workspace/${SERVICE}/workspace")"
+HERMES_UID="$(ask 'Hermes runtime UID' '10000')"
+HERMES_GID="$(ask 'Hermes runtime GID' '10000')"
 
-install -d -o 10000 -g 10000 "$WS"
+WS="$WORKSPACE_HOST_PATH"
+UID_GID="${HERMES_UID}:${HERMES_GID}"
+
+install -d -o "$HERMES_UID" -g "$HERMES_GID" "$WS"
 
 if [ ! -d "$WS/bSmart-System/.git" ]; then
   git clone https://github.com/JenZaAS/bSmart.git "$WS/bSmart-System"
@@ -70,7 +94,7 @@ else
   git -C "$WS/bSmart-System" pull --ff-only
 fi
 
-install -d -o 10000 -g 10000 \
+install -d -o "$HERMES_UID" -g "$HERMES_GID" \
   "$WS/bSmart" \
   "$WS/bSmart/bSmart_Projects" \
   "$WS/bSmart/bSmart_Workdocs" \
@@ -91,18 +115,17 @@ agent:
   operator: ${OPERATOR}
   framework: Hermes
   platforms:
-    - Telegram
+    - ask/update after setup
 
 access_model:
   writable_paths:
     - /workspace
     - /opt/data
   readonly_paths:
-    - /host-tools/shared-tools
+    - ask/update after setup
   unavailable:
-    - Docker socket
-    - VPS admin mounts unless explicitly configured
-    - broad host filesystem access
+    - Docker socket unless explicitly configured
+    - broad host filesystem access unless explicitly configured
 
 operating_policy:
   default_posture: concise, practical, confidentiality-aware
@@ -110,7 +133,7 @@ operating_policy:
     - ask before modifying important project files
     - ask before deleting, overwriting, or moving files
     - ask before actions involving credentials or external publication
-  secret_handling: avoid exposing secrets in chat; prefer direct SSH/SFTP/rsync transfer for confidential files
+  secret_handling: avoid exposing secrets in chat; prefer direct transfer methods for confidential files
 \`\`\`
 EOF
 
@@ -129,6 +152,7 @@ cat > "$WS/bSmart/bSmart_TODO.md" <<'EOF'
 
 ## Next tasks
 
+- ⬜ Review and complete `/workspace/bSmart/bSmart_Agent.md` for this instance.
 - ⬜ Create/select first project.
 - ⬜ Confirm preferred working style.
 EOF
@@ -143,16 +167,17 @@ chown -R "$UID_GID" "$WS/HERMES.md" "$WS/bSmart-System" "$WS/bSmart" "$WS/bSmart
 
 echo "bSmart installed for ${SERVICE}."
 echo "Next: restart the container, send /new to the bot, then send: Hi"
+echo "Restart command, if Docker container name matches SERVICE: sudo docker restart ${SERVICE}"
 BASH
 ```
 
-After running the block:
+After running the block, restart the Hermes container. Example when the container name equals the prompted service name:
 
 ```bash
-sudo docker restart hermes-digtech
+sudo docker restart <service-name>
 ```
 
-Then in the bot chat:
+Then in the bot/chat for that Hermes instance:
 
 ```text
 /new
@@ -161,16 +186,9 @@ Hi
 
 Expected first real reply starts with the bSmart startup wording from `/workspace/bSmart-System/bSmart.md`.
 
-### DigTech-ready values
+### What belongs in setup vs install
 
-For `hermes-digtech`, keep these values in the generic block:
-
-```bash
-SERVICE="hermes-digtech"
-AGENT_NAME="DigTech"
-AGENT_ROLE="Constrained Hermes work assistant for Dig Technology company work."
-OPERATOR="Erling H Jensen"
-```
+The installer should only bootstrap files and ask for the minimum local values needed to create them. The generated `/workspace/bSmart/bSmart_Agent.md` is intentionally local content; review and refine it after install using `bSmart_Setup.md` or by asking the agent to complete the bSmart setup for that instance.
 
 ## Update rule
 
