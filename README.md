@@ -58,17 +58,21 @@ ask() {
   local prompt="$1"
   local default="$2"
   local value
+  if [ ! -r /dev/tty ]; then
+    echo "ERROR: this installer needs an interactive terminal for prompts." >&2
+    exit 1
+  fi
   if [ -n "$default" ]; then
-    read -r -p "$prompt [$default]: " value || value=""
+    read -r -p "$prompt [$default]: " value < /dev/tty || value=""
     printf '%s' "${value:-$default}"
   else
     while true; do
-      read -r -p "$prompt: " value || value=""
+      read -r -p "$prompt: " value < /dev/tty || value=""
       if [ -n "$value" ]; then
         printf '%s' "$value"
         return 0
       fi
-      echo "This value is required."
+      echo "This value is required." >&2
     done
   fi
 }
