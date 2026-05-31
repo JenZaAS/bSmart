@@ -44,7 +44,10 @@ startup_sequence:
   - read bSmart_State.md when present
   - read bSmart_TODO.md when present
   - scan bSmart_Protocols summaries and load relevant protocols
-  - report current TODO/project briefly
+  - first visible assistant reply starts with: "bSmart — Reading HERMES.md."
+  - then say: "Hi! Welcome back."
+  - show compact TODO-oriented startup summary
+  - ask whether to continue the current TODO item
 
 missing_content_behavior:
   bSmart_Agent.md: run setup using bSmart_Templates/bSmart_Agent.template.md
