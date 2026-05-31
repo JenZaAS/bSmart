@@ -46,11 +46,9 @@ excludes:
 
 Use this when a Hermes container already has a persistent `/workspace` mount and should start loading bSmart on new sessions.
 
-### Generic copy/paste installer
+### Copy/paste installer
 
-Run this from the Docker/VPS host. It prompts for the local container/service values, so you can copy/paste it unchanged.
-
-The `git clone` uses the public HTTPS URL. No JenZaAI/GitHub login is required as long as the bSmart repo is public and the host has outbound HTTPS access.
+Run this from the Docker/VPS host. It prompts for the local container/service values.
 
 ```bash
 sudo bash - <<'BASH'
