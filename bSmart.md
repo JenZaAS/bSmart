@@ -49,6 +49,10 @@ startup_sequence:
   - show compact TODO-oriented startup summary
   - ask whether to continue the current TODO item
 
+visible_action_notes:
+  label: "bSmart —"
+  rule: Use this label for short visible pre-action/status notes, regardless of whether the immediate action is setup, troubleshooting, file work, approval handling, or another workflow step.
+
 missing_content_behavior:
   bSmart_Agent.md: run setup using bSmart_Templates/bSmart_Agent.template.md
   bSmart_State.md: create from template after approval

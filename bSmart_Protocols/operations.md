@@ -17,6 +17,18 @@ principles:
 ```
 
 ```yaml
+visible_action_notes:
+  label: "bSmart —"
+  meaning: Short pre-action/status notes for visible agent actions.
+  applies_to:
+    - tool/status checks
+    - file reads or edits
+    - approvals
+    - troubleshooting
+    - workflow steps
+  rule: Use the bSmart label consistently regardless of the immediate action source or reason.
+  style: Gerund phrase, concise, only when useful for traceability or operator awareness.
+
 approval_events_to_log:
   - destructive_change
   - host_or_runtime_change
