@@ -88,10 +88,12 @@ tool_approval_model:
     low_risk_without_extra_prompt:
       - read-only inspection
       - calculations and local Python analysis that do not modify files or call external services
+      - bounded creation of a small number of harmless new output files in approved work folders
       - syntax checks and harmless metadata checks
     explicit_operator_approval_required:
       - host/runtime/deploy changes
-      - file writes, overwrites, deletes, moves, chmod, chown, chgrp, setfacl
+      - overwriting, deleting, moving, or permission-changing files; chmod, chown, chgrp, setfacl
+      - creating many files, creating files outside approved work folders, or writing sensitive/executable/deploy-affecting content
       - commands that install packages, expose services, change credentials, publish externally, or access sensitive data
       - destructive or hard-to-reverse actions
     rule: framework approval mode is not the safety boundary; bSmart guardrails remain mandatory

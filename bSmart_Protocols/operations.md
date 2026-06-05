@@ -49,9 +49,11 @@ tool_approval_model:
       - read-only inspection
       - arithmetic/calculations
       - local Python analysis that does not modify files, change runtime state, install packages, call external services, or expose secrets
+      - bounded creation of a small number of harmless new output files in approved work folders
       - syntax checks and metadata checks
     explicit_operator_approval_required:
-      - file writes, overwrites, deletes, moves, chmod, chown, chgrp, setfacl
+      - overwriting, deleting, moving, or permission-changing files; chmod, chown, chgrp, setfacl
+      - creating many files, creating files outside approved work folders, or writing sensitive/executable/deploy-affecting content
       - host/runtime/deploy changes
       - package installs, service exposure, credential changes, external publication, or sensitive-data access
       - destructive or hard-to-reverse actions

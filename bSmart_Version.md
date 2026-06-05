@@ -1,9 +1,21 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.2-draft
-updated: 2026-06-05 23:49 UTC
+current_version: 0.1.3-draft
+updated: 2026-06-05 23:53 UTC
 status: draft
+```
+
+## 0.1.3-draft
+
+```yaml
+release_type: draft_update
+scope:
+  - refine bSmart tool approval guardrails for Python/output workflows
+  - allow bounded creation of a small number of harmless new output files in approved work folders without repeated extra prompts
+  - distinguish harmless new output files from overwrites, deletes, moves, permission changes, sensitive content, executable/deploy-affecting content, and file floods
+safety:
+  - creating many files, writing outside approved work folders, or writing sensitive/executable/deploy-affecting content still requires explicit operator approval
 ```
 
 ## 0.1.2-draft

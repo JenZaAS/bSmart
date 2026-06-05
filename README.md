@@ -173,9 +173,11 @@ operating_policy:
     low_risk_without_extra_prompt:
       - read-only inspection
       - local calculations and Python analysis without side effects
+      - bounded creation of a small number of harmless new output files in approved work folders
       - syntax checks and metadata checks
     explicit_approval_required_for:
-      - file writes, overwrites, deletes, moves, chmod, chown, chgrp, setfacl
+      - overwriting, deleting, moving, or permission-changing files; chmod, chown, chgrp, setfacl
+      - creating many files, creating files outside approved work folders, or writing sensitive/executable/deploy-affecting content
       - host/runtime/deploy changes
       - package installs, credential changes, external publication, sensitive-data access, and destructive actions
   approval_thresholds:
