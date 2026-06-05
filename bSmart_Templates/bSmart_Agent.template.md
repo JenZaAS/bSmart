@@ -36,6 +36,18 @@ shared_group:
 
 operating_policy:
   default_posture: read-only first
+  tool_approval_model:
+    framework_mode: ask/update locally
+    recommended_for_Hermes: approvals.mode smart
+    bsmart_guardrails: mandatory
+    low_risk_without_extra_prompt:
+      - read-only inspection
+      - local calculations and Python analysis without side effects
+      - syntax checks and metadata checks
+    explicit_approval_required_for:
+      - file writes, overwrites, deletes, moves, chmod, chown, chgrp, setfacl
+      - host/runtime/deploy changes
+      - package installs, credential changes, external publication, sensitive-data access, and destructive actions
   approval_required_for:
     - destructive changes
     - runtime/deploy changes

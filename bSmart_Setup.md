@@ -13,6 +13,7 @@ content_root: /workspace/bSmart
 steps:
   - verify_system_root
   - configure_optional_shared_group
+  - configure_approval_mode_and_guardrails
   - create_content_root_if_missing
   - create_content_readme_if_missing
   - create_bSmart_Agent_from_template
@@ -69,6 +70,31 @@ operating_policy:
   default_posture: ask
   approval_thresholds: ask
   secret_handling: default avoid exposing secrets
+
+tool_approval_model:
+  purpose: reduce repetitive framework permission prompts while preserving operator control through bSmart guardrails
+  framework_support:
+    Hermes:
+      recommended_config:
+        approvals.mode: smart
+      command_hint: hermes config set approvals.mode smart
+      restart_required: true
+  setup_questions:
+    - keep framework approval mode manual
+    - use smart/low-friction framework approvals plus bSmart guardrails
+    - turn framework approvals off only for explicitly trusted local/sandboxed environments
+  default_choice: use smart/low-friction framework approvals plus bSmart guardrails
+  bsmart_guardrails:
+    low_risk_without_extra_prompt:
+      - read-only inspection
+      - calculations and local Python analysis that do not modify files or call external services
+      - syntax checks and harmless metadata checks
+    explicit_operator_approval_required:
+      - host/runtime/deploy changes
+      - file writes, overwrites, deletes, moves, chmod, chown, chgrp, setfacl
+      - commands that install packages, expose services, change credentials, publish externally, or access sensitive data
+      - destructive or hard-to-reverse actions
+    rule: framework approval mode is not the safety boundary; bSmart guardrails remain mandatory
 ```
 
 ## HERMES.md hook

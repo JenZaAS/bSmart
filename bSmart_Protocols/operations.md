@@ -38,5 +38,27 @@ approval_events_to_log:
 ```
 
 ```yaml
+tool_approval_model:
+  purpose: Avoid repeated low-value permission prompts from the host framework while keeping meaningful operator approval inside bSmart.
+  recommended_default:
+    Hermes:
+      approvals.mode: smart
+      reason: Let Hermes auto-approve low-risk tool calls and reserve prompts for higher-risk actions.
+  bsmart_guardrails:
+    low_risk_actions_may_proceed:
+      - read-only inspection
+      - arithmetic/calculations
+      - local Python analysis that does not modify files, change runtime state, install packages, call external services, or expose secrets
+      - syntax checks and metadata checks
+    explicit_operator_approval_required:
+      - file writes, overwrites, deletes, moves, chmod, chown, chgrp, setfacl
+      - host/runtime/deploy changes
+      - package installs, service exposure, credential changes, external publication, or sensitive-data access
+      - destructive or hard-to-reverse actions
+  invariant: Framework approval mode is not the safety boundary; bSmart guardrails are.
+  setup_note: During init, ask the operator whether to keep manual framework approvals, use smart/low-friction approvals, or disable framework approvals only in explicitly trusted environments.
+```
+
+```yaml
 log_target: /workspace/bSmart/bSmart_Log.md
 ```

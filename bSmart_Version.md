@@ -1,9 +1,24 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.1-draft
-updated: 2026-06-05 23:37 UTC
+current_version: 0.1.2-draft
+updated: 2026-06-05 23:49 UTC
 status: draft
+```
+
+## 0.1.2-draft
+
+```yaml
+release_type: draft_update
+scope:
+  - add generic bSmart tool approval model for low-friction operation
+  - recommend Hermes approvals.mode smart during setup when appropriate
+  - define bSmart guardrails as the actual safety boundary
+  - allow read-only inspection and local no-side-effect Python analysis without repeated extra prompts
+  - require explicit operator approval for writes, permission changes, deploy/runtime changes, installs, credentials, sensitive data, external publication, and destructive actions
+safety:
+  - framework approval mode does not replace bSmart guardrails
+  - disabling framework approvals entirely is only for explicitly trusted local/sandboxed environments
 ```
 
 ## 0.1.1-draft
