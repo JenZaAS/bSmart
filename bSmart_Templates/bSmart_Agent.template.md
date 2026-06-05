@@ -17,6 +17,23 @@ access:
   unavailable:
     - <capability-or-path>
 
+shared_group:
+  purpose: keep bSmart-managed files editable by selected human and agent users
+  group: bsmart
+  users: ask/update locally
+  managed_roots:
+    - /workspace/bSmart
+    - /workspace/bSmart-System
+    - /workspace/bSmart-Extensions
+  inheritance:
+    - group ownership on managed roots
+    - group read/write access
+    - setgid directories
+    - default ACLs when supported
+  safety:
+    - show group, users, and roots before applying permission changes
+    - do not blanket-change runtime, backup, or application data folders without explicit approval
+
 operating_policy:
   default_posture: read-only first
   approval_required_for:

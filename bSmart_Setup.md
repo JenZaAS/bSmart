@@ -12,6 +12,7 @@ content_root: /workspace/bSmart
 ```yaml
 steps:
   - verify_system_root
+  - configure_optional_shared_group
   - create_content_root_if_missing
   - create_content_readme_if_missing
   - create_bSmart_Agent_from_template
@@ -37,6 +38,32 @@ access_model:
   writable_paths: ask_or_detect
   readonly_paths: ask_or_detect
   unavailable: ask_or_detect
+
+shared_group:
+  purpose: keep bSmart-managed files editable by selected human and agent users
+  default_group: bsmart
+  group_choice:
+    - create_or_use_default_bsmart_group
+    - choose_existing_group
+    - create_custom_named_group
+  users_to_add: ask
+  managed_roots: ask_with_defaults
+  default_managed_roots:
+    - /workspace/bSmart
+    - /workspace/bSmart-System
+    - /workspace/bSmart-Extensions
+  optional_managed_roots:
+    - /workspace
+    - other operator-approved project or agent workspace paths
+  inheritance:
+    group_ownership: selected_shared_group
+    directory_mode: setgid
+    access: group_read_write
+    default_acls: enabled_when_supported
+  safety:
+    - do not mention or hardcode site-local user names in reusable bSmart instructions
+    - do not blanket-change runtime, backup, or application data folders without explicit operator scope approval
+    - show planned group, users, and roots before applying host-side permission changes
 
 operating_policy:
   default_posture: ask

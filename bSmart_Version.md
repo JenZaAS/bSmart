@@ -1,9 +1,24 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.0-draft
-updated: 2026-05-31 13:54 UTC
+current_version: 0.1.1-draft
+updated: 2026-06-05 23:37 UTC
 status: draft
+```
+
+## 0.1.1-draft
+
+```yaml
+release_type: draft_update
+scope:
+  - add optional shared bSmart collaboration group setup
+  - default shared group name is bsmart
+  - setup may add selected local users to the group
+  - setup applies group ownership, group write access, setgid directories, and default ACLs to approved bSmart-managed roots
+  - reusable instructions avoid hardcoded site-local user names
+safety:
+  - operator reviews group, users, and roots before host-side permission changes
+  - runtime, backup, and application data folders are not blanket-changed
 ```
 
 ## 0.1.0-draft

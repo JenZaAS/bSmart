@@ -77,6 +77,17 @@ ask() {
   fi
 }
 
+ask_optional() {
+  local prompt="$1"
+  local value
+  if [ ! -r /dev/tty ]; then
+    echo "ERROR: this installer needs an interactive terminal for prompts." >&2
+    exit 1
+  fi
+  read -r -p "$prompt: " value < /dev/tty || value=""
+  printf '%s' "$value"
+}
+
 SERVICE="$(ask 'Container/service name' '')"
 AGENT_NAME="$(ask 'Agent display name' "$SERVICE")"
 AGENT_ROLE="$(ask 'Short agent role/purpose' 'Constrained Hermes work assistant')"
@@ -84,11 +95,35 @@ OPERATOR="$(ask 'Operator/user name' 'operator')"
 WORKSPACE_HOST_PATH="$(ask 'Host path for the persistent workspace' "/opt/docker-workspace/${SERVICE}/workspace")"
 HERMES_UID="$(ask 'Hermes runtime UID' '10000')"
 HERMES_GID="$(ask 'Hermes runtime GID' '10000')"
+BSMART_GROUP="$(ask 'Shared collaboration group for bSmart-managed files' 'bsmart')"
+BSMART_USERS="$(ask_optional 'Comma-separated local users to add to the shared group; leave blank to skip')"
+APPLY_GROUP_PERMS="$(ask 'Apply setgid/default ACL permissions to bSmart managed roots? yes/no' 'yes')"
 
 WS="$WORKSPACE_HOST_PATH"
 UID_GID="${HERMES_UID}:${HERMES_GID}"
 
 install -d -o "$HERMES_UID" -g "$HERMES_GID" "$WS"
+
+if [ "$APPLY_GROUP_PERMS" = "yes" ]; then
+  if ! getent group "$BSMART_GROUP" >/dev/null; then
+    groupadd "$BSMART_GROUP"
+  fi
+  if [ -n "$BSMART_USERS" ]; then
+    OLD_IFS="$IFS"
+    IFS=','
+    for raw_user in $BSMART_USERS; do
+      user="$(printf '%s' "$raw_user" | xargs)"
+      if [ -n "$user" ]; then
+        if id "$user" >/dev/null 2>&1; then
+          usermod -aG "$BSMART_GROUP" "$user"
+        else
+          echo "WARNING: local user not found, skipping group membership: $user" >&2
+        fi
+      fi
+    done
+    IFS="$OLD_IFS"
+  fi
+fi
 
 if [ ! -d "$WS/bSmart-System/.git" ]; then
   git clone https://github.com/JenZaAS/bSmart.git "$WS/bSmart-System"
@@ -166,6 +201,21 @@ cat > "$WS/bSmart/bSmart_Log.md" <<EOF
 EOF
 
 chown -R "$UID_GID" "$WS/HERMES.md" "$WS/bSmart-System" "$WS/bSmart" "$WS/bSmart-Extensions"
+
+if [ "$APPLY_GROUP_PERMS" = "yes" ]; then
+  MANAGED_ROOTS=("$WS/bSmart" "$WS/bSmart-System" "$WS/bSmart-Extensions")
+  chgrp -R "$BSMART_GROUP" "${MANAGED_ROOTS[@]}"
+  chmod -R g+rwX "${MANAGED_ROOTS[@]}"
+  find "${MANAGED_ROOTS[@]}" -type d -exec chmod g+s {} +
+  if command -v setfacl >/dev/null 2>&1; then
+    setfacl -R -m "g:${BSMART_GROUP}:rwX" "${MANAGED_ROOTS[@]}"
+    setfacl -R -d -m "g:${BSMART_GROUP}:rwX" "${MANAGED_ROOTS[@]}"
+    setfacl -R -m "u:${HERMES_UID}:rwX" "${MANAGED_ROOTS[@]}" || true
+    setfacl -R -d -m "u:${HERMES_UID}:rwX" "${MANAGED_ROOTS[@]}" || true
+  else
+    echo "WARNING: setfacl not found; setgid/group mode applied, but default ACL inheritance was skipped." >&2
+  fi
+fi
 
 echo "bSmart installed for ${SERVICE}."
 echo "Next: restart the container, send /new to the bot, then send: Hi"
