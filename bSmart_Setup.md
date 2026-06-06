@@ -70,6 +70,18 @@ operating_policy:
   default_posture: ask
   approval_thresholds: ask
   secret_handling: default avoid exposing secrets
+  secret_storage:
+    preferred:
+      - native deployer secrets mounted read-only
+      - /opt/docker-workspace/<service>/secrets mounted as /run/secrets:ro
+    avoid:
+      - /workspace/secrets
+      - bSmart repos/content folders
+      - project folders
+    permission_baseline:
+      directories: "0700"
+      private_keys: "0600"
+      public_keys_and_known_hosts: "0644 or stricter"
 
 tool_approval_model:
   purpose: reduce repetitive framework permission prompts while preserving operator control through bSmart guardrails

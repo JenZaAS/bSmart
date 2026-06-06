@@ -32,6 +32,20 @@ excludes:
   - Hermes runtime state
 ```
 
+## Secret storage boundary
+
+```yaml
+rule: Do not store secrets under /workspace, bSmart repos, or project folders.
+preferred:
+  - native deployer secrets mounted read-only into containers
+  - service-level host secret directory mounted read-only, e.g. /opt/docker-workspace/<service>/secrets -> /run/secrets:ro
+permissions:
+  directories: "0700 by the service runtime user where possible"
+  private_keys: "0600"
+  public_keys_and_known_hosts: "0644 or stricter"
+legacy_migration: move /workspace/secrets to the service-level secret directory, then update tool/Git configuration to use the read-only mount path.
+```
+
 ## Standard workspace layout
 
 ```text

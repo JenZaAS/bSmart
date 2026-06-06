@@ -1,9 +1,22 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.3-draft
-updated: 2026-06-05 23:53 UTC
+current_version: 0.1.4-draft
+updated: 2026-06-06 09:55 UTC
 status: draft
+```
+
+## 0.1.4-draft
+
+```yaml
+release_type: draft_update
+scope:
+  - define a bSmart secret-storage boundary for Hermes/service containers
+  - prefer deployer-native read-only secrets or /opt/docker-workspace/<service>/secrets mounted as /run/secrets:ro
+  - explicitly avoid /workspace/secrets, bSmart repos/content folders, and project folders for credentials
+safety:
+  - private keys require 0600-style permissions
+  - collaboration-group permission scripts must not recurse into secret directories
 ```
 
 ## 0.1.3-draft

@@ -38,6 +38,24 @@ approval_events_to_log:
 ```
 
 ```yaml
+secret_storage:
+  principle: Keep credentials outside collaborative workspaces and outside Git repos.
+  preferred:
+    - deployer/native secret objects mounted read-only into the container
+    - service-level host secret directories mounted read-only, e.g. /opt/docker-workspace/<service>/secrets -> /run/secrets:ro
+  avoid:
+    - /workspace/secrets
+    - project folders
+    - bSmart content/system repos
+    - broad collaboration-group permission roots
+  permissions:
+    directories: "0700 by the service runtime user where possible"
+    private_keys: "0600"
+    public_keys_and_known_hosts: "0644 or stricter"
+  note: If a legacy /workspace/secrets directory exists, migrate it to the service-level secret path, then leave only a temporary compatibility path or remove it after verification.
+```
+
+```yaml
 tool_approval_model:
   purpose: Avoid repeated low-value permission prompts from the host framework while keeping meaningful operator approval inside bSmart.
   recommended_default:
