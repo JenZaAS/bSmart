@@ -80,5 +80,17 @@ tool_approval_model:
 ```
 
 ```yaml
+git_handoff:
+  purpose: Keep bSmart handoff/content repos current when tasks or projects close.
+  rule: If the local bSmart content root is a Git repo, commit relevant task/project closure changes when finishing tasks, archiving projects, updating handoff TODOs, or recording decision-log entries.
+  applies_to:
+    - /workspace/bSmart
+    - any bSmart content root with its own Git repo
+  commit_scope: Stage only relevant bSmart content/handoff files for the completed task or project; do not mix unrelated local changes.
+  commit_style: concise conventional message, e.g. "chore: close <task>" or "chore: archive <project> project".
+  exception: If changes are sensitive, ambiguous, unrelated, or operator says not to commit, leave them uncommitted and explain why.
+```
+
+```yaml
 log_target: /workspace/bSmart/bSmart_Log.md
 ```
