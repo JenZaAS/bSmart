@@ -8,6 +8,7 @@ bsmart:
   extensions_root: /workspace/bSmart-Extensions
   version_file: /workspace/bSmart-System/bSmart_Version.md
   setup_file: /workspace/bSmart-System/bSmart_Setup.md
+  feature_registry: /workspace/bSmart-System/bSmart_Features.md
 
 ethos:
   operator_sovereignty:
@@ -24,6 +25,7 @@ content_files:
   state: /workspace/bSmart/bSmart_State.md
   todo: /workspace/bSmart/bSmart_TODO.md
   log: /workspace/bSmart/bSmart_Log.md
+  features: /workspace/bSmart-System/bSmart_Features.md
 
 content_folders:
   projects: /workspace/bSmart/Projects

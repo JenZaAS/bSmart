@@ -23,6 +23,7 @@ steps:
   - create_content_folders
   - verify_minimal_HERMES_hook
   - offer_optional_extensions
+  - offer_show_available_features
 ```
 
 ## Required operator inputs
@@ -130,4 +131,14 @@ extensions:
     question: Install or enable Fabric extension?
     default: yes
     target_path: /workspace/bSmart-Extensions/Fabric
+```
+
+## Available features prompt
+
+```yaml
+feature_registry:
+  path: /workspace/bSmart-System/bSmart_Features.md
+  setup_prompt: Would you like to see available bSmart features now?
+  if_yes: show bSmart features
+  list_mode: name + short_description
 ```
