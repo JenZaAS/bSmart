@@ -9,7 +9,7 @@ protocol:
 
 ```yaml
 paths:
-  projects_root: /workspace/bSmart/bSmart_Projects
+  projects_root: /workspace/bSmart/Projects
   state_file: /workspace/bSmart/bSmart_State.md
 ```
 

@@ -38,7 +38,7 @@ bSmart-System:
   required_folders:
     - bSmart_Protocols
     - bSmart_Templates
-    - bSmart_Docs
+    - Docs
     - bSmart_Examples
 ```
 
@@ -53,9 +53,9 @@ bSmart:
     - bSmart_TODO.md
     - bSmart_Log.md
   required_folders:
-    - bSmart_Projects
-    - bSmart_Workdocs
-    - bSmart_Library
+    - Projects
+    - Workdocs
+    - Library
 ```
 
 ## Ethos

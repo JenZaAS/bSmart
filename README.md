@@ -147,9 +147,9 @@ fi
 
 install -d -o "$HERMES_UID" -g "$HERMES_GID" \
   "$WS/bSmart" \
-  "$WS/bSmart/bSmart_Projects" \
-  "$WS/bSmart/bSmart_Workdocs" \
-  "$WS/bSmart/bSmart_Library" \
+  "$WS/bSmart/Projects" \
+  "$WS/bSmart/Workdocs" \
+  "$WS/bSmart/Library" \
   "$WS/bSmart-Extensions"
 
 cat > "$WS/HERMES.md" <<'EOF'
@@ -209,7 +209,7 @@ cat > "$WS/bSmart/bSmart_State.md" <<'EOF'
 - Active project (short name): `none`
 
 Notes:
-- Projects live under `/workspace/bSmart/bSmart_Projects/`.
+- Projects live under `/workspace/bSmart/Projects/`.
 EOF
 
 cat > "$WS/bSmart/bSmart_TODO.md" <<'EOF'
@@ -287,4 +287,4 @@ See:
 - `bSmart.md` for runtime bootstrap instructions.
 - `bSmart_Setup.md` for first-time setup.
 - `bSmart_Version.md` for version history and migration notes.
-- `bSmart_Docs/system-vs-content.md` for the separation model.
+- `Docs/system-vs-content.md` for the separation model.

@@ -26,14 +26,14 @@ content_files:
   log: /workspace/bSmart/bSmart_Log.md
 
 content_folders:
-  projects: /workspace/bSmart/bSmart_Projects
-  workdocs: /workspace/bSmart/bSmart_Workdocs
-  library: /workspace/bSmart/bSmart_Library
+  projects: /workspace/bSmart/Projects
+  workdocs: /workspace/bSmart/Workdocs
+  library: /workspace/bSmart/Library
 
 system_folders:
   protocols: /workspace/bSmart-System/bSmart_Protocols
   templates: /workspace/bSmart-System/bSmart_Templates
-  docs: /workspace/bSmart-System/bSmart_Docs
+  docs: /workspace/bSmart-System/Docs
   examples: /workspace/bSmart-System/bSmart_Examples
 
 startup_sequence:

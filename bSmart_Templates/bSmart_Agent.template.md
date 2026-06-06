@@ -59,8 +59,8 @@ operating_policy:
 
 local_paths:
   content_root: /workspace/bSmart
-  projects: /workspace/bSmart/bSmart_Projects
-  workdocs: /workspace/bSmart/bSmart_Workdocs
-  library: /workspace/bSmart/bSmart_Library
+  projects: /workspace/bSmart/Projects
+  workdocs: /workspace/bSmart/Workdocs
+  library: /workspace/bSmart/Library
   log: /workspace/bSmart/bSmart_Log.md
 ```

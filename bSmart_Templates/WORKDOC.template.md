@@ -55,5 +55,5 @@ Status:
 
 Archive decision:
 - Ask operator at completion: “Do you want to save this WORKDOC into the bSmart library?”
-- If yes, categorize it using `/workspace/bSmart/bSmart_Library/CATEGORIES.md` before moving/copying it.
+- If yes, categorize it using `/workspace/bSmart/Library/CATEGORIES.md` before moving/copying it.
 - If no category fits, propose a new category name + description; let the operator accept, modify, decline, or choose an existing category.

@@ -1,9 +1,22 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.4-draft
-updated: 2026-06-06 09:55 UTC
+current_version: 0.1.5-draft
+updated: 2026-06-06 10:30 UTC
 status: draft
+```
+
+## 0.1.5-draft
+
+```yaml
+release_type: draft_update
+scope:
+  - simplify bSmart content-root folder names by removing redundant bSmart_ prefixes inside /workspace/bSmart
+  - standard content folders are now Docs, Library, Projects, and Workdocs
+  - keep bSmart_ prefixes on root content files such as bSmart_Agent.md, bSmart_State.md, bSmart_TODO.md, and bSmart_Log.md
+migration_notes:
+  - rename existing content folders from bSmart_Docs, bSmart_Library, bSmart_Projects, and bSmart_Workdocs to Docs, Library, Projects, and Workdocs
+  - update references after renaming
 ```
 
 ## 0.1.4-draft

@@ -7,7 +7,7 @@
 ├── bSmart_State.md
 ├── bSmart_TODO.md
 ├── bSmart_Log.md
-├── bSmart_Projects/
-├── bSmart_Workdocs/
-└── bSmart_Library/
+├── Projects/
+├── Workdocs/
+└── Library/
 ```

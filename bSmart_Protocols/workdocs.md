@@ -9,8 +9,8 @@ protocol:
 
 ```yaml
 paths:
-  active_workdocs: /workspace/bSmart/bSmart_Workdocs
-  library: /workspace/bSmart/bSmart_Library
+  active_workdocs: /workspace/bSmart/Workdocs
+  library: /workspace/bSmart/Library
   template: /workspace/bSmart-System/bSmart_Templates/WORKDOC.template.md
 ```
 
