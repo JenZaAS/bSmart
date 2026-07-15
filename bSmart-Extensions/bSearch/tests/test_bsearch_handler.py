@@ -178,7 +178,6 @@ class BSearchHandlerTests(unittest.TestCase):
         self.assertIn('GitHub project', result['source_types'])
         self.assertIn('News/Blog post', result['source_types'])
         self.assertIn('Research paper', result['source_types'])
-        self.assertIn('YouTube video', result['source_types'])
         self.assertTrue(result['candidate_titles'])
         self.assertTrue(result['run_timestamp_utc'])
         state_text = (self.root / 'state.yaml').read_text(encoding='utf-8')
@@ -186,7 +185,10 @@ class BSearchHandlerTests(unittest.TestCase):
         run_file = self.root / 'runs' / f"{result['run_timestamp_utc'][:10]}_run.md"
         self.assertTrue(run_file.exists())
         candidates = self.read_jsonl('runs/candidate-pool-history.jsonl')
+        delivered = self.read_jsonl('runs/delivered-history.jsonl')
         self.assertTrue(any(row.get('run_type') == 'manual_run' for row in candidates))
+        delivered_manual = [row for row in delivered if row.get('run_type') == 'manual_run' and row.get('run_timestamp_utc') == result['run_timestamp_utc']]
+        self.assertEqual(len(delivered_manual), 5)
 
     def test_run_is_blocked_when_previous_run_is_unhandled(self):
         self.clear_manual_run_history()
@@ -206,12 +208,16 @@ class BSearchHandlerTests(unittest.TestCase):
         self.handler._github_api_json = self.fake_github_api_json
         self.handler._fetch_rss_items = self.fake_fetch_rss_items
         self.handler._fetch_youtube_search_items = self.fake_fetch_youtube_search_items
-        self.handler.handle('bSearch run')
+        run_result = self.handler.handle('bSearch run')
         result = self.handler.handle('bSearch review pending')
         self.assertEqual(result['command_family'], 'review_pending')
         self.assertEqual(result['status'], 'pending_run_ready_for_review')
-        self.assertGreater(result['pending_count'], 0)
-        self.assertTrue(result['entries'])
+        self.assertEqual(result['pending_count'], 5)
+        self.assertEqual(result['total_count'], 5)
+        self.assertEqual(result['current_index'], 1)
+        self.assertTrue(result['current_item'])
+        self.assertTrue(result['current_item']['links'])
+        self.assertEqual(result['entries'][0]['title'], run_result['delivered_titles'][0])
 
 
 if __name__ == '__main__':

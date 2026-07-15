@@ -121,17 +121,40 @@ class BSearchHandler:
     def _all_delivered_rows(self) -> List[Dict[str, Any]]:
         return self._read_jsonl(self.root / 'runs' / 'delivered-history.jsonl')
 
+    def _latest_run_markdown_titles(self, run_timestamp_utc: str) -> List[str]:
+        run_file = self.root / 'runs' / f"{run_timestamp_utc[:10]}_run.md"
+        if not run_file.exists():
+            return []
+        text = run_file.read_text(encoding='utf-8')
+        titles = re.findall(r'^###\s+\d+\.\s+(.+)$', text, flags=re.MULTILINE)
+        if titles:
+            return [title.strip() for title in titles]
+        shortlist = []
+        in_shortlist = False
+        for line in text.splitlines():
+            if line.strip() == '## Shortlist':
+                in_shortlist = True
+                continue
+            if in_shortlist and line.startswith('## '):
+                break
+            m = re.match(r'^\d+\.\s+\*\*(.+?)\*\*', line.strip())
+            if m:
+                shortlist.append(m.group(1).strip())
+        return shortlist
+
     def _latest_unhandled_run(self) -> Optional[Dict[str, Any]]:
         delivered_rows = [row for row in self._all_delivered_rows() if row.get('run_type') == 'manual_run']
         if not delivered_rows:
             return None
         latest_timestamp = max(row['run_timestamp_utc'] for row in delivered_rows if row.get('run_timestamp_utc'))
-        latest_rows = [row for row in delivered_rows if row.get('run_timestamp_utc') == latest_timestamp]
+        latest_titles = self._latest_run_markdown_titles(latest_timestamp)
+        if not latest_titles:
+            latest_titles = [row.get('title', '') for row in delivered_rows if row.get('run_timestamp_utc') == latest_timestamp]
+        latest_titles = [title for title in latest_titles if title]
         feedback_rows = self._all_feedback_rows()
         status_rows = self._read_jsonl(self.status_file)
         pending_titles = []
-        for row in latest_rows:
-            title = row.get('title', '')
+        for title in latest_titles:
             title_key = title.lower()
             handled_by_feedback = any(
                 fb.get('title', '').lower() == title_key and (fb.get('recorded_at_utc') or fb.get('run_timestamp_utc', '')) > latest_timestamp
@@ -149,7 +172,7 @@ class BSearchHandler:
             'run_timestamp_utc': latest_timestamp,
             'pending_titles': pending_titles,
             'pending_count': len(pending_titles),
-            'total_count': len(latest_rows),
+            'total_count': len(latest_titles),
         }
 
     def _current_items(self, include_archived: bool = False) -> List[Dict[str, Any]]:
@@ -394,7 +417,40 @@ class BSearchHandler:
             return self._resolve_item_reference(items[0]['html_url'], score)
         raise ValueError(f'Could not resolve item reference: {reference}')
 
-    def _record_candidate_delivery_feedback(self, *, now: str, run_type: str, item: Dict[str, Any], score: Optional[float], command: Optional[str] = None, comment: str = '') -> None:
+    def _append_candidate_record(self, *, now: str, run_type: str, item: Dict[str, Any], command: Optional[str] = None) -> None:
+        candidate_record = {
+            'run_timestamp_utc': now,
+            'run_type': run_type,
+            'candidate_position': item.get('candidate_position', 1),
+            'candidate_pool_size': item.get('candidate_pool_size', 1),
+            'title': item['title'],
+            'source_type': item['source_type'],
+            'category': item['category'],
+            'predicted_interest': item['predicted_interest'],
+            'rank_progress': item.get('rank_progress', 1.0),
+            'final_score': item['final_score'],
+            'links': item.get('links', []),
+            'description': item.get('description', ''),
+            'manual_inserted': run_type == 'manual_insert',
+        }
+        if command:
+            candidate_record['manual_insert_input'] = command
+        self._append_jsonl(self.root / 'runs' / 'candidate-pool-history.jsonl', candidate_record)
+
+    def _append_delivered_record(self, *, now: str, run_type: str, item: Dict[str, Any]) -> None:
+        delivered_record = {
+            'run_timestamp_utc': now,
+            'run_type': run_type,
+            'title': item['title'],
+            'category': item['category'],
+            'predicted_interest': item['predicted_interest'],
+            'final_score': item['final_score'],
+            'source_type': item['source_type'],
+            'manual_inserted': run_type == 'manual_insert',
+        }
+        self._append_jsonl(self.root / 'runs' / 'delivered-history.jsonl', delivered_record)
+
+    def _record_candidate_delivery_feedback(self, *, now: str, run_type: str, item: Dict[str, Any], score: Optional[float], command: Optional[str] = None, comment: str = '', delivered_to_user: bool = True) -> None:
         candidate_record = {
             'run_timestamp_utc': now,
             'run_type': run_type,
@@ -423,7 +479,8 @@ class BSearchHandler:
             'manual_inserted': run_type == 'manual_insert',
         }
         self._append_jsonl(self.root / 'runs' / 'candidate-pool-history.jsonl', candidate_record)
-        self._append_jsonl(self.root / 'runs' / 'delivered-history.jsonl', delivered_record)
+        if delivered_to_user:
+            self._append_jsonl(self.root / 'runs' / 'delivered-history.jsonl', delivered_record)
         if score is not None:
             feedback_record = {
                 'run_timestamp_utc': now,
@@ -807,17 +864,23 @@ class BSearchHandler:
                     'category': item['category'],
                     'score': item['score'],
                     'source_type': item['source_type'],
+                    'description': item.get('description', ''),
+                    'links': item.get('links', []),
                 })
             except Exception:
-                entries.append({'title': title})
+                entries.append({'title': title, 'links': []})
+        current_item = entries[0] if entries else None
         self._save_context({'view': 'pending_review', 'run_timestamp_utc': pending_run['run_timestamp_utc'], 'entries': entries})
         return {
             'command_family': 'review_pending',
             'status': 'pending_run_ready_for_review',
             'run_timestamp_utc': pending_run['run_timestamp_utc'],
             'pending_count': pending_run['pending_count'],
+            'total_count': pending_run['total_count'],
             'entries': entries,
-            'message': 'Use `bSearch score <item> <1-5>` or `bSearch archive <item>` to handle these pending items.',
+            'current_index': 1 if current_item else 0,
+            'current_item': current_item,
+            'message': 'Review item 1 first. Use `bSearch score <item> <1-5>` or `bSearch archive <item>` to handle it, then ask for the next item.',
         }
 
     def _handle_profile(self, command: str, remainder: str) -> Dict[str, Any]:
@@ -898,7 +961,9 @@ class BSearchHandler:
         delivered = candidates[:config['delivered_item_count']]
         now = self._now_utc()
         for item in candidates:
-            self._record_candidate_delivery_feedback(now=now, run_type='manual_run', item=item, score=None)
+            self._record_candidate_delivery_feedback(now=now, run_type='manual_run', item=item, score=None, delivered_to_user=False)
+        for item in delivered:
+            self._append_delivered_record(now=now, run_type='manual_run', item=item)
         self._write_run_markdown(now, delivered, config, discovery_mode)
         state_text = self._load_state_text()
         if re.search(r'(^\s*last_manual_run:\s*).+$', state_text, flags=re.MULTILINE):
