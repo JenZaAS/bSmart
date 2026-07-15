@@ -29,8 +29,9 @@ The installed extension should be initialized by guiding the user through:
 - keep a concise editable user-interest profile
 - let the user rate delivered items from 1 to 5
 - keep item history and category learning data
+- support flexible natural-language `bSearch ...` commands rather than rigid command syntax
 - support later manual insertion into the knowledge repository
 - support later search/retrieval over stored items
 
 ## Current status
-This extension is packaged and documented, but the runtime implementation is still future work.
+This extension is packaged, documented, and now has a working stdlib-only runtime command handler plus tests for core command behavior. `bSearch run` now performs multisource live discovery across GitHub, RSS/news/blog feeds, arXiv, and YouTube-oriented feed results before scoring and persisting a shortlist. Candidate selection now uses random per-slot source choice to reduce systematic source bias. New runs are also blocked while the previous delivered run still has unhandled items, and `bSearch review pending` reopens those items for scoring/archive handling. Future work is to improve source diversity quality, ranking quality, and higher-level chat/cron integration.
