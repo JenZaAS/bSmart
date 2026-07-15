@@ -281,7 +281,7 @@ files:
   - /workspace/bSmart-Extensions/
   - /workspace/bSmart-System/bSmart.md
   - /workspace/bSmart-System/bSmart_Setup.md
-description: Provides a standard location and setup flow for optional external packs such as Fabric without mixing them into core bSmart.
+description: Provides a standard location and setup flow for optional add-on packs, including bundled extensions such as bSearch and external packs such as Fabric, without mixing instance-installed state into core bSmart.
 commands:
   - show extensions
 included_capabilities:

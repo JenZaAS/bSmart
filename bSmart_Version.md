@@ -1,9 +1,24 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.5-draft
-updated: 2026-06-06 10:30 UTC
+current_version: 0.1.6-draft
+updated: 2026-07-14 00:00 UTC
 status: draft
+```
+
+## 0.1.6-draft
+
+```yaml
+release_type: draft_update
+scope:
+  - add bundled-extension source root under /workspace/bSmart-System/bSmart-Extensions
+  - add bundled optional bSearch extension as a packaged bSmart add-on
+  - distinguish bundled optional extensions from external optional extensions such as Fabric
+  - update setup/docs so initialization can offer bSearch with a short explanation
+migration_notes:
+  - bundled extension source stays in bSmart-System
+  - installed extension state lives under /workspace/bSmart-Extensions
+  - existing instances can copy or sync /workspace/bSmart-System/bSmart-Extensions/bSearch into /workspace/bSmart-Extensions/bSearch to enable the extension
 ```
 
 ## 0.1.5-draft

@@ -63,12 +63,20 @@ missing_content_behavior:
 
 extensions:
   root: /workspace/bSmart-Extensions
+  packaged_source_root: /workspace/bSmart-System/bSmart-Extensions
   discovery: subfolders
   known:
     Fabric:
       path: /workspace/bSmart-Extensions/Fabric
       optional: true
+      packaging: external_optional
       purpose: External prompt patterns and strategies adapted from Daniel Miessler Fabric.
+    bSearch:
+      path: /workspace/bSmart-Extensions/bSearch
+      optional: true
+      packaging: bundled_optional
+      source_path: /workspace/bSmart-System/bSmart-Extensions/bSearch
+      purpose: AI-driven knowledge search and curation extension with scheduled discovery, user-interest profiling, and feedback learning.
 ```
 
 ## Agent instruction

@@ -1,0 +1,40 @@
+bsearch:
+  status: initialized
+  timezone: Europe/Oslo
+  schedule:
+    mode: desired_not_scheduled_yet
+    human_label: daily at 03:00 Norwegian time
+    cron_candidate: "0 3 * * *"
+  delivery:
+    candidate_pool_size: 10
+    delivered_item_count: 5
+  ranking:
+    exploration_strength: 0.5
+    formula:
+      predicted_interest: true
+      rank_progress: a_over_b
+      randomness: softened
+      expression: "final_score = predicted_interest + (5 - predicted_interest) * exploration_strength * rank_progress * (0.5 + 0.5 * random())"
+  sources:
+    preferred:
+      - GitHub
+      - YouTube
+      - blogs/posts
+      - software/tools
+      - broader web
+    emphasized_topics:
+      - MATLAB
+      - Hermes-compatible AI harnesses and agent tooling
+      - Computer games
+  model:
+    preferred_provider: openai-codex
+    preferred_model: gpt-5.4
+    pin_for_scheduled_runs: true
+  workflow:
+    topic_generation:
+      description: Generate a mix of familiar and surprising topic leads influenced by prior pool/history but not locked to it.
+    candidate_selection:
+      description: Search broadly to build the candidate pool, then score and keep the highest-ranked delivered set.
+    user_feedback:
+      rating_scale: 1_to_5
+      use_for_learning: true

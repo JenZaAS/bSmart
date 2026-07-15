@@ -127,10 +127,19 @@ action:
 
 ```yaml
 extensions:
+  bSearch:
+    question: Install or enable bSearch extension?
+    default: yes
+    target_path: /workspace/bSmart-Extensions/bSearch
+    source_path: /workspace/bSmart-System/bSmart-Extensions/bSearch
+    packaging: bundled_with_bsmart
+    short_explanation: AI-driven knowledge search add-on that can run on a schedule, curate interesting items, maintain a short editable user-interest profile, and learn from feedback.
   Fabric:
     question: Install or enable Fabric extension?
     default: yes
     target_path: /workspace/bSmart-Extensions/Fabric
+    packaging: external_optional
+    short_explanation: Optional prompt-pattern and reasoning-strategy library adapted from Daniel Miessler Fabric.
 ```
 
 ## Available features prompt

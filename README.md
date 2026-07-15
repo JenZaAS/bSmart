@@ -52,8 +52,14 @@ legacy_migration: move /workspace/secrets to the service-level secret directory,
 /workspace/
 ├── bSmart-System/       # this git repo; safe to update
 ├── bSmart/              # local content/state; not overwritten by system updates
-├── bSmart-Extensions/   # optional extension packs, e.g. Fabric
+├── bSmart-Extensions/   # installed optional extension packs, e.g. Fabric or bSearch
 └── HERMES.md            # tiny Hermes hook outside bSmart
+```
+
+Bundled optional extensions may also ship inside the system repo under:
+
+```text
+/workspace/bSmart-System/bSmart-Extensions/
 ```
 
 ## Install into a Hermes container workspace
