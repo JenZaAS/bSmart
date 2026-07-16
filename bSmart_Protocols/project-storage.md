@@ -48,6 +48,16 @@ mounted_volume_flow:
     Enter host-project-folder, e.g.
 
     /mnt/share/MyAI
+  existing_project_migration:
+    source: /workspace/bSmart/Projects
+    destination: /projects
+    rule:
+      - never delete or overwrite the existing project folder during project-storage setup
+      - after /projects is mounted and usable, inspect both source and destination before suggesting migration
+      - prompt the operator whether to transfer old project files into the new project root
+      - use a safe copy/sync workflow first; do not remove source files as part of migration
+      - prefer dry-run listing, then copy only after explicit approval
+      - preserve metadata where possible and avoid crossing into nested .git repos unless the operator explicitly asks
   save:
     mode: mounted
     project_root: /projects

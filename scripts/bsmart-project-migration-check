@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+"""Inspect legacy bSmart project root versus canonical /projects.
+
+This helper is intentionally read-only by default. It prints a concise migration
+summary and optional rsync dry-run command. It never deletes, moves, or copies
+files unless a future explicit mode is added.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+from pathlib import Path
+
+DEFAULT_SOURCE = Path("/workspace/bSmart/Projects")
+DEFAULT_DEST = Path("/projects")
+
+
+def access(path: Path) -> str:
+    if not path.exists():
+        return "missing"
+    if not path.is_dir():
+        return "not_a_directory"
+    bits = []
+    if os.access(path, os.R_OK):
+        bits.append("readable")
+    if os.access(path, os.W_OK):
+        bits.append("writable")
+    if os.access(path, os.X_OK):
+        bits.append("executable")
+    return ",".join(bits) or "present_but_no_access"
+
+
+def list_children(path: Path) -> list[str]:
+    if not path.is_dir():
+        return []
+    return sorted(child.name for child in path.iterdir() if child.name not in {".", ".."})
+
+
+def shell_quote(value: str) -> str:
+    return "'" + value.replace("'", "'\\''") + "'"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Read-only bSmart project migration inspection.")
+    parser.add_argument("--source", default=str(DEFAULT_SOURCE), help="legacy project root")
+    parser.add_argument("--dest", default=str(DEFAULT_DEST), help="new canonical project root")
+    args = parser.parse_args()
+
+    source = Path(args.source)
+    dest = Path(args.dest)
+    source_children = list_children(source)
+    dest_children = list_children(dest)
+    overlaps = sorted(set(source_children) & set(dest_children))
+
+    print("bSmart project migration check:")
+    print(f"  source: {source} ({access(source)})")
+    print(f"  destination: {dest} ({access(dest)})")
+    print(f"  source entries: {len(source_children)}")
+    for name in source_children[:20]:
+        marker = " [also in destination]" if name in overlaps else ""
+        print(f"    - {name}{marker}")
+    if len(source_children) > 20:
+        print(f"    ... {len(source_children) - 20} more")
+    print(f"  destination entries: {len(dest_children)}")
+    for name in dest_children[:20]:
+        print(f"    - {name}")
+    if len(dest_children) > 20:
+        print(f"    ... {len(dest_children) - 20} more")
+
+    if not source_children:
+        print("  result: no legacy project entries found; no migration needed")
+        return 0
+
+    print("  result: legacy project entries exist; ask operator before copying")
+    if overlaps:
+        print("  warning: some names already exist in destination; do not overwrite without review")
+    print("")
+    print("Safe dry-run command to review before any copy:")
+    print(
+        "  rsync -aHAXn --info=NAME,STATS "
+        f"--exclude='**/.git/**' {shell_quote(str(source) + '/')} {shell_quote(str(dest) + '/')}"
+    )
+    print("")
+    print("If approved after dry-run, remove -n to copy. Do not delete the source as part of this migration.")
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
