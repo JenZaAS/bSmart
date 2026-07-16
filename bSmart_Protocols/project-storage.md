@@ -113,6 +113,13 @@ sandbox_storage:
   compose_recommendation: /opt/docker-workspace/<instance>/sandboxes:/sandboxes:rw
   predeploy_prepare:
     rule: create and permission the host sandbox folder before suggesting/adding the /sandboxes volume
+    default_inference:
+      - infer host path backing /workspace using findmnt -T /workspace -n -o SOURCE
+      - if the backing path ends with /workspace, use its sibling path named sandboxes
+      - when configuring a different instance from a mounted project path like /mnt/share/JenZa, infer /opt/docker-workspace/ai/jenza/sandboxes from the project folder name when it follows known VPS naming conventions
+      - example: /opt/docker-workspace/ai/jenza/workspace -> /opt/docker-workspace/ai/jenza/sandboxes
+      - example: /mnt/share/JenZa -> /opt/docker-workspace/ai/jenza/sandboxes
+      - only fall back to <host-sandbox-folder> when the host path cannot be inferred
     host_command_template: mkdir -p /opt/docker-workspace/<instance>/sandboxes && chown 10000:10000 /opt/docker-workspace/<instance>/sandboxes && chmod 775 /opt/docker-workspace/<instance>/sandboxes
   fallback: legacy per-project sandbox under /workspace/bSmart/Projects/<project>/sandbox when /sandboxes is unavailable
 ```

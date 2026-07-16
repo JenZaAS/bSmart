@@ -59,6 +59,30 @@ def infer_workspace_host_path() -> str | None:
     return None
 
 
+def infer_sandbox_host_path(project_host_folder: str | None = None) -> str | None:
+    """Infer the host sandboxes path.
+
+    Prefer project-host folder patterns such as `/mnt/share/JenZa` so a dry run
+    in SschwAdmin can still produce the right target for a different instance.
+    Fall back to a sibling of the host path backing this container's /workspace.
+    """
+    if project_host_folder:
+        project = Path(project_host_folder)
+        if len(project.parts) >= 3 and project.parts[1] == "mnt" and project.parts[2] == "share":
+            slug = project.name.lower()
+            special = {"jenza": "ai/jenza", "sschwaadmin": "hermes-admin", "sschwadmin": "hermes-admin"}
+            scope = special.get(slug, f"hermes-{slug}")
+            return f"/opt/docker-workspace/{scope}/sandboxes"
+
+    workspace_host = infer_workspace_host_path()
+    if not workspace_host:
+        return None
+    workspace = Path(workspace_host)
+    if workspace.name == "workspace":
+        return str(workspace.parent / "sandboxes")
+    return None
+
+
 def write_spec(spec_path: Path, content: str) -> None:
     spec_path.parent.mkdir(parents=True, exist_ok=True)
     if spec_path.exists():
@@ -157,8 +181,11 @@ def main() -> int:
     parser.add_argument("--configure-mounted", action="store_true", help="create spec for a mounted /projects volume")
     parser.add_argument("--configure-internal", action="store_true", help="create spec using /workspace/bSmart/Projects as the host-backed source")
     parser.add_argument("--host-project-folder", help="host path to mount at /projects")
-    parser.add_argument("--host-sandbox-folder", help="host path to mount at /sandboxes")
+    parser.add_argument("--host-sandbox-folder", help="host path to mount at /sandboxes; defaults to sibling 'sandboxes' next to the host /workspace path when inferable")
     args = parser.parse_args()
+
+    if not args.host_sandbox_folder:
+        args.host_sandbox_folder = infer_sandbox_host_path(args.host_project_folder)
 
     spec_path = Path(args.spec)
     if args.configure_mounted and args.configure_internal:
