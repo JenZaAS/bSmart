@@ -62,17 +62,19 @@ project_storage:
   purpose: choose the canonical project folder location for this AI instance
   spec_file: /workspace/bSmart/State/container-storage.yaml
   trigger: ask when spec_file is missing
+  daily_startup_helper: /workspace/bSmart-System/scripts/bsmart-startup-check
+  storage_helper: /workspace/bSmart-System/scripts/bsmart-project-storage-check
   prompt_style: Telegram buttons when supported
   prompt_text: |
     bSmart - Project configuration
 
     Choose location for project folders:
 
-    1) Mounted volume
-    Host/exchange folder mounted into the container.
+    1) Mounted volume (e.g. external to Docker image and possibly a mounted SMB drive)
 
-    2) Internal bSmart
-    bSmart’s standard project folder inside the container workspace.
+    2) Internal bSmart (standard bSmart project folder inside the container workspace)
+
+    Some things will be stored in an internal project sandbox.
   choices:
     - Mounted volume
     - Internal bSmart
@@ -84,9 +86,11 @@ project_storage:
 
       /mnt/share/MyAI
     compose_line_template: "- <host-project-folder>:/projects:rw"
+    helper_command: "bsmart-project-storage-check --configure-mounted --host-project-folder <host-project-folder>"
   internal_bsmart:
     infer_workspace_host_path: findmnt -T /workspace -n -o SOURCE
     compose_line_template: "- <host-workspace>/bSmart/Projects:/projects:rw"
+    helper_command: "bsmart-project-storage-check --configure-internal"
     fallback_if_inference_fails: ask operator for the host path backing /workspace
   sandbox:
     canonical_root: /sandboxes

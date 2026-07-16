@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""bSmart system Git freshness check.
+
+Runs a lightweight once-per-day check for /workspace/bSmart-System.
+Default behavior is non-mutating: fetch remote metadata and report clean/dirty,
+up-to-date/behind/ahead/diverged. With --auto-pull it will fast-forward only
+when the repo is clean, on the expected branch, and behind the upstream.
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import subprocess
+import sys
+from pathlib import Path
+
+DEFAULT_REPO = Path("/workspace/bSmart-System")
+DEFAULT_STATE = Path("/workspace/bSmart/State/bsmart-system-update.yaml")
+
+
+def today() -> str:
+    return dt.datetime.now(dt.UTC).date().isoformat()
+
+
+def now() -> str:
+    return dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def read_last_checked(state: Path) -> str | None:
+    if not state.exists():
+        return None
+    for line in state.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.startswith("last_checked_utc_date:"):
+            return line.split(":", 1)[1].strip().strip('"')
+    return None
+
+
+def write_state(state: Path, status: str, detail: str) -> None:
+    state.parent.mkdir(parents=True, exist_ok=True)
+    state.write_text(
+        f"last_checked_utc_date: {today()}\nlast_checked_at: {now()}\nstatus: {status}\ndetail: {detail!r}\n",
+        encoding="utf-8",
+    )
+
+
+def run(cmd: list[str], cwd: Path, timeout: int = 30) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(cmd, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
+
+
+def git(args: list[str], repo: Path, timeout: int = 30) -> subprocess.CompletedProcess[str]:
+    return run(["git", *args], repo, timeout=timeout)
+
+
+def fail(state: Path, status: str, detail: str) -> int:
+    write_state(state, status, detail)
+    print(f"bSmart system update check: {status} — {detail}")
+    return 1
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Check bSmart-System Git freshness once per day.")
+    parser.add_argument("--repo", default=str(DEFAULT_REPO))
+    parser.add_argument("--state", default=str(DEFAULT_STATE))
+    parser.add_argument("--force", action="store_true", help="run even if already checked today")
+    parser.add_argument("--auto-pull", action="store_true", help="fast-forward pull only when safe")
+    parser.add_argument("--expected-branch", default="main")
+    args = parser.parse_args()
+
+    repo = Path(args.repo)
+    state = Path(args.state)
+    if not args.force and read_last_checked(state) == today():
+        print("bSmart system update check: skipped — already checked today")
+        return 0
+
+    if not (repo / ".git").exists():
+        return fail(state, "unavailable", f"not a git repo: {repo}")
+
+    branch = git(["branch", "--show-current"], repo)
+    if branch.returncode != 0:
+        return fail(state, "unavailable", branch.stderr.strip() or "cannot determine branch")
+    branch_name = branch.stdout.strip()
+    if branch_name != args.expected_branch:
+        return fail(state, "blocked", f"unexpected branch {branch_name!r}; expected {args.expected_branch!r}")
+
+    status = git(["status", "--porcelain"], repo)
+    if status.returncode != 0:
+        return fail(state, "unavailable", status.stderr.strip() or "git status failed")
+    dirty = bool(status.stdout.strip())
+
+    fetch = git(["fetch", "--verbose"], repo, timeout=60)
+    if fetch.returncode != 0:
+        return fail(state, "unavailable", fetch.stderr.strip() or "git fetch failed")
+
+    upstream = git(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], repo)
+    if upstream.returncode != 0:
+        return fail(state, "unavailable", "no upstream configured")
+
+    counts = git(["rev-list", "--left-right", "--count", "HEAD...@{u}"], repo)
+    if counts.returncode != 0:
+        return fail(state, "unavailable", counts.stderr.strip() or "ahead/behind check failed")
+    left, right = [int(x) for x in counts.stdout.split()[:2]]
+
+    if dirty:
+        detail = f"uncommitted changes; ahead={left} behind={right}"
+        write_state(state, "blocked", detail)
+        print(f"bSmart system update check: blocked — {detail}")
+        return 1
+
+    if left == 0 and right == 0:
+        write_state(state, "up_to_date", "clean and aligned with upstream")
+        print("bSmart system update check: up to date")
+        return 0
+
+    if left == 0 and right > 0:
+        if args.auto_pull:
+            pull = git(["pull", "--ff-only"], repo, timeout=60)
+            if pull.returncode != 0:
+                return fail(state, "blocked", pull.stderr.strip() or "fast-forward pull failed")
+            write_state(state, "updated", f"fast-forwarded by {right} commit(s)")
+            print(f"bSmart system update check: updated — fast-forwarded by {right} commit(s)")
+            return 0
+        write_state(state, "behind", f"behind upstream by {right} commit(s)")
+        print(f"bSmart system update check: behind remote by {right} commit(s)")
+        return 1
+
+    if left > 0 and right == 0:
+        write_state(state, "ahead", f"ahead of upstream by {left} commit(s)")
+        print(f"bSmart system update check: ahead of remote by {left} commit(s)")
+        return 1
+
+    write_state(state, "diverged", f"ahead={left} behind={right}")
+    print(f"bSmart system update check: diverged — ahead={left} behind={right}")
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -102,6 +102,8 @@ bsmart_system_update_check:
   purpose: Keep each AI instance's bSmart-System repo fresh without requiring routine user prompting.
   trigger: first /new startup per UTC day when helper/support exists
   target: /workspace/bSmart-System only
+  helper: /workspace/bSmart-System/scripts/bsmart-system-update-check
+  startup_wrapper: /workspace/bSmart-System/scripts/bsmart-startup-check
   safe_actions:
     - fetch/check remote status
     - auto-pull only when repo is clean, on expected branch, and fast-forward only
@@ -110,6 +112,20 @@ bsmart_system_update_check:
     - dirty, diverged, or unexpected-remote system repo
   state_file: /workspace/bSmart/State/bsmart-system-update.yaml
   report_style: compact; report only updated, up-to-date, skipped, or blocked state
+```
+
+```yaml
+bsmart_startup_checks:
+  purpose: Run the concrete /new checks that are safe for an AI instance to execute locally.
+  helper: /workspace/bSmart-System/scripts/bsmart-startup-check
+  cadence: once per UTC day
+  state_file: /workspace/bSmart/State/bsmart-startup-check.yaml
+  checks:
+    - bSmart-System Git freshness via bsmart-system-update-check
+    - project/sandbox storage spec via bsmart-project-storage-check
+  important_behavior:
+    - missing container-storage.yaml is reported as setup_required
+    - the helper does not create the spec or change Compose/Dokploy unless an explicit configure subcommand is run
 ```
 
 ```yaml

@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+"""bSmart /new startup checks.
+
+Intended for agents to run after reading /workspace/bSmart-System/bSmart.md.
+It performs bounded, local checks and prints concise operator-facing output.
+
+Checks:
+- bSmart-System Git freshness: once per UTC day.
+- Project/sandbox storage configuration: once per UTC day, but if the storage
+  spec is missing it is still reported as setup_required.
+
+The wrapper does not deploy, restart, edit Compose/Dokploy, or create the
+storage spec by default.
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import subprocess
+from pathlib import Path
+
+DEFAULT_STATE = Path("/workspace/bSmart/State/bsmart-startup-check.yaml")
+SCRIPT_DIR = Path(__file__).resolve().parent
+
+
+def today() -> str:
+    return dt.datetime.now(dt.UTC).date().isoformat()
+
+
+def now() -> str:
+    return dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def get_yamlish_value(path: Path, key: str) -> str | None:
+    if not path.exists():
+        return None
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.startswith(key + ":"):
+            return line.split(":", 1)[1].strip().strip('"')
+    return None
+
+
+def write_state(path: Path, project_storage_checked: bool, system_update_checked: bool) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"last_checked_utc_date: {today()}\n"
+        f"last_checked_at: {now()}\n"
+        f"project_storage_checked: {str(project_storage_checked).lower()}\n"
+        f"system_update_checked: {str(system_update_checked).lower()}\n",
+        encoding="utf-8",
+    )
+
+
+def run_script(script: str, args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run([str(SCRIPT_DIR / script), *args], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+
+def print_result(title: str, proc: subprocess.CompletedProcess[str]) -> None:
+    if proc.stdout.strip():
+        print(proc.stdout.rstrip())
+    if proc.stderr.strip():
+        print(f"{title}: stderr: {proc.stderr.strip()}")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Run bSmart startup checks once per UTC day.")
+    parser.add_argument("--state", default=str(DEFAULT_STATE))
+    parser.add_argument("--force", action="store_true")
+    parser.add_argument("--auto-pull", action="store_true", help="allow bsmart-system-update-check to fast-forward when safe")
+    parser.add_argument("--skip-system-update", action="store_true")
+    parser.add_argument("--skip-project-storage", action="store_true")
+    args = parser.parse_args()
+
+    state = Path(args.state)
+    already_today = get_yamlish_value(state, "last_checked_utc_date") == today()
+    project_spec = Path("/workspace/bSmart/State/container-storage.yaml")
+
+    if already_today and not args.force and project_spec.exists():
+        print("bSmart startup checks: skipped — already checked today")
+        return 0
+
+    exit_code = 0
+    system_checked = False
+    storage_checked = False
+
+    if not args.skip_system_update:
+        sys_args = [] if not args.force else ["--force"]
+        if args.auto_pull:
+            sys_args.append("--auto-pull")
+        proc = run_script("bsmart-system-update-check", sys_args)
+        print_result("bSmart system update check", proc)
+        system_checked = True
+        if proc.returncode not in (0,):
+            exit_code = max(exit_code, 1)
+
+    if not args.skip_project_storage:
+        # Force-like behavior is intentional here: if the spec is missing, report
+        # setup_required even if another startup check happened earlier today.
+        proc = run_script("bsmart-project-storage-check", [])
+        print_result("bSmart project storage check", proc)
+        storage_checked = True
+        if proc.returncode not in (0,):
+            exit_code = max(exit_code, proc.returncode)
+
+    write_state(state, storage_checked, system_checked)
+    return exit_code
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

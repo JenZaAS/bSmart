@@ -20,17 +20,20 @@ project_root_selection:
 ```yaml
 project_storage_setup:
   trigger: /workspace/bSmart/State/container-storage.yaml missing
+  daily_check_helper: /workspace/bSmart-System/scripts/bsmart-startup-check
+  storage_helper: /workspace/bSmart-System/scripts/bsmart-project-storage-check
+  daily_state_file: /workspace/bSmart/State/bsmart-startup-check.yaml
   prompt_style: use button choices where supported
   prompt_text: |
     bSmart - Project configuration
 
     Choose location for project folders:
 
-    1) Mounted volume
-    Host/exchange folder mounted into the container.
+    1) Mounted volume (e.g. external to Docker image and possibly a mounted SMB drive)
 
-    2) Internal bSmart
-    bSmart’s standard project folder inside the container workspace.
+    2) Internal bSmart (standard bSmart project folder inside the container workspace)
+
+    Some things will be stored in an internal project sandbox.
   choices:
     - Mounted volume
     - Internal bSmart
@@ -103,6 +106,22 @@ container_storage_spec:
     sandbox_storage:
       sandbox_root: /sandboxes
       mode: vps_local_preferred
+```
+
+```yaml
+startup_check_behavior:
+  helper: /workspace/bSmart-System/scripts/bsmart-startup-check
+  cadence: once per UTC day
+  force_option: --force
+  no_side_effects_by_default:
+    - does not create container-storage.yaml
+    - does not edit Docker Compose or Dokploy
+    - does not deploy, restart, chmod, chown, or mount anything
+  reports_setup_required_when:
+    - /workspace/bSmart/State/container-storage.yaml is missing
+  local_spec_creation:
+    mounted_volume: bsmart-project-storage-check --configure-mounted --host-project-folder <host-path>
+    internal_bsmart: bsmart-project-storage-check --configure-internal
 ```
 
 ```yaml

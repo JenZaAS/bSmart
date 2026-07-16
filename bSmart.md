@@ -62,11 +62,11 @@ project_storage:
 
 startup_sequence:
   - read this manifest
-  - run daily bSmart system update check when the helper exists and has not checked today
+  - run /workspace/bSmart-System/scripts/bsmart-startup-check when the helper exists
   - check content root exists
   - if bSmart_Agent.md missing, run bSmart_Setup.md
   - read bSmart_Agent.md
-  - if State/container-storage.yaml missing, run project-storage setup from bSmart_Protocols/project-storage.md
+  - if startup check reports project storage setup_required, run project-storage setup from bSmart_Protocols/project-storage.md
   - read bSmart_State.md when present
   - read bSmart_TODO.md when present
   - scan bSmart_Protocols summaries and load relevant protocols

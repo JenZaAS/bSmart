@@ -17,12 +17,17 @@ scope:
   - add instance Git setup as an explicit optional/recommended bSmart setup choice
   - add nested Git hygiene helper for ignoring external code repos inside projects
   - document daily bSmart-System update checks for /new startup
+  - add concrete startup helper scripts for daily Git freshness and project-storage checks
   - document need for read-only Dokploy compose visibility to avoid blueprint/runtime drift
 migration_notes:
   - existing instances must manually pull this bSmart-System update once because daily update checks did not exist in older versions
   - after update, /new should create or prompt for /workspace/bSmart/State/container-storage.yaml when missing
   - project-storage setup should guide the operator to add a /projects volume line to Compose/Dokploy
   - sandboxes should move toward /sandboxes/<project-slug>; legacy project-local sandbox folders remain valid fallback
+helpers:
+  - /workspace/bSmart-System/scripts/bsmart-startup-check
+  - /workspace/bSmart-System/scripts/bsmart-system-update-check
+  - /workspace/bSmart-System/scripts/bsmart-project-storage-check
 ```
 
 ## 0.1.6-draft

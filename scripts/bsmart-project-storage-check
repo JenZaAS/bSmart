@@ -1,0 +1,203 @@
+#!/usr/bin/env python3
+"""bSmart project/sandbox storage check and local spec helper.
+
+This helper is intentionally local and non-deploying. It can:
+- report whether the instance storage spec exists;
+- report whether /projects and /sandboxes are mounted/usable;
+- create the local spec only when explicitly asked with --configure-*.
+
+It never edits Docker Compose, Dokploy, host mounts, or runtime services.
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+DEFAULT_CONTENT_ROOT = Path("/workspace/bSmart")
+DEFAULT_SPEC = DEFAULT_CONTENT_ROOT / "State" / "container-storage.yaml"
+
+
+def access(path: Path) -> dict[str, object]:
+    return {
+        "exists": path.exists(),
+        "is_dir": path.is_dir(),
+        "readable": os.access(path, os.R_OK),
+        "writable": os.access(path, os.W_OK),
+        "executable": os.access(path, os.X_OK),
+    }
+
+
+def status_word(info: dict[str, object]) -> str:
+    if not info["exists"]:
+        return "missing"
+    if info["is_dir"] and info["readable"] and info["writable"] and info["executable"]:
+        return "usable"
+    return "present_but_not_usable"
+
+
+def run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+
+def infer_workspace_host_path() -> str | None:
+    proc = run(["findmnt", "-T", "/workspace", "-n", "-o", "SOURCE"])
+    if proc.returncode != 0:
+        return None
+    source = proc.stdout.strip()
+    if not source:
+        return None
+    # Overlay/bind output can look like: /dev/sda1[/opt/docker-workspace/x/workspace]
+    if "[" in source and source.endswith("]"):
+        return source.rsplit("[", 1)[1][:-1]
+    if source.startswith("/"):
+        return source
+    return None
+
+
+def write_spec(spec_path: Path, content: str) -> None:
+    spec_path.parent.mkdir(parents=True, exist_ok=True)
+    if spec_path.exists():
+        raise SystemExit(f"Refusing to overwrite existing spec: {spec_path}")
+    spec_path.write_text(content, encoding="utf-8")
+
+
+def spec_text(mode: str, project_root: str, host_project_folder: str, sandbox_root: str, host_sandbox_folder: str | None, backing: str) -> str:
+    generated = dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    sandbox_host = host_sandbox_folder or "TODO: host path backing /sandboxes"
+    return f"""# bSmart container storage spec
+# Local instance state. Do not put this file inside the project volume.
+generated_at: {generated}
+
+container_storage:
+  project_root:
+    path_in_container: {project_root}
+    required: true
+    backing: {backing}
+    desired_host_path: {host_project_folder}
+    mode: rw
+  sandbox_root:
+    path_in_container: {sandbox_root}
+    required: true
+    backing: vps-local
+    desired_host_path: {sandbox_host}
+    mode: rw
+
+project_storage:
+  mode: {mode}
+  project_root: {project_root}
+  host_project_folder: {host_project_folder}
+
+sandbox_storage:
+  mode: vps_local_preferred
+  sandbox_root: {sandbox_root}
+  host_sandbox_folder: {sandbox_host}
+"""
+
+
+def print_status(spec_path: Path) -> int:
+    projects = Path("/projects")
+    fallback = Path("/workspace/bSmart/Projects")
+    sandboxes = Path("/sandboxes")
+
+    spec_exists = spec_path.exists()
+    projects_status = status_word(access(projects))
+    fallback_status = status_word(access(fallback))
+    sandboxes_status = status_word(access(sandboxes))
+
+    print("bSmart project storage check:")
+    print(f"  spec: {'present' if spec_exists else 'missing'} ({spec_path})")
+    print(f"  /projects: {projects_status}")
+    print(f"  fallback: {fallback_status} ({fallback})")
+    print(f"  /sandboxes: {sandboxes_status}")
+
+    if spec_exists:
+        if projects_status == "usable":
+            print("  result: configured; canonical project root is usable")
+            return 0
+        print("  result: spec exists, but /projects is not usable; Compose/Dokploy may still need the /projects mount")
+        return 1
+
+    print("  result: setup_required")
+    print("")
+    print("bSmart - Project configuration")
+    print("Choose location for project folders:")
+    print("1) Mounted volume (e.g. external to Docker image and possibly a mounted SMB drive)")
+    print("2) Internal bSmart (standard bSmart project folder inside the container workspace)")
+    print("Some things will be stored in an internal project sandbox.")
+    print("")
+    print("To record the choice with this helper:")
+    print("  Mounted volume:  bsmart-project-storage-check --configure-mounted --host-project-folder <host-path>")
+    print("  Internal bSmart:  bsmart-project-storage-check --configure-internal")
+    return 2
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Check or create bSmart container storage spec.")
+    parser.add_argument("--spec", default=str(DEFAULT_SPEC), help="storage spec path")
+    parser.add_argument("--configure-mounted", action="store_true", help="create spec for a mounted /projects volume")
+    parser.add_argument("--configure-internal", action="store_true", help="create spec using /workspace/bSmart/Projects as the host-backed source")
+    parser.add_argument("--host-project-folder", help="host path to mount at /projects")
+    parser.add_argument("--host-sandbox-folder", help="host path to mount at /sandboxes")
+    args = parser.parse_args()
+
+    spec_path = Path(args.spec)
+    if args.configure_mounted and args.configure_internal:
+        raise SystemExit("Choose only one of --configure-mounted or --configure-internal")
+
+    if args.configure_mounted:
+        if not args.host_project_folder:
+            raise SystemExit("--configure-mounted requires --host-project-folder")
+        write_spec(
+            spec_path,
+            spec_text(
+                mode="mounted",
+                project_root="/projects",
+                host_project_folder=args.host_project_folder,
+                sandbox_root="/sandboxes",
+                host_sandbox_folder=args.host_sandbox_folder,
+                backing="custom",
+            ),
+        )
+        print(f"bSmart project storage: wrote {spec_path}")
+        print(f"Compose/Dokploy volume line: - {args.host_project_folder}:/projects:rw")
+        if args.host_sandbox_folder:
+            print(f"Sandbox volume line: - {args.host_sandbox_folder}:/sandboxes:rw")
+        else:
+            print("Sandbox volume line: - <host-sandbox-folder>:/sandboxes:rw")
+        return 0
+
+    if args.configure_internal:
+        workspace_host = infer_workspace_host_path()
+        if workspace_host:
+            host_project_folder = f"{workspace_host.rstrip('/')}/bSmart/Projects"
+        else:
+            host_project_folder = "TODO: host path backing /workspace/bSmart/Projects"
+        write_spec(
+            spec_path,
+            spec_text(
+                mode="internal_bsmart",
+                project_root="/projects",
+                host_project_folder=host_project_folder,
+                sandbox_root="/sandboxes",
+                host_sandbox_folder=args.host_sandbox_folder,
+                backing="vps-local",
+            ),
+        )
+        print(f"bSmart project storage: wrote {spec_path}")
+        print(f"Compose/Dokploy volume line: - {host_project_folder}:/projects:rw")
+        if args.host_sandbox_folder:
+            print(f"Sandbox volume line: - {args.host_sandbox_folder}:/sandboxes:rw")
+        else:
+            print("Sandbox volume line: - <host-sandbox-folder>:/sandboxes:rw")
+        return 0
+
+    return print_status(spec_path)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
