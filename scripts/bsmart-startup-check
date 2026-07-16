@@ -74,9 +74,8 @@ def main() -> int:
 
     state = Path(args.state)
     already_today = get_yamlish_value(state, "last_checked_utc_date") == today()
-    project_spec = Path("/workspace/bSmart/State/container-storage.yaml")
 
-    if already_today and not args.force and project_spec.exists():
+    if already_today and not args.force:
         print("bSmart startup checks: skipped — already checked today")
         return 0
 
