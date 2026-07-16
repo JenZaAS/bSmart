@@ -66,6 +66,21 @@ def write_spec(spec_path: Path, content: str) -> None:
     spec_path.write_text(content, encoding="utf-8")
 
 
+def quote_shell(value: str) -> str:
+    return "'" + value.replace("'", "'\\''") + "'"
+
+
+def print_predeploy_commands(host_project_folder: str, host_sandbox_folder: str | None) -> None:
+    print("Pre-deploy host prep:")
+    print(f"  sudo mkdir -p {quote_shell(host_project_folder)}")
+    if host_sandbox_folder:
+        q = quote_shell(host_sandbox_folder)
+        print(f"  sudo mkdir -p {q} && sudo chown 10000:10000 {q} && sudo chmod 775 {q}")
+    else:
+        print("  sudo mkdir -p <host-sandbox-folder> && sudo chown 10000:10000 <host-sandbox-folder> && sudo chmod 775 <host-sandbox-folder>")
+    print("")
+
+
 def spec_text(mode: str, project_root: str, host_project_folder: str, sandbox_root: str, host_sandbox_folder: str | None, backing: str) -> str:
     generated = dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     sandbox_host = host_sandbox_folder or "TODO: host path backing /sandboxes"
@@ -164,6 +179,7 @@ def main() -> int:
             ),
         )
         print(f"bSmart project storage: wrote {spec_path}")
+        print_predeploy_commands(args.host_project_folder, args.host_sandbox_folder)
         print(f"Compose/Dokploy volume line: - {args.host_project_folder}:/projects:rw")
         if args.host_sandbox_folder:
             print(f"Sandbox volume line: - {args.host_sandbox_folder}:/sandboxes:rw")
@@ -189,6 +205,7 @@ def main() -> int:
             ),
         )
         print(f"bSmart project storage: wrote {spec_path}")
+        print_predeploy_commands(host_project_folder, args.host_sandbox_folder)
         print(f"Compose/Dokploy volume line: - {host_project_folder}:/projects:rw")
         if args.host_sandbox_folder:
             print(f"Sandbox volume line: - {args.host_sandbox_folder}:/sandboxes:rw")

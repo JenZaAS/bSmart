@@ -21,6 +21,7 @@ import subprocess
 from pathlib import Path
 
 DEFAULT_STATE = Path("/workspace/bSmart/State/bsmart-startup-check.yaml")
+DEFAULT_STORAGE_SPEC = Path("/workspace/bSmart/State/container-storage.yaml")
 SCRIPT_DIR = Path(__file__).resolve().parent
 
 
@@ -76,6 +77,13 @@ def main() -> int:
     already_today = get_yamlish_value(state, "last_checked_utc_date") == today()
 
     if already_today and not args.force:
+        if not args.skip_project_storage and not DEFAULT_STORAGE_SPEC.exists():
+            # Do not let the once-per-day throttle hide first-run setup work.
+            # Missing project storage is an actionable setup prompt, not a
+            # routine freshness check.
+            proc = run_script("bsmart-project-storage-check", [])
+            print_result("bSmart project storage check", proc)
+            return proc.returncode
         print("bSmart startup checks: skipped — already checked today")
         return 0
 

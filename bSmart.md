@@ -66,7 +66,7 @@ startup_sequence:
   - check content root exists
   - if bSmart_Agent.md missing, run bSmart_Setup.md
   - read bSmart_Agent.md
-  - if startup check reports project storage setup_required, run project-storage setup from bSmart_Protocols/project-storage.md
+  - if startup check reports project storage setup_required, immediately prompt the operator with Telegram buttons using clarify choices from bSmart_Protocols/project-storage.md before the normal TODO prompt
   - read bSmart_State.md when present
   - read bSmart_TODO.md when present
   - scan bSmart_Protocols summaries and load relevant protocols

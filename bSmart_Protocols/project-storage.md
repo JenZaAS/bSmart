@@ -23,7 +23,7 @@ project_storage_setup:
   daily_check_helper: /workspace/bSmart-System/scripts/bsmart-startup-check
   storage_helper: /workspace/bSmart-System/scripts/bsmart-project-storage-check
   daily_state_file: /workspace/bSmart/State/bsmart-startup-check.yaml
-  prompt_style: use button choices where supported
+  prompt_style: use Telegram button choices through the clarify tool where supported; do not replace this with a plain-text question on Telegram
   prompt_text: |
     bSmart - Project configuration
 
@@ -52,8 +52,19 @@ mounted_volume_flow:
     mode: mounted
     project_root: /projects
     host_project_folder: operator_value
+  predeploy_prepare:
+    rule:
+      - before telling the operator to add a Compose/Dokploy volume, make sure the host project folder exists
+      - if the folder is reachable from the agent through an existing writable host/share mount, create it directly and verify readability/writability
+      - if the folder is not reachable from the agent, give one explicit host command to create it before the volume-line instruction
+      - for SMB/CIFS project folders, prefer relying on the mount uid/gid/file_mode/dir_mode options rather than chowning files on the share
+    host_command_template: mkdir -p {host_project_folder}
   feedback_template: |
     bSmart - Project storage configured.
+
+    First ensure the host folder exists:
+
+    mkdir -p {host_project_folder}
 
     Add following volume to Docker Compose file:
 
@@ -90,6 +101,9 @@ sandbox_storage:
   git_policy: outside instance Git by default
   setup_visibility: do not explain sandbox details during project-storage setup unless operator asks
   compose_recommendation: /opt/docker-workspace/<instance>/sandboxes:/sandboxes:rw
+  predeploy_prepare:
+    rule: create and permission the host sandbox folder before suggesting/adding the /sandboxes volume
+    host_command_template: mkdir -p /opt/docker-workspace/<instance>/sandboxes && chown 10000:10000 /opt/docker-workspace/<instance>/sandboxes && chmod 775 /opt/docker-workspace/<instance>/sandboxes
   fallback: legacy per-project sandbox under /workspace/bSmart/Projects/<project>/sandbox when /sandboxes is unavailable
 ```
 
@@ -119,6 +133,8 @@ startup_check_behavior:
     - does not deploy, restart, chmod, chown, or mount anything
   reports_setup_required_when:
     - /workspace/bSmart/State/container-storage.yaml is missing
+  throttle_exception:
+    - missing container-storage.yaml must still be reported even if the daily startup check already ran today
   local_spec_creation:
     mounted_volume: bsmart-project-storage-check --configure-mounted --host-project-folder <host-path>
     internal_bsmart: bsmart-project-storage-check --configure-internal
