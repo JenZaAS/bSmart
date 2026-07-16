@@ -12,8 +12,10 @@ content_root: /workspace/bSmart
 ```yaml
 steps:
   - verify_system_root
+  - configure_instance_git
   - configure_optional_shared_group
   - configure_approval_mode_and_guardrails
+  - configure_project_storage
   - create_content_root_if_missing
   - create_content_readme_if_missing
   - create_bSmart_Agent_from_template
@@ -40,6 +42,56 @@ access_model:
   writable_paths: ask_or_detect
   readonly_paths: ask_or_detect
   unavailable: ask_or_detect
+
+instance_git:
+  purpose: make the AI instance content/projects durable and syncable without mixing them into the bSmart system repo
+  default: ask
+  choices:
+    - none
+    - local_git_only
+    - existing_remote
+    - create_new_remote
+  guidance:
+    - recommend a private instance repo for persistent AI instances
+    - allow no Git when the operator wants a temporary/local-only instance
+    - do not store secrets in the instance repo
+    - if Git is enabled, keep nested external code repos ignored unless the operator explicitly wants submodules
+  nested_git_helper: /workspace/bSmart-System/scripts/bsmart-ignore-nested-git
+
+project_storage:
+  purpose: choose the canonical project folder location for this AI instance
+  spec_file: /workspace/bSmart/State/container-storage.yaml
+  trigger: ask when spec_file is missing
+  prompt_style: Telegram buttons when supported
+  prompt_text: |
+    bSmart - Project configuration
+
+    Choose location for project folders:
+
+    1) Mounted volume
+    Host/exchange folder mounted into the container.
+
+    2) Internal bSmart
+    bSmart’s standard project folder inside the container workspace.
+  choices:
+    - Mounted volume
+    - Internal bSmart
+  mounted_volume:
+    followup_prompt: |
+      bSmart - Mounted project volume selected.
+
+      Enter host-project-folder, e.g.
+
+      /mnt/share/MyAI
+    compose_line_template: "- <host-project-folder>:/projects:rw"
+  internal_bsmart:
+    infer_workspace_host_path: findmnt -T /workspace -n -o SOURCE
+    compose_line_template: "- <host-workspace>/bSmart/Projects:/projects:rw"
+    fallback_if_inference_fails: ask operator for the host path backing /workspace
+  sandbox:
+    canonical_root: /sandboxes
+    per_project_template: /sandboxes/<project-slug>
+    user_prompt: do not mention during initial project-storage setup unless operator asks
 
 shared_group:
   purpose: keep bSmart-managed files editable by selected human and agent users

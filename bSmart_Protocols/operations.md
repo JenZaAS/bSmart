@@ -89,6 +89,44 @@ git_handoff:
   commit_scope: Stage only relevant bSmart content/handoff files for the completed task or project; do not mix unrelated local changes.
   commit_style: concise conventional message, e.g. "chore: close <task>" or "chore: archive <project> project".
   exception: If changes are sensitive, ambiguous, unrelated, or operator says not to commit, leave them uncommitted and explain why.
+  nested_git_policy:
+    rule: Nested Git repos inside projects are independent source repos by default, not submodules.
+    if_agent_clones_repo: Add the cloned path to the AI instance repo .gitignore unless the operator explicitly requests a submodule.
+    before_instance_commit: Run /workspace/bSmart-System/scripts/bsmart-ignore-nested-git --check when available.
+    fix_command: /workspace/bSmart-System/scripts/bsmart-ignore-nested-git --fix
+    submodules: opt_in_only
+```
+
+```yaml
+bsmart_system_update_check:
+  purpose: Keep each AI instance's bSmart-System repo fresh without requiring routine user prompting.
+  trigger: first /new startup per UTC day when helper/support exists
+  target: /workspace/bSmart-System only
+  safe_actions:
+    - fetch/check remote status
+    - auto-pull only when repo is clean, on expected branch, and fast-forward only
+  never_auto_update:
+    - /workspace/bSmart instance/content repo
+    - dirty, diverged, or unexpected-remote system repo
+  state_file: /workspace/bSmart/State/bsmart-system-update.yaml
+  report_style: compact; report only updated, up-to-date, skipped, or blocked state
+```
+
+```yaml
+dokploy_compose_visibility:
+  problem: SschwAdmin can see image-source blueprint compose but not necessarily live Dokploy compose stored in Dokploy UI/database.
+  risk: Copying stale blueprint compose into Dokploy can overwrite operator-made Dokploy changes.
+  preferred_solution: narrow read-only helper exposed to SschwAdmin, e.g. /usr/local/ai-bin/dokploy-compose-read <service>
+  helper_constraints:
+    - read-only
+    - exact service lookup or allowlist
+    - no deploy/edit/delete operations
+    - avoid printing secrets where possible
+    - timeout and clear errors if API/token unavailable
+  reconciliation_sources:
+    - /workspace/bSmart/State/container-storage.yaml
+    - /opt/image-sources/<instance>/docker-compose.yml blueprint
+    - live Dokploy compose via read-only helper when available
 ```
 
 ```yaml

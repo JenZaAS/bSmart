@@ -25,10 +25,13 @@ content_files:
   state: /workspace/bSmart/bSmart_State.md
   todo: /workspace/bSmart/bSmart_TODO.md
   log: /workspace/bSmart/bSmart_Log.md
+  container_storage: /workspace/bSmart/State/container-storage.yaml
   features: /workspace/bSmart-System/bSmart_Features.md
 
 content_folders:
-  projects: /workspace/bSmart/Projects
+  projects_preferred: /projects
+  projects_fallback: /workspace/bSmart/Projects
+  sandboxes_preferred: /sandboxes
   workdocs: /workspace/bSmart/Workdocs
   library: /workspace/bSmart/Library
 
@@ -37,12 +40,33 @@ system_folders:
   templates: /workspace/bSmart-System/bSmart_Templates
   docs: /workspace/bSmart-System/Docs
   examples: /workspace/bSmart-System/bSmart_Examples
+  scripts: /workspace/bSmart-System/scripts
+
+instance_git:
+  status: optional_but_recommended
+  setup_prompt: Ask whether this AI instance should use a Git repo for its bSmart content/projects.
+  modes:
+    - none
+    - local_git_only
+    - existing_remote
+    - create_new_remote
+  rule: Do not force Git, but make the choice explicit during setup.
+
+project_storage:
+  spec_file: /workspace/bSmart/State/container-storage.yaml
+  preferred_project_root: /projects
+  fallback_project_root: /workspace/bSmart/Projects
+  preferred_sandbox_root: /sandboxes
+  setup_protocol: /workspace/bSmart-System/bSmart_Protocols/project-storage.md
+  compose_change_required_for_projects: true
 
 startup_sequence:
   - read this manifest
+  - run daily bSmart system update check when the helper exists and has not checked today
   - check content root exists
   - if bSmart_Agent.md missing, run bSmart_Setup.md
   - read bSmart_Agent.md
+  - if State/container-storage.yaml missing, run project-storage setup from bSmart_Protocols/project-storage.md
   - read bSmart_State.md when present
   - read bSmart_TODO.md when present
   - scan bSmart_Protocols summaries and load relevant protocols

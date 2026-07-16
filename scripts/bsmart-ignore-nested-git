@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+"""bSmart nested Git hygiene helper.
+
+Scans a bSmart instance/content repo for nested Git repositories and checks
+whether the parent repo ignores them. In --fix mode, missing ignore entries are
+appended to .gitignore.
+
+Default policy: nested Git repos inside projects are independent source repos,
+not submodules, unless the operator explicitly says otherwise.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+
+def run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(cmd, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+
+def git_root(start: Path) -> Path:
+    proc = run(["git", "rev-parse", "--show-toplevel"], start)
+    if proc.returncode != 0:
+        raise SystemExit("Not inside a Git worktree. Run from the bSmart instance/content repo.")
+    return Path(proc.stdout.strip()).resolve()
+
+
+def is_ignored(root: Path, rel: str) -> bool:
+    proc = run(["git", "check-ignore", "-q", rel], root)
+    return proc.returncode == 0
+
+
+def find_nested_repos(root: Path, scan_root: Path) -> list[str]:
+    nested: set[str] = set()
+    root_git = (root / ".git").resolve()
+    for dirpath, dirnames, filenames in os.walk(scan_root):
+        path = Path(dirpath)
+        # Skip the parent repo's own .git and ignored directories.
+        rel_dir = path.relative_to(root).as_posix() if path != root else "."
+        if rel_dir != "." and is_ignored(root, rel_dir + "/"):
+            dirnames[:] = []
+            continue
+        if ".git" in dirnames:
+            git_path = (path / ".git").resolve()
+            if git_path != root_git:
+                nested.add(path.relative_to(root).as_posix() + "/")
+            dirnames.remove(".git")
+        if ".git" in filenames:
+            nested.add(path.relative_to(root).as_posix() + "/")
+    return sorted(nested)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Check/fix ignored nested Git repos in a bSmart instance repo.")
+    parser.add_argument("--fix", action="store_true", help="append missing ignore entries to .gitignore")
+    parser.add_argument("--check", action="store_true", help="check only; non-zero if missing ignores exist")
+    parser.add_argument("--path", default=".", help="repo/path to inspect; default current directory")
+    parser.add_argument("--scan", default=".", help="subpath to scan inside repo; default whole repo")
+    args = parser.parse_args()
+
+    start = Path(args.path).resolve()
+    root = git_root(start)
+    scan_root = (root / args.scan).resolve()
+    if not scan_root.exists():
+        raise SystemExit(f"Scan path not found: {scan_root}")
+    if root not in [scan_root, *scan_root.parents]:
+        raise SystemExit("Scan path must be inside the Git repo.")
+
+    nested = find_nested_repos(root, scan_root)
+    missing = [rel for rel in nested if not is_ignored(root, rel)]
+    already = [rel for rel in nested if is_ignored(root, rel)]
+
+    if args.fix and missing:
+        gitignore = root / ".gitignore"
+        existing = gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
+        block = ["", "# bSmart: nested Git repos are independent source repos"]
+        block.extend(missing)
+        gitignore.write_text(existing.rstrip() + "\n" + "\n".join(block) + "\n", encoding="utf-8")
+        print(f"bSmart Git hygiene: added {len(missing)} ignore entr{'y' if len(missing)==1 else 'ies'}")
+        for rel in missing:
+            print(f"  + {rel}")
+        return 0
+
+    if missing:
+        print(f"bSmart Git hygiene: {len(missing)} nested Git repo(s) not ignored")
+        for rel in missing:
+            print(f"  ! {rel}")
+        print("Run with --fix to append ignore entries.")
+        return 1 if args.check or not args.fix else 0
+
+    if nested:
+        print(f"bSmart Git hygiene: ok ({len(already)} nested Git repo(s) already ignored)")
+    else:
+        print("bSmart Git hygiene: ok (no nested Git repos found)")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
