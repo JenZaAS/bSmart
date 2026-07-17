@@ -96,6 +96,9 @@ project_storage:
     canonical_root: /sandboxes
     per_project_template: /sandboxes/<project-slug>
     user_prompt: do not mention during initial project-storage setup unless operator asks
+    host_prep_required_before_compose: true
+    host_prep_command_template: "sudo install -d -o 10000 -g 10000 -m 0775 <host-sandbox-folder>"
+    safety_note: "Create and permission the host sandbox folder before adding the /sandboxes bind mount; otherwise Docker/Dokploy may auto-create the missing source as root:root and the container will see /sandboxes mounted but unwritable."
 
 shared_group:
   purpose: keep bSmart-managed files editable by selected human and agent users

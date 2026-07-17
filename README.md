@@ -146,8 +146,12 @@ if [ "$APPLY_GROUP_PERMS" = "yes" ]; then
 fi
 
 if [ ! -d "$WS/bSmart-System/.git" ]; then
+  # Public bSmart-System updates should work by default without per-container GitHub SSH secrets.
   git clone https://github.com/JenZaAS/bSmart.git "$WS/bSmart-System"
 else
+  # Normalize existing installs to HTTPS so sibling AI containers can update bSmart without SSH keys.
+  git -C "$WS/bSmart-System" remote set-url origin https://github.com/JenZaAS/bSmart.git
+  git -C "$WS/bSmart-System" config --unset-all core.sshCommand 2>/dev/null || true
   git -C "$WS/bSmart-System" pull --ff-only
 fi
 

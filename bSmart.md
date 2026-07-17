@@ -62,7 +62,7 @@ project_storage:
 
 startup_sequence:
   - read this manifest
-  - run /workspace/bSmart-System/scripts/bsmart-startup-check when the helper exists
+  - run /workspace/bSmart-System/scripts/bsmart-startup-check --auto-pull when the helper exists
   - check content root exists
   - if bSmart_Agent.md missing, run bSmart_Setup.md
   - read bSmart_Agent.md

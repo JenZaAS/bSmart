@@ -104,8 +104,10 @@ bsmart_system_update_check:
   target: /workspace/bSmart-System only
   helper: /workspace/bSmart-System/scripts/bsmart-system-update-check
   startup_wrapper: /workspace/bSmart-System/scripts/bsmart-startup-check
+  default_remote: https://github.com/JenZaAS/bSmart.git
+  reason: public bSmart-System updates should work in sibling AI containers without per-container GitHub SSH secrets
   safe_actions:
-    - fetch/check remote status
+    - fetch/check remote status over HTTPS by default
     - auto-pull only when repo is clean, on expected branch, and fast-forward only
   never_auto_update:
     - /workspace/bSmart instance/content repo

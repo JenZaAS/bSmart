@@ -67,6 +67,7 @@ mounted_volume_flow:
       - before telling the operator to add a Compose/Dokploy volume, make sure the host project folder exists
       - if the folder is reachable from the agent through an existing writable host/share mount, create it directly and verify readability/writability
       - if the folder is not reachable from the agent, give one explicit host command to create it before the volume-line instruction
+      - present the host-prep command as a required first step, not as optional cleanup; Docker may auto-create missing bind-mount folders as root:root, causing permission failures inside the container
       - for SMB/CIFS project folders, prefer relying on the mount uid/gid/file_mode/dir_mode options rather than chowning files on the share
     host_command_template: mkdir -p {host_project_folder}
   feedback_template: |
@@ -112,7 +113,7 @@ sandbox_storage:
   setup_visibility: do not explain sandbox details during project-storage setup unless operator asks
   compose_recommendation: /opt/docker-workspace/<instance>/sandboxes:/sandboxes:rw
   predeploy_prepare:
-    rule: create and permission the host sandbox folder before suggesting/adding the /sandboxes volume
+    rule: create and permission the host sandbox folder before suggesting/adding the /sandboxes volume; do not tell the operator to add the volume until the folder creation command has succeeded
     default_inference:
       - infer host path backing /workspace using findmnt -T /workspace -n -o SOURCE
       - if the backing path ends with /workspace, use its sibling path named sandboxes
@@ -120,7 +121,8 @@ sandbox_storage:
       - example: /opt/docker-workspace/ai/jenza/workspace -> /opt/docker-workspace/ai/jenza/sandboxes
       - example: /mnt/share/JenZa -> /opt/docker-workspace/ai/jenza/sandboxes
       - only fall back to <host-sandbox-folder> when the host path cannot be inferred
-    host_command_template: mkdir -p /opt/docker-workspace/<instance>/sandboxes && chown 10000:10000 /opt/docker-workspace/<instance>/sandboxes && chmod 775 /opt/docker-workspace/<instance>/sandboxes
+    host_command_template: sudo install -d -o 10000 -g 10000 -m 0775 /opt/docker-workspace/<instance>/sandboxes
+    docker_bind_mount_pitfall: if a host bind-mount source does not exist when Compose/Dokploy starts the service, Docker can create it as root:root; the container then sees /sandboxes mounted but cannot write to it
   fallback: legacy per-project sandbox under /workspace/bSmart/Projects/<project>/sandbox when /sandboxes is unavailable
 ```
 

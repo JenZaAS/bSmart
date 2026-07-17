@@ -95,13 +95,14 @@ def quote_shell(value: str) -> str:
 
 
 def print_predeploy_commands(host_project_folder: str, host_sandbox_folder: str | None) -> None:
-    print("Pre-deploy host prep:")
+    print("Required host prep before adding Compose/Dokploy volume lines:")
+    print("  # Run these first, then verify they succeed. Do not add the volume lines before this step.")
     print(f"  sudo mkdir -p {quote_shell(host_project_folder)}")
     if host_sandbox_folder:
         q = quote_shell(host_sandbox_folder)
-        print(f"  sudo mkdir -p {q} && sudo chown 10000:10000 {q} && sudo chmod 775 {q}")
+        print(f"  sudo install -d -o 10000 -g 10000 -m 0775 {q}")
     else:
-        print("  sudo mkdir -p <host-sandbox-folder> && sudo chown 10000:10000 <host-sandbox-folder> && sudo chmod 775 <host-sandbox-folder>")
+        print("  sudo install -d -o 10000 -g 10000 -m 0775 <host-sandbox-folder>")
     print("")
 
 
@@ -207,7 +208,8 @@ def main() -> int:
         )
         print(f"bSmart project storage: wrote {spec_path}")
         print_predeploy_commands(args.host_project_folder, args.host_sandbox_folder)
-        print(f"Compose/Dokploy volume line: - {args.host_project_folder}:/projects:rw")
+        print("After the required host prep succeeds, add these Compose/Dokploy volume lines:")
+        print(f"Project volume line: - {args.host_project_folder}:/projects:rw")
         if args.host_sandbox_folder:
             print(f"Sandbox volume line: - {args.host_sandbox_folder}:/sandboxes:rw")
         else:
@@ -233,7 +235,8 @@ def main() -> int:
         )
         print(f"bSmart project storage: wrote {spec_path}")
         print_predeploy_commands(host_project_folder, args.host_sandbox_folder)
-        print(f"Compose/Dokploy volume line: - {host_project_folder}:/projects:rw")
+        print("After the required host prep succeeds, add these Compose/Dokploy volume lines:")
+        print(f"Project volume line: - {host_project_folder}:/projects:rw")
         if args.host_sandbox_folder:
             print(f"Sandbox volume line: - {args.host_sandbox_folder}:/sandboxes:rw")
         else:

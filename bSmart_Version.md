@@ -1,9 +1,27 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.7-draft
-updated: 2026-07-16 00:00 UTC
+current_version: 0.1.8-draft
+updated: 2026-07-17 08:48 UTC
 status: draft
+```
+
+## 0.1.8-draft
+
+```yaml
+release_type: draft_update
+scope:
+  - make project-storage setup treat host sandbox-folder creation as a required pre-compose step
+  - update bsmart-project-storage-check output so host prep appears before volume lines with an explicit do-not-add-yet warning
+  - use sudo install -d -o 10000 -g 10000 -m 0775 for VPS-local /sandboxes host folders
+  - make bSmart-enabled AI instances use HTTPS for public bSmart-System updates by default, without requiring per-container GitHub SSH secrets
+  - run the daily startup check with --auto-pull so clean bSmart-System repos can fast-forward safely
+safety:
+  - prevents Docker/Dokploy from auto-creating missing bind-mount sources as root:root and leaving /sandboxes unwritable inside containers
+  - bSmart-System auto-pull remains limited to clean, expected-branch, fast-forward-only updates; instance content under /workspace/bSmart is not auto-updated
+migration_notes:
+  - existing instances with root-owned sandbox bind sources can repair them with the same install -d command, then verify write access inside the container
+  - existing sibling AI installs that inherited SSH remotes should switch /workspace/bSmart-System origin to https://github.com/JenZaAS/bSmart.git and unset core.sshCommand
 ```
 
 ## 0.1.7-draft
