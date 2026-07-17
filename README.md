@@ -66,9 +66,56 @@ Bundled optional extensions may also ship inside the system repo under:
 
 Use this when a Hermes container already has a persistent `/workspace` mount and should start loading bSmart on new sessions.
 
-### Copy/paste installer
+### Recommended streamlined installer
 
-Run this from the Docker/VPS host. It prompts for the local container/service values.
+Run this from the Docker/VPS host. It fetches only the small bootstrap helper, then the helper clones/updates the live bSmart-System Git repo into the target workspace over HTTPS. bSmart itself is **not baked into the image**, so future system updates do not go stale.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/JenZaAS/bSmart/main/scripts/bsmart-bootstrap-workspace \
+  -o /tmp/bsmart-bootstrap-workspace
+sudo python3 /tmp/bsmart-bootstrap-workspace \
+  --workspace /opt/docker-workspace/ai/<slug>/workspace \
+  --agent-name "<AgentName>" \
+  --role "<short role>" \
+  --operator "<operator>" \
+  --host-project-root /mnt/share/<AgentName> \
+  --host-sandbox-root /opt/docker-workspace/ai/<slug>/sandboxes \
+  --content-git none
+```
+
+Required Compose/Dokploy defaults for every bSmart-enabled AI:
+
+```yaml
+working_dir: /workspace
+environment:
+  TERMINAL_CWD: /workspace
+  HERMES_WRITE_SAFE_ROOT: /workspace
+volumes:
+  - /opt/docker-workspace/ai/<slug>/workspace:/workspace
+  - /opt/docker-workspace/ai/<slug>/hermes-data:/opt/data
+  - /opt/docker-workspace/ai/<slug>/secrets:/run/secrets:ro
+```
+
+Recommended image/start-wrapper pattern:
+
+```yaml
+rule: The image may contain a tiny generic bootstrap hook or startup wrapper, but not a baked copy of bSmart-System.
+startup: If /workspace/HERMES.md or /workspace/bSmart-System is missing, run the workspace bootstrap helper against the mounted workspace before starting the gateway.
+remove_later: Once the workspace is initialized and verified, later blueprint revisions may remove the first-run bootstrap hook; bSmart stays live in the workspace Git checkout.
+```
+
+Verification after restart/redeploy:
+
+```text
+/new
+Hi
+```
+
+The first agent-authored reply should report bSmart startup, a clean/public HTTPS bSmart-System update check, and no per-container GitHub SSH-key warning.
+
+### Legacy interactive installer
+
+The older interactive installer remains below as a fallback when `curl` is unavailable or you want prompted values.
 
 ```bash
 sudo bash - <<'BASH'

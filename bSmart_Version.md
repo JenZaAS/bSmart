@@ -1,9 +1,27 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.8-draft
-updated: 2026-07-17 08:48 UTC
+current_version: 0.1.9-draft
+updated: 2026-07-17 09:21 UTC
 status: draft
+```
+
+## 0.1.9-draft
+
+```yaml
+release_type: draft_update
+scope:
+  - add scripts/bsmart-bootstrap-workspace as the streamlined host-side initializer for new bSmart-enabled AI workspaces
+  - document that all newly initialized AI agents should run bSmart by default
+  - clarify that bSmart-System must live as a workspace Git checkout, not as stale image-baked content
+  - allow images/start wrappers to include only a tiny first-run bootstrap hook that fetches the live workspace helper
+  - standardize new-agent Compose defaults: working_dir=/workspace, TERMINAL_CWD=/workspace, HERMES_WRITE_SAFE_ROOT=/workspace
+  - separate bSmart-System Git from optional instance/content Git to avoid setup ambiguity
+safety:
+  - helper creates only missing local content files and uses public HTTPS for bSmart-System updates
+  - bSmart content Git is opt-in/local-only by default; no remote is configured unless the operator chooses it
+verification:
+  - helper syntax-tested and exercised against a temporary workspace with local content Git enabled
 ```
 
 ## 0.1.8-draft

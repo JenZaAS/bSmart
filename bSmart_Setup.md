@@ -11,8 +11,10 @@ content_root: /workspace/bSmart
 
 ```yaml
 steps:
-  - verify_system_root
-  - configure_instance_git
+  - run_or_offer_streamlined_workspace_bootstrap_helper
+  - verify_system_root_public_https_git
+  - verify_compose_defaults_working_dir_terminal_cwd_and_safe_root
+  - configure_instance_git_only_if_operator_wants_content_git
   - configure_optional_shared_group
   - configure_approval_mode_and_guardrails
   - configure_project_storage
@@ -43,9 +45,21 @@ access_model:
   readonly_paths: ask_or_detect
   unavailable: ask_or_detect
 
+workspace_bootstrap:
+  streamlined_helper: /workspace/bSmart-System/scripts/bsmart-bootstrap-workspace
+  public_fetch_command: curl -fsSL https://raw.githubusercontent.com/JenZaAS/bSmart/main/scripts/bsmart-bootstrap-workspace -o /tmp/bsmart-bootstrap-workspace
+  purpose: initialize the mounted workspace quickly without baking bSmart-System into the image
+  defaults:
+    bsmart_system_remote: https://github.com/JenZaAS/bSmart.git
+    bsmart_system_updates: safe HTTPS fast-forward auto-pull
+    HERMES.md: minimal hook only
+    HERMES_WRITE_SAFE_ROOT: /workspace
+    TERMINAL_CWD: /workspace
+  rule: all new AI agents should be bSmart-enabled unless the operator explicitly says otherwise
+
 instance_git:
   purpose: make the AI instance content/projects durable and syncable without mixing them into the bSmart system repo
-  default: ask
+  default: ask only for /workspace/bSmart content; do not confuse this with bSmart-System Git, which is required system infrastructure
   choices:
     - none
     - local_git_only
