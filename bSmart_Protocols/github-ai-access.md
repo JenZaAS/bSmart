@@ -1,8 +1,8 @@
 # bSmart Protocol: GitHub access for AI containers
 
-This protocol defines the standard way bSmart/Hermes AI containers get access to GitHub repositories owned by JenZaAS or related organizations.
+This protocol defines the standard way bSmart/Hermes AI containers get access to GitHub repositories without placing credentials in images, repos, or workspaces.
 
-Use this for containers such as SschwAdmin, DigTech, JenZa, Hugo, and future bSmart-aware work containers.
+Use this for bSmart-aware admin/work containers that need controlled GitHub access.
 
 ## Goals
 
@@ -49,10 +49,9 @@ Each container gets its own host-side secrets directory mounted read-only as `/r
 Examples:
 
 ```text
-/opt/docker-workspace/hermes-admin/secrets
-/opt/docker-workspace/hermes-digtech/secrets
-/opt/docker-workspace/ai/jenza/secrets
-/opt/docker-workspace/hermes-hugo/secrets
+/opt/docker-workspace/<service-a>/secrets
+/opt/docker-workspace/<service-b>/secrets
+/opt/docker-workspace/ai/<agent-slug>/secrets
 ```
 
 Expected files when GitHub access is enabled:
@@ -116,7 +115,7 @@ id
 ls -l /run/secrets
 ssh-keygen -lf /run/secrets/jenzai_container_ed25519.pub
 GIT_SSH_COMMAND="ssh -i /run/secrets/jenzai_container_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/run/secrets/github_known_hosts" \
-  git ls-remote git@github.com:JenZaAS/<repo>.git HEAD
+  git ls-remote git@github.com:<owner>/<repo>.git HEAD
 ```
 
 If `gh` is needed and `/run/secrets/github_token` exists:
@@ -137,7 +136,7 @@ JenZaAI https://github.com/JenZaAI
 Clone private repos into that container's project storage, usually `/projects`:
 
 ```bash
-git clone git@github.com:JenZaAS/<repo>.git /projects/<repo>
+git clone git@github.com:<owner>/<repo>.git /projects/<repo>
 ```
 
 For updates:
@@ -154,32 +153,31 @@ git push -u origin ai/<short-task-name>
 
 Then create a PR with `gh` if token/API auth exists, or ask Erling to open the PR manually.
 
-## Example: DigTech access to `DIG_MATLAB`
+## Generic example: grant one AI container access to one private repo
 
-GitHub side:
-
-1. Add [JenZaAI](https://github.com/JenZaAI) to `JenZaAS/DIG_MATLAB` with `Write` permission.
-2. Confirm the DigTech public SSH key is added to the JenZaAI account, labelled for DigTech.
-
-VPS host secrets:
+1. Choose the target container/service slug, e.g. `<agent-slug>`.
+2. Choose the target repository, e.g. `<owner>/<repo>`.
+3. In GitHub, grant the machine user or GitHub App access to `<owner>/<repo>` with the least permission needed.
+4. Put that container's SSH key, public key, known-hosts file, and optional token into its host secrets directory:
 
 ```text
-/opt/docker-workspace/hermes-digtech/secrets/jenzai_container_ed25519
-/opt/docker-workspace/hermes-digtech/secrets/jenzai_container_ed25519.pub
-/opt/docker-workspace/hermes-digtech/secrets/github_known_hosts
-/opt/docker-workspace/hermes-digtech/secrets/github_token        # optional for gh/API
+/opt/docker-workspace/<agent-slug>/secrets/jenzai_container_ed25519
+/opt/docker-workspace/<agent-slug>/secrets/jenzai_container_ed25519.pub
+/opt/docker-workspace/<agent-slug>/secrets/github_known_hosts
+/opt/docker-workspace/<agent-slug>/secrets/github_token        # optional for gh/API
 ```
 
-After redeploying DigTech, verify inside DigTech:
+5. Redeploy the container so `/run/secrets` and `GIT_SSH_COMMAND` are active.
+6. Verify inside the container:
 
 ```bash
-git ls-remote git@github.com:JenZaAS/DIG_MATLAB.git HEAD
+git ls-remote git@github.com:<owner>/<repo>.git HEAD
 ```
 
-Clone:
+7. Clone into project storage:
 
 ```bash
-git clone git@github.com:JenZaAS/DIG_MATLAB.git /projects/DIG_MATLAB
+git clone git@github.com:<owner>/<repo>.git /projects/<repo>
 ```
 
 ## Guardrails
