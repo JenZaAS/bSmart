@@ -59,6 +59,10 @@ project_storage:
   preferred_sandbox_root: /sandboxes
   setup_protocol: /workspace/bSmart-System/bSmart_Protocols/project-storage.md
   compose_change_required_for_projects: true
+github_ai_access:
+  machine_user: JenZaAI
+  profile: https://github.com/JenZaAI
+  protocol: /workspace/bSmart-System/bSmart_Protocols/github-ai-access.md
 
 startup_sequence:
   - read this manifest

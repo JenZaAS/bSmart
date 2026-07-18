@@ -396,6 +396,34 @@ class BSearchHandler:
                 'description': description,
                 'source_reference': reference,
             }
+        huggingface_match = re.match(r'https?://huggingface\.co/([^/]+)/([^/#?]+)', reference)
+        if huggingface_match:
+            owner, model = huggingface_match.groups()
+            return {
+                'title': model,
+                'category': 'Local LLM / model runtime',
+                'source_type': 'Hugging Face model',
+                'predicted_interest': round(max(3.0, min(5.0, score - 0.05)), 2),
+                'final_score': round(max(3.0, min(5.0, score - 0.05)), 2),
+                'links': [reference],
+                'description': f'Hugging Face GGUF model {owner}/{model}; candidate input for local large-model runtime discussions.',
+                'source_reference': reference,
+            }
+
+        youtube_match = re.match(r'https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([A-Za-z0-9_-]{11})', reference)
+        if youtube_match:
+            video_id = youtube_match.group(1)
+            return {
+                'title': f'YouTube video {video_id}',
+                'category': 'Local LLM / model runtime',
+                'source_type': 'YouTube video',
+                'predicted_interest': round(max(3.0, min(5.0, score - 0.05)), 2),
+                'final_score': round(max(3.0, min(5.0, score - 0.05)), 2),
+                'links': [reference],
+                'description': 'YouTube video input for local large-model/runtime discussion.',
+                'source_reference': reference,
+            }
+
         try:
             known = self._find_item(reference, include_archived=True)
             return {

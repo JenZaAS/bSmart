@@ -10,6 +10,8 @@ Use this when creating or reviewing a containerized Hermes/bSmart instance such 
 - Constrained work containers like `hermes-jenza` or `hermes-digtech`.
 - Future bSmart-enabled containers that need private GitHub access and project storage.
 
+For the detailed GitHub credential/repo-access workflow, see `/workspace/bSmart-System/bSmart_Protocols/github-ai-access.md`.
+
 Do not treat this as a requirement for every bSmart installation on non-container platforms.
 
 ## Container boundaries

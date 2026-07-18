@@ -34,6 +34,12 @@ excludes:
 
 ## Secret storage boundary
 
+For GitHub repo access by AI containers, use the standard protocol in:
+
+```text
+/workspace/bSmart-System/bSmart_Protocols/github-ai-access.md
+```
+
 ```yaml
 rule: Do not store secrets under /workspace, bSmart repos, or project folders.
 preferred:

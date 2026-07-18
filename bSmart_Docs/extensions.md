@@ -43,3 +43,21 @@ purpose:
 ```
 
 Setup should ask whether to install/enable Fabric, default yes.
+
+## Graphify
+
+```yaml
+name: Graphify
+path: /workspace/bSmart-Extensions/Graphify
+source_path: /workspace/bSmart-System/bSmart-Extensions/Graphify
+license: MIT
+status: optional_bundled_extension
+purpose:
+  - controlled baseline-vs-Graphify evaluation kit
+  - reusable worker prompts and Hermes metrics collection
+  - future bGraph/backend comparison tests on code-heavy corpora
+install_model: copy_or_sync_from_bundled_source
+setup_default: no
+```
+
+Setup may ask whether to install/enable the Graphify evaluation kit when the AI container will run codebase/tool-comparison experiments.
