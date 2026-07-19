@@ -13,7 +13,11 @@ purpose: Reusable controlled baseline-vs-Graphify evaluation kit for AI containe
 
 This extension packages the repeatable test protocol we used for evaluating Graphify as a possible bSmart `bGraph` backend.
 
-It is **not** a claim that Graphify improves the base AI container. The clean docs-corpus test showed Graphify was usable and non-misleading, but not faster or cheaper than baseline search.
+It includes the evaluation harness and now also the missing runtime-readiness/setup helpers. It still does **not** vendor Graphify source code itself.
+
+## What this is not
+
+This is not a standalone Graphify runtime. A real Graphify phase requires an installed `graphify` CLI from `graphifyy`, a Graphify PR/local build, or another approved Graphify backend setup.
 
 ## Current conclusion from SschwAdmin docs-corpus test
 
@@ -25,6 +29,30 @@ It is **not** a claim that Graphify improves the base AI container. The clean do
 Strict interpretation:
 
 > Graphify did not improve the base docs-corpus workflow. It should be retested on code-heavy corpora, especially MATLAB, where graph relationships may matter more.
+
+## Quick readiness check
+
+After installing/copying this extension, run:
+
+```bash
+/workspace/bSmart-Extensions/Graphify/scripts/check_graphify_readiness.sh
+```
+
+If `graphify` is missing, the container can only do baseline/protocol dry runs until Graphify is installed.
+
+For a low-risk code-only runtime install:
+
+```bash
+uv tool install graphifyy
+```
+
+Then run a code-only extraction:
+
+```bash
+/workspace/bSmart-Extensions/Graphify/scripts/run_graphify_code_only.sh <CORPUS_ROOT> <EVAL_ROOT>
+```
+
+See `references/runtime-setup.md` for the fuller Codex/full-semantic path and safety notes.
 
 ## Install/copy model
 
@@ -38,7 +66,7 @@ Other AI containers can then use the prompts/scripts here to run controlled comp
 
 ## Protocol requirements
 
-Use the `controlled-tool-evaluation-protocol` skill.
+Use the `controlled-tool-evaluation-protocol` skill when available. The core rules are included here so the kit is usable even when that skill is missing.
 
 Core rules:
 
@@ -54,8 +82,12 @@ Core rules:
 
 ## Files
 
+- `references/runtime-setup.md` — Graphify runtime/readiness setup notes.
 - `prompts/baseline-worker.prompt.md` — strict baseline worker prompt template.
 - `prompts/graphify-worker.prompt.md` — strict Graphify worker prompt template.
+- `scripts/check_graphify_readiness.sh` — checks whether runtime pieces are present.
+- `scripts/run_graphify_code_only.sh` — runs low-risk code-only Graphify extraction.
+- `scripts/run_graphify_codex_smoke.sh` — verifies a scoped Codex CLI home before semantic extraction.
 - `scripts/collect_hermes_worker_metrics.py` — collect worker token/time metrics from Hermes `state.db`.
 - `templates/upstream-pr1787-comment.md` — polished upstream feedback draft for Graphify PR #1787.
 
