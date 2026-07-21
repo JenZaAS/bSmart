@@ -4,11 +4,21 @@
 bsmart:
   name: bSmart
   system_root: /workspace/bSmart-System
+  system_root_local: ./bSmart-System
   content_root: /workspace/bSmart
+  content_root_local: ./bSmart
   extensions_root: /workspace/bSmart-Extensions
+  extensions_root_local: ./bSmart-Extensions
   version_file: /workspace/bSmart-System/bSmart_Version.md
   setup_file: /workspace/bSmart-System/bSmart_Setup.md
   feature_registry: /workspace/bSmart-System/bSmart_Features.md
+
+path_resolution:
+  rule:
+    - prefer absolute /workspace paths when they exist
+    - otherwise resolve local relative paths from the folder containing the startup hook, e.g. AGENTS.md
+    - local/non-container agents should map /workspace/bSmart-System to ./bSmart-System and /workspace/bSmart to ./bSmart
+  purpose: Keep the same bSmart manifest usable by Hermes containers and local agents such as Mistral, OpenCode, or Codex.
 
 ethos:
   operator_sovereignty:
@@ -22,11 +32,17 @@ ethos:
 
 content_files:
   agent: /workspace/bSmart/bSmart_Agent.md
+  agent_local: ./bSmart/bSmart_Agent.md
   state: /workspace/bSmart/bSmart_State.md
+  state_local: ./bSmart/bSmart_State.md
   todo: /workspace/bSmart/bSmart_TODO.md
+  todo_local: ./bSmart/bSmart_TODO.md
   log: /workspace/bSmart/bSmart_Log.md
+  log_local: ./bSmart/bSmart_Log.md
   container_storage: /workspace/bSmart/State/container-storage.yaml
+  container_storage_local: ./bSmart/State/container-storage.yaml
   features: /workspace/bSmart-System/bSmart_Features.md
+  features_local: ./bSmart-System/bSmart_Features.md
 
 content_folders:
   projects_override_env: BSMART_PROJECT_ROOT
@@ -84,7 +100,7 @@ startup_sequence:
   - read bSmart_State.md when present
   - read bSmart_TODO.md when present
   - scan bSmart_Protocols summaries and load relevant protocols
-  - first visible assistant reply starts with: "bSmart — Reading HERMES.md."
+  - first visible assistant reply starts with: "bSmart — Loading bSmart."
   - then say: "Hi! Welcome back."
   - show compact TODO-oriented startup summary
   - ask whether to continue the current TODO item

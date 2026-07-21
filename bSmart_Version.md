@@ -11,6 +11,9 @@ status: draft
 ```yaml
 release_type: draft_update
 scope:
+  - replace Hermes-specific startup wording with framework-neutral "bSmart — Loading bSmart."
+  - add local path-resolution guidance so local AGENTS.md agents map /workspace/bSmart-System to ./bSmart-System and /workspace/bSmart to ./bSmart
+  - make project listing explicitly use the selected project root and not fail when legacy /workspace/bSmart/Projects is absent
   - add portable sandbox-root selection for local/non-container agents: BSMART_SANDBOX_ROOT, then /sandboxes, then ./sandboxes, then ./bSmart/Sandboxes
   - add portable project-root selection for local/non-container agents: BSMART_PROJECT_ROOT, then /projects, then ./projects, then /workspace/bSmart/Projects
   - add scripts/bsmart-bootstrap-workspace as the streamlined host-side initializer for new bSmart-enabled AI workspaces
