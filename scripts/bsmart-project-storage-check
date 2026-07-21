@@ -19,7 +19,21 @@ import sys
 from pathlib import Path
 
 DEFAULT_CONTENT_ROOT = Path("/workspace/bSmart")
-DEFAULT_SPEC = DEFAULT_CONTENT_ROOT / "State" / "container-storage.yaml"
+SCRIPT_DIR = Path(__file__).resolve().parent
+SYSTEM_ROOT = SCRIPT_DIR.parent
+WORKSPACE_ROOT = SYSTEM_ROOT.parent
+CONTENT_ROOT = DEFAULT_CONTENT_ROOT if DEFAULT_CONTENT_ROOT.exists() else WORKSPACE_ROOT / "bSmart"
+DEFAULT_SPEC = CONTENT_ROOT / "State" / "container-storage.yaml"
+
+
+def workspace_root() -> Path:
+    env_root = os.environ.get("BSMART_WORKSPACE_ROOT")
+    if env_root:
+        return Path(env_root).expanduser()
+    cwd = Path.cwd()
+    if (cwd / "bSmart-System").is_dir() or (cwd / "AGENTS.md").exists() or (cwd / "HERMES.md").exists():
+        return cwd
+    return WORKSPACE_ROOT
 
 
 def access(path: Path) -> dict[str, object]:
@@ -52,8 +66,9 @@ def project_root_candidates() -> list[tuple[str, Path]]:
     candidates.extend(
         [
             ("/projects", Path("/projects")),
-            ("./projects", Path.cwd() / "projects"),
+            ("./projects", workspace_root() / "projects"),
             ("fallback", Path("/workspace/bSmart/Projects")),
+            ("./bSmart/Projects", workspace_root() / "bSmart" / "Projects"),
         ]
     )
     return candidates
@@ -74,8 +89,8 @@ def sandbox_root_candidates() -> list[tuple[str, Path]]:
     candidates.extend(
         [
             ("/sandboxes", Path("/sandboxes")),
-            ("./sandboxes", Path.cwd() / "sandboxes"),
-            ("./bSmart/Sandboxes", Path.cwd() / "bSmart" / "Sandboxes"),
+            ("./sandboxes", workspace_root() / "sandboxes"),
+            ("./bSmart/Sandboxes", workspace_root() / "bSmart" / "Sandboxes"),
         ]
     )
     return candidates

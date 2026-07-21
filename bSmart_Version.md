@@ -11,6 +11,7 @@ status: draft
 ```yaml
 release_type: draft_update
 scope:
+  - make startup/storage helper scripts infer workspace/content roots from their own bSmart-System checkout, so they work from VPS /workspace and local AGENTS.md workspaces
   - document CIFS/SMB executable-bit pitfall and prefer python3 <script> invocations for bSmart Python helpers
   - replace Hermes-specific startup wording with framework-neutral "bSmart — Loading bSmart."
   - add local path-resolution guidance so local AGENTS.md agents map /workspace/bSmart-System to ./bSmart-System and /workspace/bSmart to ./bSmart

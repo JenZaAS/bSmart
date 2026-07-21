@@ -15,8 +15,12 @@ import subprocess
 import sys
 from pathlib import Path
 
-DEFAULT_REPO = Path("/workspace/bSmart-System")
-DEFAULT_STATE = Path("/workspace/bSmart/State/bsmart-system-update.yaml")
+SCRIPT_DIR = Path(__file__).resolve().parent
+SYSTEM_ROOT = SCRIPT_DIR.parent
+WORKSPACE_ROOT = SYSTEM_ROOT.parent
+CONTENT_ROOT = Path("/workspace/bSmart") if Path("/workspace/bSmart").exists() else WORKSPACE_ROOT / "bSmart"
+DEFAULT_REPO = SYSTEM_ROOT
+DEFAULT_STATE = CONTENT_ROOT / "State" / "bsmart-system-update.yaml"
 
 
 def today() -> str:

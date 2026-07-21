@@ -18,11 +18,15 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import subprocess
+import sys
 from pathlib import Path
 
-DEFAULT_STATE = Path("/workspace/bSmart/State/bsmart-startup-check.yaml")
-DEFAULT_STORAGE_SPEC = Path("/workspace/bSmart/State/container-storage.yaml")
 SCRIPT_DIR = Path(__file__).resolve().parent
+SYSTEM_ROOT = SCRIPT_DIR.parent
+WORKSPACE_ROOT = SYSTEM_ROOT.parent
+CONTENT_ROOT = Path("/workspace/bSmart") if Path("/workspace/bSmart").exists() else WORKSPACE_ROOT / "bSmart"
+DEFAULT_STATE = CONTENT_ROOT / "State" / "bsmart-startup-check.yaml"
+DEFAULT_STORAGE_SPEC = CONTENT_ROOT / "State" / "container-storage.yaml"
 
 
 def today() -> str:
@@ -54,7 +58,7 @@ def write_state(path: Path, project_storage_checked: bool, system_update_checked
 
 
 def run_script(script: str, args: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run([str(SCRIPT_DIR / script), *args], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return subprocess.run([sys.executable, str(SCRIPT_DIR / script), *args], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
 def print_result(title: str, proc: subprocess.CompletedProcess[str]) -> None:
