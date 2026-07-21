@@ -33,7 +33,10 @@ content_folders:
   projects_preferred: /projects
   projects_local_relative: ./projects
   projects_fallback: /workspace/bSmart/Projects
+  sandboxes_override_env: BSMART_SANDBOX_ROOT
   sandboxes_preferred: /sandboxes
+  sandboxes_local_relative: ./sandboxes
+  sandboxes_local_bsmart_fallback: ./bSmart/Sandboxes
   workdocs: /workspace/bSmart/Workdocs
   library: /workspace/bSmart/Library
 
@@ -60,7 +63,10 @@ project_storage:
   preferred_project_root: /projects
   local_project_root: ./projects
   fallback_project_root: /workspace/bSmart/Projects
+  sandbox_override_env: BSMART_SANDBOX_ROOT
   preferred_sandbox_root: /sandboxes
+  local_sandbox_root: ./sandboxes
+  local_bsmart_sandbox_root: ./bSmart/Sandboxes
   setup_protocol: /workspace/bSmart-System/bSmart_Protocols/project-storage.md
   compose_change_required_for_projects: true
 github_ai_access:

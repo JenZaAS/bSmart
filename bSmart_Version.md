@@ -11,6 +11,7 @@ status: draft
 ```yaml
 release_type: draft_update
 scope:
+  - add portable sandbox-root selection for local/non-container agents: BSMART_SANDBOX_ROOT, then /sandboxes, then ./sandboxes, then ./bSmart/Sandboxes
   - add portable project-root selection for local/non-container agents: BSMART_PROJECT_ROOT, then /projects, then ./projects, then /workspace/bSmart/Projects
   - add scripts/bsmart-bootstrap-workspace as the streamlined host-side initializer for new bSmart-enabled AI workspaces
   - document that all newly initialized AI agents should run bSmart by default

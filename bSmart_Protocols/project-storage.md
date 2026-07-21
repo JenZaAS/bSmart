@@ -115,9 +115,22 @@ internal_bsmart_flow:
 
 ```yaml
 sandbox_storage:
+  override_env: BSMART_SANDBOX_ROOT
   canonical_container_path: /sandboxes
+  local_relative_path: ./sandboxes
+  local_bsmart_fallback_path: ./bSmart/Sandboxes
   structure: /sandboxes/<project-slug>
   git_policy: outside instance Git by default
+  selection_rule:
+    - if BSMART_SANDBOX_ROOT is set and points to a readable/writable directory: use BSMART_SANDBOX_ROOT
+    - else if /sandboxes exists and is readable/writable: use /sandboxes
+    - else if ./sandboxes exists and is readable/writable from the current workspace: use ./sandboxes
+    - else if ./bSmart/Sandboxes exists and is readable/writable from the current workspace: use ./bSmart/Sandboxes
+    - else use legacy per-project sandbox under the selected project root only when explicitly needed
+  rationale:
+    - VPS/container agents should keep heavy scratch/build/test/cache work on VPS-local /sandboxes
+    - local/non-container agents should use local sandboxes without writing heavy runtime files into project source or Git
+    - BSMART_SANDBOX_ROOT gives operators and wrappers an explicit cross-framework override
   setup_visibility: do not explain sandbox details during project-storage setup unless operator asks
   compose_recommendation: /opt/docker-workspace/<instance>/sandboxes:/sandboxes:rw
   predeploy_prepare:

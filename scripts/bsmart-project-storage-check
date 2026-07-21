@@ -66,6 +66,28 @@ def select_project_root() -> tuple[str, Path] | None:
     return None
 
 
+def sandbox_root_candidates() -> list[tuple[str, Path]]:
+    candidates: list[tuple[str, Path]] = []
+    override = os.environ.get("BSMART_SANDBOX_ROOT")
+    if override:
+        candidates.append(("BSMART_SANDBOX_ROOT", Path(override).expanduser()))
+    candidates.extend(
+        [
+            ("/sandboxes", Path("/sandboxes")),
+            ("./sandboxes", Path.cwd() / "sandboxes"),
+            ("./bSmart/Sandboxes", Path.cwd() / "bSmart" / "Sandboxes"),
+        ]
+    )
+    return candidates
+
+
+def select_sandbox_root() -> tuple[str, Path] | None:
+    for label, path in sandbox_root_candidates():
+        if usable(path):
+            return label, path
+    return None
+
+
 def run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -166,27 +188,34 @@ sandbox_storage:
 
 
 def print_status(spec_path: Path) -> int:
-    candidates = project_root_candidates()
-    sandboxes = Path("/sandboxes")
+    project_candidates = project_root_candidates()
+    sandbox_candidates = sandbox_root_candidates()
 
     spec_exists = spec_path.exists()
-    sandboxes_status = status_word(access(sandboxes))
-    selected = select_project_root()
+    selected_project = select_project_root()
+    selected_sandbox = select_sandbox_root()
 
     print("bSmart project storage check:")
     print(f"  spec: {'present' if spec_exists else 'missing'} ({spec_path})")
-    for label, path in candidates:
+    for label, path in project_candidates:
         display = str(path) if label != str(path) else label
         print(f"  project candidate {label}: {status_word(access(path))} ({display})")
-    print(f"  /sandboxes: {sandboxes_status}")
-    if selected:
-        print(f"  selected_project_root: {selected[1]} ({selected[0]})")
+    for label, path in sandbox_candidates:
+        display = str(path) if label != str(path) else label
+        print(f"  sandbox candidate {label}: {status_word(access(path))} ({display})")
+    if selected_project:
+        print(f"  selected_project_root: {selected_project[1]} ({selected_project[0]})")
+    if selected_sandbox:
+        print(f"  selected_sandbox_root: {selected_sandbox[1]} ({selected_sandbox[0]})")
 
     if spec_exists:
-        if selected:
-            print("  result: configured; selected project root is usable")
+        if selected_project and selected_sandbox:
+            print("  result: configured; selected project and sandbox roots are usable")
             return 0
-        print("  result: spec exists, but no configured project root is usable; set BSMART_PROJECT_ROOT, add /projects, or launch from a workspace with ./projects")
+        if not selected_project:
+            print("  result: spec exists, but no configured project root is usable; set BSMART_PROJECT_ROOT, add /projects, or launch from a workspace with ./projects")
+        if not selected_sandbox:
+            print("  result: spec exists, but no sandbox root is usable; set BSMART_SANDBOX_ROOT, add /sandboxes, or launch from a workspace with ./sandboxes")
         return 1
 
     print("  result: setup_required")

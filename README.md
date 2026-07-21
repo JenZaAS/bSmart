@@ -273,6 +273,7 @@ cat > "$WS/bSmart/bSmart_State.md" <<'EOF'
 
 Notes:
 - Project root selection is `BSMART_PROJECT_ROOT`, then `/projects`, then `./projects`, then `/workspace/bSmart/Projects`.
+- Sandbox root selection is `BSMART_SANDBOX_ROOT`, then `/sandboxes`, then `./sandboxes`, then `./bSmart/Sandboxes`.
 EOF
 
 cat > "$WS/bSmart/bSmart_TODO.md" <<'EOF'

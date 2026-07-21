@@ -123,7 +123,7 @@ def main() -> int:
     system_action = ensure_system_repo(workspace, args.repo_url)
 
     content_root = workspace / "bSmart"
-    for rel in ["Docs", "Library", "Projects", "Workdocs", "State"]:
+    for rel in ["Docs", "Library", "Projects", "Sandboxes", "Workdocs", "State"]:
         install_dir(content_root / rel, args.uid, args.gid)
     install_dir(workspace / "bSmart-Extensions", args.uid, args.gid)
 
@@ -162,6 +162,19 @@ operating_policy:
   posture: concise, practical, confidentiality-aware
   host_changes: require explicit operator approval
   bsmart_system_updates: public HTTPS fast-forward only
+
+local_paths:
+  content_root: /workspace/bSmart
+  project_root_selection:
+    - BSMART_PROJECT_ROOT
+    - {args.projects_root}
+    - ./projects
+    - /workspace/bSmart/Projects
+  sandbox_root_selection:
+    - BSMART_SANDBOX_ROOT
+    - {args.sandboxes_root}
+    - ./sandboxes
+    - ./bSmart/Sandboxes
 ```
 """
     if write_if_missing(content_root / "bSmart_Agent.md", agent_md):

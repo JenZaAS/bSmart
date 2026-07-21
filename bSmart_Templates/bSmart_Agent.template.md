@@ -64,6 +64,11 @@ local_paths:
     - /projects
     - ./projects
     - /workspace/bSmart/Projects
+  sandbox_root_selection:
+    - BSMART_SANDBOX_ROOT
+    - /sandboxes
+    - ./sandboxes
+    - ./bSmart/Sandboxes
   workdocs: /workspace/bSmart/Workdocs
   library: /workspace/bSmart/Library
   log: /workspace/bSmart/bSmart_Log.md
