@@ -77,7 +77,11 @@ project_storage:
   spec_file: /workspace/bSmart/State/container-storage.yaml
   trigger: ask when spec_file is missing
   daily_startup_helper: /workspace/bSmart-System/scripts/bsmart-startup-check
+  daily_startup_invocation: python3 /workspace/bSmart-System/scripts/bsmart-startup-check --auto-pull
+  daily_startup_local_invocation: python3 ./bSmart-System/scripts/bsmart-startup-check --auto-pull
   storage_helper: /workspace/bSmart-System/scripts/bsmart-project-storage-check
+  storage_helper_invocation: python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check
+  storage_helper_local_invocation: python3 ./bSmart-System/scripts/bsmart-project-storage-check
   prompt_style: Telegram buttons when supported
   prompt_text: |
     bSmart - Project configuration
@@ -100,11 +104,13 @@ project_storage:
 
       /mnt/share/MyAI
     compose_line_template: "- <host-project-folder>:/projects:rw"
-    helper_command: "bsmart-project-storage-check --configure-mounted --host-project-folder <host-project-folder>"
+    helper_command: "python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check --configure-mounted --host-project-folder <host-project-folder>"
+    helper_command_local: "python3 ./bSmart-System/scripts/bsmart-project-storage-check --configure-mounted --host-project-folder <host-project-folder>"
   internal_bsmart:
     infer_workspace_host_path: findmnt -T /workspace -n -o SOURCE
     compose_line_template: "- <host-workspace>/bSmart/Projects:/projects:rw"
-    helper_command: "bsmart-project-storage-check --configure-internal"
+    helper_command: "python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check --configure-internal"
+    helper_command_local: "python3 ./bSmart-System/scripts/bsmart-project-storage-check --configure-internal"
     fallback_if_inference_fails: ask operator for the host path backing /workspace
   sandbox:
     canonical_root: /sandboxes

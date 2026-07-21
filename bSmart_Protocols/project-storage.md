@@ -29,7 +29,11 @@ project_root_selection:
 project_storage_setup:
   trigger: /workspace/bSmart/State/container-storage.yaml missing
   daily_check_helper: /workspace/bSmart-System/scripts/bsmart-startup-check
+  daily_check_invocation: python3 /workspace/bSmart-System/scripts/bsmart-startup-check --auto-pull
+  daily_check_local_invocation: python3 ./bSmart-System/scripts/bsmart-startup-check --auto-pull
   storage_helper: /workspace/bSmart-System/scripts/bsmart-project-storage-check
+  storage_helper_invocation: python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check
+  storage_helper_local_invocation: python3 ./bSmart-System/scripts/bsmart-project-storage-check
   daily_state_file: /workspace/bSmart/State/bsmart-startup-check.yaml
   prompt_style: use Telegram button choices through the clarify tool where supported; do not replace this with a plain-text question on Telegram
   prompt_text: |
@@ -165,6 +169,8 @@ container_storage_spec:
 ```yaml
 startup_check_behavior:
   helper: /workspace/bSmart-System/scripts/bsmart-startup-check
+  invocation: python3 /workspace/bSmart-System/scripts/bsmart-startup-check --auto-pull
+  local_invocation: python3 ./bSmart-System/scripts/bsmart-startup-check --auto-pull
   cadence: once per UTC day
   force_option: --force
   no_side_effects_by_default:
@@ -176,8 +182,11 @@ startup_check_behavior:
   throttle_exception:
     - missing container-storage.yaml must still be reported even if the daily startup check already ran today
   local_spec_creation:
-    mounted_volume: bsmart-project-storage-check --configure-mounted --host-project-folder <host-path>
-    internal_bsmart: bsmart-project-storage-check --configure-internal
+    mounted_volume: python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check --configure-mounted --host-project-folder <host-path>
+    mounted_volume_local: python3 ./bSmart-System/scripts/bsmart-project-storage-check --configure-mounted --host-project-folder <host-path>
+    internal_bsmart: python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check --configure-internal
+    internal_bsmart_local: python3 ./bSmart-System/scripts/bsmart-project-storage-check --configure-internal
+  executable_bit_pitfall: On CIFS/SMB-backed workspaces, file_mode mount options may ignore Git executable bits. Prefer python3 <script> for Python helpers.
 ```
 
 ```yaml

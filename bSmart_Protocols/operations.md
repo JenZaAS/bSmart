@@ -120,6 +120,8 @@ bsmart_system_update_check:
 bsmart_startup_checks:
   purpose: Run the concrete /new checks that are safe for an AI instance to execute locally.
   helper: /workspace/bSmart-System/scripts/bsmart-startup-check
+  invocation: python3 /workspace/bSmart-System/scripts/bsmart-startup-check --auto-pull
+  local_invocation: python3 ./bSmart-System/scripts/bsmart-startup-check --auto-pull
   cadence: once per UTC day
   state_file: /workspace/bSmart/State/bsmart-startup-check.yaml
   checks:
@@ -127,6 +129,7 @@ bsmart_startup_checks:
     - project/sandbox storage spec via bsmart-project-storage-check
   important_behavior:
     - missing container-storage.yaml is reported as setup_required
+    - on CIFS/SMB-backed workspaces executable bits may not be honored; run Python helpers with python3 <script> instead of executing the script path directly
     - the helper does not create the spec or change Compose/Dokploy unless an explicit configure subcommand is run
 ```
 

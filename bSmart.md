@@ -92,7 +92,7 @@ github_ai_access:
 
 startup_sequence:
   - read this manifest
-  - run /workspace/bSmart-System/scripts/bsmart-startup-check --auto-pull when the helper exists
+  - run python3 /workspace/bSmart-System/scripts/bsmart-startup-check --auto-pull when the helper exists; use the local ./bSmart-System path on non-container agents
   - check content root exists
   - if bSmart_Agent.md missing, run bSmart_Setup.md
   - read bSmart_Agent.md

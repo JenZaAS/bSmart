@@ -11,6 +11,7 @@ status: draft
 ```yaml
 release_type: draft_update
 scope:
+  - document CIFS/SMB executable-bit pitfall and prefer python3 <script> invocations for bSmart Python helpers
   - replace Hermes-specific startup wording with framework-neutral "bSmart — Loading bSmart."
   - add local path-resolution guidance so local AGENTS.md agents map /workspace/bSmart-System to ./bSmart-System and /workspace/bSmart to ./bSmart
   - make project listing explicitly use the selected project root and not fail when legacy /workspace/bSmart/Projects is absent
