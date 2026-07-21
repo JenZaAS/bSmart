@@ -272,7 +272,7 @@ cat > "$WS/bSmart/bSmart_State.md" <<'EOF'
 - Active project (short name): `none`
 
 Notes:
-- Projects live under `/workspace/bSmart/Projects/`.
+- Project root selection is `BSMART_PROJECT_ROOT`, then `/projects`, then `./projects`, then `/workspace/bSmart/Projects`.
 EOF
 
 cat > "$WS/bSmart/bSmart_TODO.md" <<'EOF'

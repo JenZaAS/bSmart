@@ -9,12 +9,20 @@ protocol:
 
 ```yaml
 project_root_selection:
+  override_env: BSMART_PROJECT_ROOT
   canonical_container_path: /projects
+  local_relative_path: ./projects
   fallback_container_path: /workspace/bSmart/Projects
   rule:
-    - if /projects exists and is readable/writable: use /projects
+    - if BSMART_PROJECT_ROOT is set and points to a readable/writable directory: use BSMART_PROJECT_ROOT
+    - else if /projects exists and is readable/writable: use /projects
+    - else if ./projects exists and is readable/writable from the current workspace: use ./projects
     - else use /workspace/bSmart/Projects
     - else run project-storage setup
+  rationale:
+    - containerized Hermes instances can keep using /projects as the canonical mounted project root
+    - local/non-container agents launched from a bSmart instance folder can use the colocated projects/ subfolder without relying on AGENTS.md
+    - BSMART_PROJECT_ROOT gives operators and wrappers an explicit cross-framework override
 ```
 
 ```yaml

@@ -9,7 +9,11 @@ protocol:
 
 ```yaml
 paths:
-  projects_root: /workspace/bSmart/Projects
+  project_root_selection:
+    - BSMART_PROJECT_ROOT when set to a readable/writable directory
+    - /projects when readable/writable
+    - ./projects when readable/writable from the current bSmart/workspace folder
+    - /workspace/bSmart/Projects as legacy fallback
   state_file: /workspace/bSmart/bSmart_State.md
 ```
 

@@ -29,7 +29,9 @@ content_files:
   features: /workspace/bSmart-System/bSmart_Features.md
 
 content_folders:
+  projects_override_env: BSMART_PROJECT_ROOT
   projects_preferred: /projects
+  projects_local_relative: ./projects
   projects_fallback: /workspace/bSmart/Projects
   sandboxes_preferred: /sandboxes
   workdocs: /workspace/bSmart/Workdocs
@@ -54,7 +56,9 @@ instance_git:
 
 project_storage:
   spec_file: /workspace/bSmart/State/container-storage.yaml
+  override_env: BSMART_PROJECT_ROOT
   preferred_project_root: /projects
+  local_project_root: ./projects
   fallback_project_root: /workspace/bSmart/Projects
   preferred_sandbox_root: /sandboxes
   setup_protocol: /workspace/bSmart-System/bSmart_Protocols/project-storage.md

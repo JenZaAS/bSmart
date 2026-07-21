@@ -40,6 +40,32 @@ def status_word(info: dict[str, object]) -> str:
     return "present_but_not_usable"
 
 
+def usable(path: Path) -> bool:
+    return status_word(access(path)) == "usable"
+
+
+def project_root_candidates() -> list[tuple[str, Path]]:
+    candidates: list[tuple[str, Path]] = []
+    override = os.environ.get("BSMART_PROJECT_ROOT")
+    if override:
+        candidates.append(("BSMART_PROJECT_ROOT", Path(override).expanduser()))
+    candidates.extend(
+        [
+            ("/projects", Path("/projects")),
+            ("./projects", Path.cwd() / "projects"),
+            ("fallback", Path("/workspace/bSmart/Projects")),
+        ]
+    )
+    return candidates
+
+
+def select_project_root() -> tuple[str, Path] | None:
+    for label, path in project_root_candidates():
+        if usable(path):
+            return label, path
+    return None
+
+
 def run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -140,26 +166,27 @@ sandbox_storage:
 
 
 def print_status(spec_path: Path) -> int:
-    projects = Path("/projects")
-    fallback = Path("/workspace/bSmart/Projects")
+    candidates = project_root_candidates()
     sandboxes = Path("/sandboxes")
 
     spec_exists = spec_path.exists()
-    projects_status = status_word(access(projects))
-    fallback_status = status_word(access(fallback))
     sandboxes_status = status_word(access(sandboxes))
+    selected = select_project_root()
 
     print("bSmart project storage check:")
     print(f"  spec: {'present' if spec_exists else 'missing'} ({spec_path})")
-    print(f"  /projects: {projects_status}")
-    print(f"  fallback: {fallback_status} ({fallback})")
+    for label, path in candidates:
+        display = str(path) if label != str(path) else label
+        print(f"  project candidate {label}: {status_word(access(path))} ({display})")
     print(f"  /sandboxes: {sandboxes_status}")
+    if selected:
+        print(f"  selected_project_root: {selected[1]} ({selected[0]})")
 
     if spec_exists:
-        if projects_status == "usable":
-            print("  result: configured; canonical project root is usable")
+        if selected:
+            print("  result: configured; selected project root is usable")
             return 0
-        print("  result: spec exists, but /projects is not usable; Compose/Dokploy may still need the /projects mount")
+        print("  result: spec exists, but no configured project root is usable; set BSMART_PROJECT_ROOT, add /projects, or launch from a workspace with ./projects")
         return 1
 
     print("  result: setup_required")
