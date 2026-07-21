@@ -1,0 +1,23 @@
+# Normalize text in Git for cross-platform agents/editors.
+* text=auto eol=lf
+
+# Common binary assets/documents.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.docx binary
+*.pptx binary
+*.xlsx binary
+*.zip binary
+*.7z binary
+*.tar binary
+*.gz binary
+*.tgz binary
+*.mp3 binary
+*.mp4 binary
+*.wav binary
+*.ogg binary
