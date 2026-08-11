@@ -28,6 +28,18 @@ visible_action_notes:
     - workflow steps
   rule: Use the bSmart label consistently regardless of the immediate action source or reason.
   style: Gerund phrase, concise, only when useful for traceability or operator awareness.
+  sensitive_action_expansion:
+    trigger: Use only when an action is sensitive, user-visible, or likely to trigger a framework approval prompt.
+    rule: Add a compact plain-language note before the tool call; do not expand routine status notes.
+    max_length: "1-2 short sentences"
+    include_when_useful:
+      - high-level meaning of the action
+      - main risk or why it may be flagged
+      - likely approval scope suggestion, e.g. prefer Allow Once for one-off SSH/setup checks
+    avoid:
+      - full command-by-command breakdowns unless the operator asks
+      - repeated long explanations for routine reads/checks
+    example: "bSmart — Preparing GitHub SSH setup: this adds GitHub to SSH known_hosts and tests login. It may be flagged because it edits an SSH dotfile; if prompted, prefer Allow Once."
 
 approval_events_to_log:
   - destructive_change
