@@ -117,6 +117,35 @@ class BSmartMailmanTests(unittest.TestCase):
         self.assertEqual(summary["messages"][0]["subject"], "Check me")
         self.assertEqual(summary["wake"][0]["type"], "mail_arrived")
 
+    def test_cli_tickle_is_stable_and_ack_moves_wake_marker(self):
+        self.module.send_message(self.registry, "FM", "Admin", "Tickle me", "Body")
+        self.module.deliver(self.registry)
+        first = self.run_cli(sys.executable, str(BMAIL), "tickle", "--mailbox", str(self.admin), expect=1)
+        second = self.run_cli(sys.executable, str(BMAIL), "tickle", "--mailbox", str(self.admin), expect=1)
+        self.assertEqual(first.stdout, second.stdout)
+        summary = json.loads(first.stdout)
+        self.assertEqual(summary["pending_wake"], 1)
+        self.assertEqual(summary["items"][0]["subject"], "Tickle me")
+        wake_id = summary["items"][0]["wake_id"]
+        ack = self.run_cli(sys.executable, str(BMAIL), "ack-wake", "--mailbox", str(self.admin), "--id", wake_id)
+        self.assertIn("acknowledged:", ack.stdout)
+        quiet = self.run_cli(sys.executable, str(BMAIL), "tickle", "--mailbox", str(self.admin))
+        self.assertEqual(quiet.stdout, "")
+        self.assertEqual(list((self.admin / "wake" / "pending").glob("*.json")), [])
+        self.assertEqual(len(list((self.admin / "wake" / "sent").glob("*.json"))), 1)
+
+    def test_cli_tickle_ignores_stale_wake_for_read_message(self):
+        self.module.send_message(self.registry, "FM", "Admin", "Already read", "Body")
+        self.module.deliver(self.registry)
+        msg_id = json.loads(next((self.admin / "inbox" / "new").glob("*.json")).read_text(encoding="utf-8"))["id"]
+        self.module.read_message(self.admin, msg_id)
+        quiet = self.run_cli(sys.executable, str(BMAIL), "tickle", "--mailbox", str(self.admin))
+        self.assertEqual(quiet.stdout, "")
+        check = self.run_cli(sys.executable, str(BMAIL), "check", "--mailbox", str(self.admin), expect=1)
+        summary = json.loads(check.stdout)
+        self.assertEqual(summary["new"], 0)
+        self.assertEqual(summary["wake_pending"], 1)
+
     def test_send_policy_open_with_deny_exception_blocks_recipient(self):
         data = json.loads(self.registry.read_text(encoding="utf-8"))
         data["agents"]["Admin"]["send_policy"] = {"mode": "open", "allow_to": [], "deny_to": ["FM"]}

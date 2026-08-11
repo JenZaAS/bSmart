@@ -436,6 +436,54 @@ def read_message(mailbox: Path, message_id: str) -> dict[str, Any]:
     raise MailmanError(f"message not found in mailbox inbox: {message_id}")
 
 
+def move_wake_marker(mailbox: Path, wake_id: str, dest_name: str) -> Path:
+    init_mailbox(mailbox)
+    filename = safe_message_filename(wake_id)
+    source = mailbox / "wake" / "pending" / filename
+    if not source.exists():
+        raise MailmanError(f"wake marker not found: {wake_id}")
+    dest = unique_path(mailbox / "wake" / dest_name, filename)
+    shutil.move(str(source), str(dest))
+    return dest
+
+
+def tickle_summary(mailbox: Path) -> dict[str, Any]:
+    """Stable machine-readable summary for cron monitor-mode.
+
+    Intentionally omits current timestamps so unchanged pending wake markers
+    hash to the same output and Hermes monitor jobs stay silent.
+    """
+    init_mailbox(mailbox)
+    wake = wake_pending(mailbox)
+    messages = inbox(mailbox)
+    by_id = {row["id"]: row for row in messages}
+    items = []
+    for marker in wake:
+        message_id = marker.get("message_id", "")
+        message_row = by_id.get(message_id)
+        if not message_row:
+            # A pending wake whose message is no longer in inbox/new is stale
+            # for wake purposes. `bMail check` still exposes it for cleanup,
+            # but the cron tickle should not re-wake the agent forever.
+            continue
+        item = {
+            "wake_id": marker.get("id", ""),
+            "message_id": message_id,
+            "from": marker.get("from", ""),
+            "subject": marker.get("subject", ""),
+            "message_path": message_row.get("path", ""),
+            "wake_path": marker.get("path", ""),
+        }
+        items.append(item)
+    return {
+        "mailbox": str(mailbox),
+        "pending_wake": len(items),
+        "new_messages": len(messages),
+        "items": items,
+        "command_hint": "python3 /workspace/bSmart-System/scripts/bMail read --mailbox /mail --id <message_id>",
+    }
+
+
 def cmd_mailman(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="bsmart-mailman", description="bSmart deterministic non-agent mail relay")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -485,6 +533,11 @@ def cmd_bmail(argv: list[str] | None = None) -> int:
     p_inbox.add_argument("--mailbox", required=True)
     p_check = sub.add_parser("check", help="quickly summarize inbox/new and wake/pending for prompts like 'check your mail'")
     p_check.add_argument("--mailbox", default=os.environ.get("BSMART_MAIL_ROOT", "/mail"))
+    p_tickle = sub.add_parser("tickle", help="stable wake-marker summary for Hermes cron monitor-mode; silent when no pending wake markers")
+    p_tickle.add_argument("--mailbox", default=os.environ.get("BSMART_MAIL_ROOT", "/mail"))
+    p_ack_wake = sub.add_parser("ack-wake", help="move one wake marker from wake/pending to wake/sent after the related mail is handled")
+    p_ack_wake.add_argument("--mailbox", default=os.environ.get("BSMART_MAIL_ROOT", "/mail"))
+    p_ack_wake.add_argument("--id", required=True, help="wake marker id, e.g. wake-<message-id>")
     p_read = sub.add_parser("read", help="show a message and move it from inbox/new to inbox/read")
     p_read.add_argument("--mailbox", required=True)
     p_read.add_argument("--id", required=True)
@@ -508,6 +561,16 @@ def cmd_bmail(argv: list[str] | None = None) -> int:
             summary = check_mailbox(Path(args.mailbox).expanduser())
             print(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
             return 1 if summary["new"] or summary["wake_pending"] else 0
+        if args.command == "tickle":
+            summary = tickle_summary(Path(args.mailbox).expanduser())
+            if summary["pending_wake"]:
+                print(json.dumps(summary, ensure_ascii=False, sort_keys=True))
+                return 1
+            return 0
+        if args.command == "ack-wake":
+            dest = move_wake_marker(Path(args.mailbox).expanduser(), args.id, "sent")
+            print(f"acknowledged: {dest}")
+            return 0
         if args.command == "read":
             message = read_message(Path(args.mailbox).expanduser(), args.id)
             print(json.dumps(message, ensure_ascii=False, indent=2, sort_keys=True))

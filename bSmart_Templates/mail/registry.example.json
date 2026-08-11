@@ -4,7 +4,7 @@
       "display_name": "First Mate",
       "role": "Coordinator agent",
       "description": "Coordinates task routing and receives operator-facing escalations.",
-      "mailbox": "/mail/FM/mail",
+      "mailbox": "/mail",
       "send_policy": {
         "mode": "restricted",
         "allow_to": ["Admin"],
@@ -12,14 +12,15 @@
       },
       "wake": {
         "type": "file",
-        "handling_hint": "triage_then_delegate"
+        "handling_hint": "triage_then_delegate",
+        "runtime_adapter": "hermes_cron_monitor"
       }
     },
     "Admin": {
       "display_name": "Admin",
       "role": "Administrative/safety agent",
       "description": "Handles approvals, protected-project integration, and operator-visible administration.",
-      "mailbox": "/mail/Admin/mail",
+      "mailbox": "/mail",
       "send_policy": {
         "mode": "disabled",
         "allow_to": [],
@@ -27,7 +28,8 @@
       },
       "wake": {
         "type": "file",
-        "handling_hint": "triage_then_delegate"
+        "handling_hint": "triage_then_delegate",
+        "runtime_adapter": "hermes_cron_monitor"
       }
     }
   },

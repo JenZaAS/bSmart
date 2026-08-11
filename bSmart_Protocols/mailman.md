@@ -67,6 +67,7 @@ agents.<id>.send_policy.allow_to: [recipient_agent_ids]
 agents.<id>.send_policy.deny_to: [recipient_agent_ids]
 agents.<id>.wake.type: none | file
 agents.<id>.wake.handling_hint: triage_then_delegate
+agents.<id>.wake.runtime_adapter: none | hermes_cron_monitor
 routes.default_policy: deny
 ```
 
@@ -159,6 +160,12 @@ Rule: **sender proposes context; receiver decides workspace**. The sender may in
 # Fast natural-language check for "can you check your mail?"
 /workspace/bSmart-System/scripts/bMail check --mailbox /mail
 
+# Stable cron-monitor output; empty stdout when no wake markers are pending
+/workspace/bSmart-System/scripts/bMail tickle --mailbox /mail
+
+# Acknowledge a handled wake marker
+/workspace/bSmart-System/scripts/bMail ack-wake --mailbox /mail --id wake-MESSAGE_ID
+
 # Read a message; if it is in inbox/new, move it to inbox/read
 /workspace/bSmart-System/scripts/bMail read --mailbox /path/to/Admin/mail --id MESSAGE_ID
 
@@ -182,6 +189,34 @@ Rule: **sender proposes context; receiver decides workspace**. The sender may in
 
 The mailman should not decide whether the recipient is busy and should not spawn subagents itself. It only delivers mail and, when configured, writes a wake marker.
 
+Real tickle v1 is recipient-side and Hermes-native:
+
+```yaml
+runtime_adapter:
+  type: hermes_cron_monitor
+  monitor_script_template: /workspace/bSmart-System/scripts/bsmart-mail-tickle-monitor.py
+  prompt_template: /workspace/bSmart-System/bSmart_Templates/mail/tickle-cron-prompt.md
+  recommended_schedule: 1m
+  behavior:
+    - monitor script prints stable JSON only when /mail/wake/pending has entries for messages still in /mail/inbox/new
+    - stale pending wake markers whose message was already read are ignored by the tickle monitor but still visible in bMail check for cleanup
+    - Hermes monitor-mode suppresses unchanged output, so the agent is not woken repeatedly for the same pending mail
+    - a changed wake list starts a normal Hermes agent run with the prompt template
+    - after handling a message, recipient should run bMail ack-wake for the related wake id
+```
+
+Install pattern inside the recipient Hermes instance:
+
+```bash
+mkdir -p /opt/data/scripts
+cp /workspace/bSmart-System/scripts/bsmart-mail-tickle-monitor.py /opt/data/scripts/bsmart-mail-tickle-monitor.py
+hermes cron create 1m \
+  --name bsmart-bmail-tickle \
+  --monitor-script bsmart-mail-tickle-monitor.py \
+  --workdir /workspace \
+  "$(cat /workspace/bSmart-System/bSmart_Templates/mail/tickle-cron-prompt.md)"
+```
+
 Recipient-side expected behavior:
 
 0. If the user says “check your mail” / “check bMail” / “check mailbox” in a bSmart-enabled agent, run `bMail check --mailbox /mail` first. Do not open internet email/IMAP tools such as Himalaya unless the user explicitly says email, Gmail, IMAP, or another external mailbox.
@@ -195,10 +230,16 @@ This avoids tying up a persistent agent's current user/agent conversation. A bus
 
 ## Mail-triggered workspaces
 
-Default mailbox root for each agent should be the first-class bSmart mail root:
+Default mailbox root for each agent should be the first-class bSmart mail root mounted into that agent:
 
 ```text
-/mail/<agent-id>/mail
+/mail
+```
+
+From an admin/relay container that has the shared agent root mounted, the same mailbox is typically visible as:
+
+```text
+/agents/<Agent>/mail
 ```
 
 The `/mail` container path should normally be backed by a top-level `mail` sibling folder for that agent, for example `E:/VPS/share/Hugo/mail` or `/opt/docker-workspace/ai/hugo/mail`. Avoid storing durable mailbox state inside project Git.
