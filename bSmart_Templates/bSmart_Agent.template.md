@@ -69,7 +69,21 @@ local_paths:
     - /sandboxes
     - ./sandboxes
     - ./bSmart/Sandboxes
+  mail_root_selection:
+    - BSMART_MAIL_ROOT
+    - /mail
+    - ./mail
+    - /workspace/bSmart/Mail
   workdocs: /workspace/bSmart/Workdocs
   library: /workspace/bSmart/Library
   log: /workspace/bSmart/bSmart_Log.md
+
+mail_handling:
+  natural_language_trigger: when the user says "check your mail" or similar, check bSmart bMail first, not internet email/Himalaya, unless the user explicitly says email/Gmail/IMAP.
+  quick_check_command: python3 /workspace/bSmart-System/scripts/bMail check --mailbox /mail
+  read_command_template: python3 /workspace/bSmart-System/scripts/bMail read --mailbox /mail --id <message-id>
+  fallback_mailbox_paths:
+    - /mail
+    - ./mail
+    - /workspace/bSmart/Mail
 ```

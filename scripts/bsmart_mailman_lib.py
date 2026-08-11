@@ -384,6 +384,41 @@ def inbox(mailbox: Path) -> list[dict[str, str]]:
     return rows
 
 
+def wake_pending(mailbox: Path) -> list[dict[str, str]]:
+    init_mailbox(mailbox)
+    rows = []
+    for path in sorted((mailbox / "wake" / "pending").glob("*.json")):
+        try:
+            marker = load_json(path)
+            rows.append({
+                "id": str(marker.get("id", path.stem)),
+                "type": str(marker.get("type", "")),
+                "message_id": str(marker.get("message_id", "")),
+                "from": str(marker.get("from", "")),
+                "subject": str(marker.get("subject", "")),
+                "created_at": str(marker.get("created_at", "")),
+                "path": str(path),
+            })
+        except MailmanError:
+            rows.append({"id": path.stem, "type": "<invalid JSON>", "message_id": "", "from": "", "subject": "", "created_at": "", "path": str(path)})
+    return rows
+
+
+def check_mailbox(mailbox: Path) -> dict[str, Any]:
+    """Fast recipient-side check for natural prompts like 'check your mail'."""
+    init_mailbox(mailbox)
+    new_messages = inbox(mailbox)
+    wake_markers = wake_pending(mailbox)
+    return {
+        "mailbox": str(mailbox),
+        "new": len(new_messages),
+        "wake_pending": len(wake_markers),
+        "messages": new_messages,
+        "wake": wake_markers,
+        "hint": "Use `bMail read --mailbox MAILBOX --id MESSAGE_ID` to read a message.",
+    }
+
+
 def read_message(mailbox: Path, message_id: str) -> dict[str, Any]:
     init_mailbox(mailbox)
     filename = safe_message_filename(message_id)
@@ -448,6 +483,8 @@ def cmd_bmail(argv: list[str] | None = None) -> int:
     body.add_argument("--body-file")
     p_inbox = sub.add_parser("inbox", help="list inbox/new messages")
     p_inbox.add_argument("--mailbox", required=True)
+    p_check = sub.add_parser("check", help="quickly summarize inbox/new and wake/pending for prompts like 'check your mail'")
+    p_check.add_argument("--mailbox", default=os.environ.get("BSMART_MAIL_ROOT", "/mail"))
     p_read = sub.add_parser("read", help="show a message and move it from inbox/new to inbox/read")
     p_read.add_argument("--mailbox", required=True)
     p_read.add_argument("--id", required=True)
@@ -467,6 +504,10 @@ def cmd_bmail(argv: list[str] | None = None) -> int:
                 print(json.dumps(row, ensure_ascii=False, sort_keys=True))
             print(json.dumps({"new": len(rows)}, sort_keys=True))
             return 0
+        if args.command == "check":
+            summary = check_mailbox(Path(args.mailbox).expanduser())
+            print(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
+            return 1 if summary["new"] or summary["wake_pending"] else 0
         if args.command == "read":
             message = read_message(Path(args.mailbox).expanduser(), args.id)
             print(json.dumps(message, ensure_ascii=False, indent=2, sort_keys=True))

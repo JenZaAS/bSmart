@@ -107,6 +107,16 @@ class BSmartMailmanTests(unittest.TestCase):
         inbox = self.run_cli(sys.executable, str(BMAIL), "inbox", "--mailbox", str(self.admin))
         self.assertIn('"subject": "CLI"', inbox.stdout)
 
+    def test_cli_check_summarizes_messages_and_wake_markers(self):
+        self.module.send_message(self.registry, "FM", "Admin", "Check me", "Body")
+        self.module.deliver(self.registry)
+        check = self.run_cli(sys.executable, str(BMAIL), "check", "--mailbox", str(self.admin), expect=1)
+        summary = json.loads(check.stdout)
+        self.assertEqual(summary["new"], 1)
+        self.assertEqual(summary["wake_pending"], 1)
+        self.assertEqual(summary["messages"][0]["subject"], "Check me")
+        self.assertEqual(summary["wake"][0]["type"], "mail_arrived")
+
     def test_send_policy_open_with_deny_exception_blocks_recipient(self):
         data = json.loads(self.registry.read_text(encoding="utf-8"))
         data["agents"]["Admin"]["send_policy"] = {"mode": "open", "allow_to": [], "deny_to": ["FM"]}

@@ -156,6 +156,9 @@ Rule: **sender proposes context; receiver decides workspace**. The sender may in
 # List new inbox messages
 /workspace/bSmart-System/scripts/bMail inbox --mailbox /path/to/Admin/mail
 
+# Fast natural-language check for "can you check your mail?"
+/workspace/bSmart-System/scripts/bMail check --mailbox /mail
+
 # Read a message; if it is in inbox/new, move it to inbox/read
 /workspace/bSmart-System/scripts/bMail read --mailbox /path/to/Admin/mail --id MESSAGE_ID
 
@@ -181,6 +184,7 @@ The mailman should not decide whether the recipient is busy and should not spawn
 
 Recipient-side expected behavior:
 
+0. If the user says “check your mail” / “check bMail” / “check mailbox” in a bSmart-enabled agent, run `bMail check --mailbox /mail` first. Do not open internet email/IMAP tools such as Himalaya unless the user explicitly says email, Gmail, IMAP, or another external mailbox.
 1. Notice `mail/wake/pending` or run a startup/new-session mail check.
 2. Inspect only enough message metadata/body to route safely.
 3. If the message is non-trivial, spawn a subagent with a bounded task contract.
