@@ -1,5 +1,7 @@
 # bSmart-System
 
+bSmart is a portable system layer for Hermes-style container agents. It keeps the reusable startup rules, setup procedures, protocols, templates, and versioned docs separate from the instance-specific content that lives in `/workspace/bSmart`.
+
 ```yaml
 name: bSmart-System
 status: draft-v1
@@ -71,6 +73,20 @@ Bundled optional extensions may also ship inside the system repo under:
 ## Install into a Hermes container workspace
 
 Use this when a Hermes container already has a persistent `/workspace` mount and should start loading bSmart on new sessions.
+
+### Minimal manual shape
+
+If you want the core install steps spelled out directly, the expected shape is:
+
+```bash
+git clone https://github.com/JenZaAS/bSmart.git /workspace/bSmart-System
+mkdir -p /workspace/bSmart /workspace/bSmart-Extensions
+cat > /workspace/HERMES.md <<'EOF'
+At session start, before answering the user, read /workspace/bSmart-System/bSmart.md with the file-reading tool and follow it for the session. Do not just acknowledge this; actually load the file.
+EOF
+```
+
+That HERMES hook is intentionally tiny. For Hermes or another harness system, create the equivalent startup file in the directory the harness actually reads at session start, and put only the single bootstrap instruction there.
 
 ### Recommended streamlined installer
 
@@ -216,7 +232,7 @@ install -d -o "$HERMES_UID" -g "$HERMES_GID" \
   "$WS/bSmart-Extensions"
 
 cat > "$WS/HERMES.md" <<'EOF'
-At session start, read /workspace/bSmart-System/bSmart.md and follow it.
+At session start, before answering the user, read /workspace/bSmart-System/bSmart.md with the file-reading tool and follow it for the session. Do not just acknowledge this; actually load the file.
 EOF
 
 cat > "$WS/bSmart/bSmart_Agent.md" <<EOF

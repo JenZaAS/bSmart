@@ -11,6 +11,7 @@ status: draft
 ```yaml
 release_type: draft_update
 scope:
+  - clarify the minimal manual bSmart bootstrap shape and strengthen the HERMES.md hook so agents actually load bSmart.md before answering
   - add compact sensitive-action expansion for bSmart pre-action notes: only sensitive/approval-likely actions get a short meaning/risk/approval-scope hint, while routine notes stay brief
   - clarify GitHub AI runtime pattern: export GIT_SSH_COMMAND in container env for normal git operations, keep GH_TOKEN file-based per command by default, and look in local bSmart docs for instance-specific implementation details before proposing setup
   - make startup/storage helper scripts infer workspace/content roots from their own bSmart-System checkout, so they work from VPS /workspace and local AGENTS.md workspaces
