@@ -2,7 +2,7 @@
 
 ```yaml
 current_version: 0.1.9-draft
-updated: 2026-07-17 09:21 UTC
+updated: 2026-08-11 09:20 UTC
 status: draft
 ```
 
@@ -11,6 +11,7 @@ status: draft
 ```yaml
 release_type: draft_update
 scope:
+  - clarify GitHub AI runtime pattern: export GIT_SSH_COMMAND in container env for normal git operations, keep GH_TOKEN file-based per command by default, and look in local bSmart docs for instance-specific implementation details before proposing setup
   - make startup/storage helper scripts infer workspace/content roots from their own bSmart-System checkout, so they work from VPS /workspace and local AGENTS.md workspaces
   - document CIFS/SMB executable-bit pitfall and prefer python3 <script> invocations for bSmart Python helpers
   - replace Hermes-specific startup wording with framework-neutral "bSmart — Loading bSmart."

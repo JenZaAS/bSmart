@@ -90,7 +90,21 @@ environment:
   GIT_SSH_COMMAND: "ssh -i /run/secrets/jenzai_container_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/run/secrets/github_known_hosts"
 ```
 
-Do not set `StrictHostKeyChecking=no`.
+Recommended environment split:
+
+- Put `GIT_SSH_COMMAND` in the container's runtime environment so ordinary `git fetch`, `git pull`, and `git push` automatically use the mounted JenZaAI SSH key and pinned GitHub host keys.
+- Keep `GH_TOKEN` file-based by default. For GitHub API actions, read it only for the command that needs it, e.g. `GH_TOKEN="$(cat /run/secrets/github_token)" gh ...`.
+- Do not export `GH_TOKEN` globally unless the operator explicitly accepts that broader runtime exposure.
+- Do not set `StrictHostKeyChecking=no`.
+
+Implementation lookup rule:
+
+- bSmart-System defines the abstract standard only. Instance-specific Compose, Dokploy, helper-script, and path details should live in the local bSmart content/docs for that AI instance.
+- When setting up or troubleshooting an instance, first look for local implementation notes such as:
+  - `/workspace/bSmart/Docs/github/JENZAI_GITHUB_ACCESS_PLAN.md`
+  - `/workspace/bSmart/Docs/admin/`
+  - the instance's blueprint/source notes if visible to that agent or admin container
+- If the local implementation details are missing, propose a small setup workflow: identify the container/service slug, secrets host path, target repositories, desired permissions, Compose/Dokploy environment update, redeploy step, and verification commands. Do not invent site-local paths.
 
 ## GitHub-side repo access workflow
 
@@ -124,6 +138,8 @@ If `gh` is needed and `/run/secrets/github_token` exists:
 GH_TOKEN="$(cat /run/secrets/github_token)" gh auth status
 GH_TOKEN="$(cat /run/secrets/github_token)" gh api user --jq '.login + " " + .html_url'
 ```
+
+If plain `git` fails with `Permission denied (publickey)` but an explicit command using the mounted key works, the live runtime is probably missing `GIT_SSH_COMMAND` or running from stale Compose/Dokploy configuration. Update the authoritative deployment configuration, redeploy/recreate the container, then verify the environment inside the live container.
 
 Expected user:
 
