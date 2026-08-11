@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+"""Report pending mail-triggered integration/approval items.
+
+Read-only helper for bSmart startup. It does not apply, edit, archive, or delete
+pending items; it only prints a compact summary so the parent agent can prompt
+the operator to review/apply/postpone.
+"""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+
+def read_yamlish_field(path: Path, key: str) -> str | None:
+    prefix = key + ":"
+    try:
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if line.startswith(prefix):
+                return line.split(":", 1)[1].strip().strip('"').strip("'") or None
+    except OSError:
+        return None
+    return None
+
+
+def find_pending(root: Path) -> list[Path]:
+    if not root.exists():
+        return []
+    return sorted([*root.glob("*/pending/*.yaml"), *root.glob("*/pending/*.yml"), *root.glob("*/pending/*.json")])
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Report pending bSmart mail-triggered items.")
+    parser.add_argument("--agent-comms-root", default="/projects/Agent-Comms")
+    parser.add_argument("--limit", type=int, default=10)
+    args = parser.parse_args()
+
+    root = Path(args.agent_comms_root).expanduser()
+    pending = find_pending(root)
+    if not pending:
+        print("bSmart mail pending: none")
+        return 0
+
+    print(f"bSmart mail pending: {len(pending)} item(s) need review/apply/postpone")
+    for idx, path in enumerate(pending[: args.limit], start=1):
+        item_id = read_yamlish_field(path, "id") or path.stem
+        sender = read_yamlish_field(path, "from_agent") or "?"
+        recipient = read_yamlish_field(path, "to_agent") or "?"
+        status = read_yamlish_field(path, "status") or "pending"
+        reason = read_yamlish_field(path, "reason") or ""
+        target = read_yamlish_field(path, "path") or ""
+        bits = [f"{idx}. {sender} -> {recipient}: {item_id}", f"status={status}"]
+        if target:
+            bits.append(f"target={target}")
+        if reason:
+            bits.append(f"reason={reason}")
+        bits.append(f"file={path}")
+        print(" | ".join(bits))
+    if len(pending) > args.limit:
+        print(f"... {len(pending) - args.limit} more pending item(s) not shown")
+    print("Operator choices should include: review/apply selected, postpone, archive/reject selected.")
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

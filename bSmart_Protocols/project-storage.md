@@ -152,6 +152,38 @@ sandbox_storage:
 ```
 
 ```yaml
+mail_storage:
+  override_env: BSMART_MAIL_ROOT
+  canonical_container_path: /mail
+  local_relative_path: ./mail
+  local_bsmart_fallback_path: ./bSmart/Mail
+  purpose: first-class durable mailbox root for bMail/mailman state, separate from projects and sandboxes
+  selection_rule:
+    - if BSMART_MAIL_ROOT is set and points to a readable/writable directory: use BSMART_MAIL_ROOT
+    - else if /mail exists and is readable/writable: use /mail
+    - else if ./mail exists and is readable/writable from the current workspace/shared-root folder: use ./mail
+    - else use /workspace/bSmart/Mail as a local fallback only until a real mail mount is configured
+  preferred_container_mount: /mail
+  recommended_host_layout:
+    vps_local: /opt/docker-workspace/<instance>/mail
+    shared_local_sibling: /mnt/share/<Agent>/mail
+    windows_share_example: E:/VPS/share/<Agent>/mail
+  sibling_layout_example: |
+    E:/VPS/share/Hugo/
+      bSmart/
+      bSmart-System/
+      projects/
+      sandboxes/
+      mail/
+  compose_recommendation: <host-mail-folder>:/mail:rw
+  predeploy_prepare:
+    rule: create and permission the host mail folder before adding the /mail volume; do not let Docker/Dokploy auto-create it as root-owned
+    vps_local_command_template: sudo install -d -o 10000 -g 10000 -m 0775 /opt/docker-workspace/<instance>/mail
+    shared_folder_command_template: mkdir -p <share>/<Agent>/mail
+  privacy_note: mail may contain inter-agent context and should not be stored in project Git by default
+```
+
+```yaml
 container_storage_spec:
   path: /workspace/bSmart/State/container-storage.yaml
   scope: one reality for the whole AI instance
@@ -164,6 +196,10 @@ container_storage_spec:
     sandbox_storage:
       sandbox_root: /sandboxes
       mode: vps_local_preferred
+    mail_storage:
+      mail_root: /mail
+      mode: mounted | vps_local | local_sibling | fallback
+      host_mail_folder: host/share path used in Compose, when mounted
 ```
 
 ```yaml

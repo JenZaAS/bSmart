@@ -1,0 +1,57 @@
+id: <task-id>
+source_mail_id: <message-id>
+from_agent: <sender-agent-id>
+to_agent: <recipient-agent-id>
+parent_agent: <recipient-agent-id>
+subagent_id: <subagent-id>
+
+intent: <explicit-or-inferred-intent>
+intent_source: explicit # explicit | inferred
+intent_confidence: high # high | medium | low
+goal: <concrete-completion-goal>
+
+workspace: /projects/Agent-Comms/<sender>-to-<recipient>/tasks/<task-id>
+requested_target:
+  type: none # none | project | system | external
+  path: null
+  source: sender_hint # sender_hint | receiver_triage | user_instruction
+
+routing_decision:
+  selected_workspace: agent_comms_project
+  reason: <why-this-workspace-was-selected>
+  approval_required_before_target_write: false
+  approval_timeout_fallback: agent_comms_project
+
+authority:
+  may_read:
+    - incoming-mail.json
+  may_write:
+    - this task folder
+  may_not_write:
+    - protected/shared/system targets unless separately approved
+    - public/external targets unless separately approved
+  may_send_reply: false
+  reply_identity: <parent-agent-id>
+
+completion_criteria:
+  - Original mail intent has been addressed or explicitly marked blocked.
+  - Result is written to result.md.
+  - Worklog records important decisions and files touched.
+  - If protected-target changes are needed, create/update a pending integration item instead of applying directly.
+  - If a reply is authorized, outgoing mail records handled_by: <subagent-id>.
+
+escape_conditions:
+  - intent is ambiguous or low-confidence
+  - required approval is missing or timed out
+  - task risks unsafe edits or external side effects
+  - work exceeds configured time/step budget
+
+limits:
+  max_runtime_minutes: 30
+  max_iterations: 5
+
+outputs:
+  result: result.md
+  worklog: worklog.md
+  outgoing_mail: outgoing-mail.json
+  pending_item: ../../pending/<task-id>.yaml

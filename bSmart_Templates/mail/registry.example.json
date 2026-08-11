@@ -1,0 +1,43 @@
+{
+  "agents": {
+    "FM": {
+      "display_name": "First Mate",
+      "role": "Coordinator agent",
+      "description": "Coordinates task routing and receives operator-facing escalations.",
+      "mailbox": "/mail/FM/mail",
+      "send_policy": {
+        "mode": "restricted",
+        "allow_to": ["Admin"],
+        "deny_to": []
+      },
+      "wake": {
+        "type": "file",
+        "handling_hint": "triage_then_delegate"
+      }
+    },
+    "Admin": {
+      "display_name": "Admin",
+      "role": "Administrative/safety agent",
+      "description": "Handles approvals, protected-project integration, and operator-visible administration.",
+      "mailbox": "/mail/Admin/mail",
+      "send_policy": {
+        "mode": "disabled",
+        "allow_to": [],
+        "deny_to": []
+      },
+      "wake": {
+        "type": "file",
+        "handling_hint": "triage_then_delegate"
+      }
+    }
+  },
+  "routes": {
+    "default_policy": "deny"
+  },
+  "workspace_policy": {
+    "default": "agent_comms_project",
+    "agent_comms_root": "/projects/Agent-Comms",
+    "protected_targets_require_user_approval": true,
+    "approval_timeout_fallback": "agent_comms_project"
+  }
+}

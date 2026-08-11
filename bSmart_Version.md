@@ -2,7 +2,7 @@
 
 ```yaml
 current_version: 0.1.9-draft
-updated: 2026-08-11 09:20 UTC
+updated: 2026-08-11 12:26 UTC
 status: draft
 ```
 
@@ -28,6 +28,8 @@ scope:
   - allow images/start wrappers to include only a tiny first-run bootstrap hook that fetches the live workspace helper
   - standardize new-agent Compose defaults: working_dir=/workspace, TERMINAL_CWD=/workspace, HERMES_WRITE_SAFE_ROOT=/workspace
   - separate bSmart-System Git from optional instance/content Git to avoid setup ambiguity
+  - upgrade mailman/bMail prototype to v1 design: phone-book registry, send_policy modes, deny/allow precedence, file wake tickles, subagent trace fields, agent-communication project fallback, and pending integration workflow
+  - add first-class `mail` storage root guidance: `/mail` in containers, sibling `mail/` folder in share/local layouts, and `mail_storage` in container-storage specs
 safety:
   - helper creates only missing local content files and uses public HTTPS for bSmart-System updates
   - bSmart content Git is opt-in/local-only by default; no remote is configured unless the operator chooses it

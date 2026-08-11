@@ -18,6 +18,7 @@ steps:
   - configure_optional_shared_group
   - configure_approval_mode_and_guardrails
   - configure_project_storage
+  - configure_mail_storage
   - create_content_root_if_missing
   - create_content_readme_if_missing
   - create_bSmart_Agent_from_template
@@ -119,6 +120,39 @@ project_storage:
     host_prep_required_before_compose: true
     host_prep_command_template: "sudo install -d -o 10000 -g 10000 -m 0775 <host-sandbox-folder>"
     safety_note: "Create and permission the host sandbox folder before adding the /sandboxes bind mount; otherwise Docker/Dokploy may auto-create the missing source as root:root and the container will see /sandboxes mounted but unwritable."
+
+mail_storage:
+  purpose: choose the canonical mailbox folder location for bMail/mailman state
+  spec_file: /workspace/bSmart/State/container-storage.yaml
+  canonical_root: /mail
+  override_env: BSMART_MAIL_ROOT
+  local_relative_path: ./mail
+  fallback_root: /workspace/bSmart/Mail
+  prompt_style: Telegram buttons when supported
+  prompt_text: |
+    bSmart - Mail configuration
+
+    Choose location for mailbox folders:
+
+    1) Mounted mail volume (recommended for persistent agents)
+
+    2) Local sibling mail folder (for local/share-backed agent homes)
+
+    3) Temporary/fallback under bSmart content
+  choices:
+    - Mounted mail volume
+    - Local sibling mail
+    - Temporary fallback
+  mounted_volume:
+    compose_line_template: "- <host-mail-folder>:/mail:rw"
+    examples:
+      - /opt/docker-workspace/ai/hugo/mail
+      - /mnt/share/Hugo/mail
+      - E:/VPS/share/Hugo/mail
+    host_prep_required_before_compose: true
+    vps_local_host_prep_command_template: "sudo install -d -o 10000 -g 10000 -m 0775 <host-mail-folder>"
+    shared_folder_host_prep_command_template: "mkdir -p <host-mail-folder>"
+  layout_rule: mail is a top-level sibling root named `mail`, not a normal project folder and not stored in project Git by default
 
 shared_group:
   purpose: keep bSmart-managed files editable by selected human and agent users

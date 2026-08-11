@@ -1,0 +1,5 @@
+#!/usr/bin/env python3
+from bsmart_mailman_lib import cmd_mailman
+
+if __name__ == "__main__":
+    raise SystemExit(cmd_mailman())

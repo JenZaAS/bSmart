@@ -53,6 +53,10 @@ content_folders:
   sandboxes_preferred: /sandboxes
   sandboxes_local_relative: ./sandboxes
   sandboxes_local_bsmart_fallback: ./bSmart/Sandboxes
+  mail_override_env: BSMART_MAIL_ROOT
+  mail_preferred: /mail
+  mail_local_relative: ./mail
+  mail_fallback: /workspace/bSmart/Mail
   workdocs: /workspace/bSmart/Workdocs
   library: /workspace/bSmart/Library
 

@@ -8,6 +8,8 @@ Checks:
 - bSmart-System Git freshness: once per UTC day.
 - Project/sandbox storage configuration: once per UTC day, but if the storage
   spec is missing it is still reported as setup_required.
+- Pending mail-triggered integration/approval items: every startup run, because
+  postpone means leave the item in place and ask again next time.
 
 The wrapper does not deploy, restart, edit Compose/Dokploy, or create the
 storage spec by default.
@@ -27,6 +29,7 @@ WORKSPACE_ROOT = SYSTEM_ROOT.parent
 CONTENT_ROOT = Path("/workspace/bSmart") if Path("/workspace/bSmart").exists() else WORKSPACE_ROOT / "bSmart"
 DEFAULT_STATE = CONTENT_ROOT / "State" / "bsmart-startup-check.yaml"
 DEFAULT_STORAGE_SPEC = CONTENT_ROOT / "State" / "container-storage.yaml"
+DEFAULT_AGENT_COMMS_ROOT = Path("/projects/Agent-Comms") if Path("/projects").exists() else WORKSPACE_ROOT / "projects" / "Agent-Comms"
 
 
 def today() -> str:
@@ -75,21 +78,28 @@ def main() -> int:
     parser.add_argument("--auto-pull", action="store_true", help="allow bsmart-system-update-check to fast-forward when safe")
     parser.add_argument("--skip-system-update", action="store_true")
     parser.add_argument("--skip-project-storage", action="store_true")
+    parser.add_argument("--skip-mail-pending", action="store_true")
+    parser.add_argument("--agent-comms-root", default=str(DEFAULT_AGENT_COMMS_ROOT))
     args = parser.parse_args()
 
     state = Path(args.state)
     already_today = get_yamlish_value(state, "last_checked_utc_date") == today()
 
     if already_today and not args.force:
+        pending_code = 0
+        if not args.skip_mail_pending:
+            proc = run_script("bsmart-mail-pending-check", ["--agent-comms-root", args.agent_comms_root])
+            print_result("bSmart mail pending check", proc)
+            pending_code = proc.returncode
         if not args.skip_project_storage and not DEFAULT_STORAGE_SPEC.exists():
             # Do not let the once-per-day throttle hide first-run setup work.
             # Missing project storage is an actionable setup prompt, not a
             # routine freshness check.
             proc = run_script("bsmart-project-storage-check", [])
             print_result("bSmart project storage check", proc)
-            return proc.returncode
-        print("bSmart startup checks: skipped — already checked today")
-        return 0
+            return max(proc.returncode, 1 if pending_code else 0)
+        print("bSmart startup checks: skipped daily checks — already checked today")
+        return 1 if pending_code else 0
 
     exit_code = 0
     system_checked = False
@@ -113,6 +123,12 @@ def main() -> int:
         storage_checked = True
         if proc.returncode not in (0,):
             exit_code = max(exit_code, proc.returncode)
+
+    if not args.skip_mail_pending:
+        proc = run_script("bsmart-mail-pending-check", ["--agent-comms-root", args.agent_comms_root])
+        print_result("bSmart mail pending check", proc)
+        if proc.returncode not in (0,):
+            exit_code = max(exit_code, 1)
 
     write_state(state, storage_checked, system_checked)
     return exit_code
