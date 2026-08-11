@@ -99,6 +99,12 @@ def main() -> int:
             print_result("bSmart project storage check", proc)
             return max(proc.returncode, 1 if pending_code else 0)
         print("bSmart startup checks: skipped daily checks — already checked today")
+        if args.auto_pull and not args.skip_system_update:
+            print(
+                "bSmart system update: auto-pull was requested but skipped by the once-per-UTC-day throttle; "
+                "run `python3 /workspace/bSmart-System/scripts/bsmart-startup-check --force --auto-pull` "
+                "when the operator specifically wants an immediate same-day bSmart-System update."
+            )
         return 1 if pending_code else 0
 
     exit_code = 0

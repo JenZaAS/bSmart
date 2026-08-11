@@ -217,6 +217,10 @@ startup_check_behavior:
     - /workspace/bSmart/State/container-storage.yaml is missing
   throttle_exception:
     - missing container-storage.yaml must still be reported even if the daily startup check already ran today
+  same_day_update_behavior:
+    - normal `/new` startup uses a once-per-UTC-day throttle and may skip Git contact even when --auto-pull is present
+    - when the operator has just requested/pushed a bSmart-System update and wants an immediate same-day pull, run the helper with --force --auto-pull
+    - if --auto-pull is skipped by the throttle, the helper should print the exact --force --auto-pull command rather than implying it checked Git
   local_spec_creation:
     mounted_volume: python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check --configure-mounted --host-project-folder <host-path>
     mounted_volume_local: python3 ./bSmart-System/scripts/bsmart-project-storage-check --configure-mounted --host-project-folder <host-path>
