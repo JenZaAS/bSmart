@@ -53,9 +53,10 @@ commands:
 4. Library — Store and reuse durable knowledge.
 5. Decision Log — Record important decisions and approvals.
 6. Safety — Keep actions transparent and low-risk.
-7. Setup — Initialize and maintain bSmart structure.
-8. Extensions — Enable optional add-on packs.
-9. Features — Show available bSmart capabilities.
+7. Security Watch — Check visible VPS/container security drift.
+8. Setup — Initialize and maintain bSmart structure.
+9. Extensions — Enable optional add-on packs.
+10. Features — Show available bSmart capabilities.
 
 ## Feature index
 
@@ -65,9 +66,10 @@ commands:
 4. Library
 5. Decision Log
 6. Safety
-7. Setup
-8. Extensions
-9. Features
+7. Security Watch
+8. Setup
+9. Extensions
+10. Features
 
 ## Features by group
 
@@ -82,6 +84,7 @@ commands:
 
 ### System
 - Safety — Keep actions transparent and low-risk.
+- Security Watch — Check visible VPS/container security drift.
 - Setup — Initialize and maintain bSmart structure.
 - Extensions — Enable optional add-on packs.
 - Features — Show available bSmart capabilities.
@@ -235,6 +238,33 @@ included_capabilities:
 notes:
   - bSmart guardrails remain mandatory even if framework approvals are relaxed.
   - Never blanket-change runtime, backup, or application data folders without explicit scope approval.
+```
+
+### Security Watch
+
+```yaml
+name: Security Watch
+group: System
+status: active
+visibility: user-facing
+short_description: Check visible VPS/container security drift.
+files:
+  - /workspace/bSmart-System/bSmart_Protocols/security-watch.md
+  - /opt/data/home/.hermes/scripts/bsmart-security-watch.py
+description: Runs a low-noise, read-only security drift check from the designated admin instance. It verifies visible mounts, helper scripts, blueprints, obvious risky Compose/Dockerfile patterns, backup-file permission signals, and watched-file changes. Ordinary AI containers should not run this by default; bSmart setup should ask whether the current instance is the designated owner.
+commands:
+  - show security watch
+  - run security watch
+included_capabilities:
+  - Weekly script-only watchdog
+  - Visible mount posture checks
+  - Blueprint/helper drift detection
+  - Obvious secret/risky-pattern detection
+  - Opt-in ownership per AI container
+notes:
+  - SschwAdmin is the default owner for Erling's VPS.
+  - The lightweight weekly job is silent unless new findings, changed watched files, or check failures appear.
+  - Live Docker/Dokploy state and host package CVEs require a future least-privilege host helper.
 ```
 
 ### Setup

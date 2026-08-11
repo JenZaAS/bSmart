@@ -11,6 +11,7 @@ status: draft
 ```yaml
 release_type: draft_update
 scope:
+  - add Security Watch as an opt-in/admin-owned bSmart feature and protocol for low-noise read-only VPS/container drift checks
   - clarify the minimal manual bSmart bootstrap shape and strengthen the HERMES.md hook so agents actually load bSmart.md before answering
   - add compact sensitive-action expansion for bSmart pre-action notes: only sensitive/approval-likely actions get a short meaning/risk/approval-scope hint, while routine notes stay brief
   - clarify GitHub AI runtime pattern: export GIT_SSH_COMMAND in container env for normal git operations, keep GH_TOKEN file-based per command by default, and look in local bSmart docs for instance-specific implementation details before proposing setup
