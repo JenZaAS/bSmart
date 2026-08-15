@@ -36,7 +36,7 @@ new_agent_bootstrap_standard:
   compose_defaults:
     working_dir: /workspace
     TERMINAL_CWD: /workspace
-    HERMES_WRITE_SAFE_ROOT: /workspace
+    HERMES_WRITE_SAFE_ROOT: /opt/data:/workspace:/projects:/sandboxes
   first_run_helper: /workspace/bSmart-System/scripts/bsmart-bootstrap-workspace
   verification:
     - restart_or_redeploy_after workspace/bootstrap/compose changes
@@ -52,3 +52,21 @@ governance:
   HERMES.md: minimal_hook_only
   SOUL.md: no_bSmart_footprint_preferred
 ```
+
+## Progressive help and `/new` greeting
+
+After `/new`, the gateway reset itself may not be an agent-authored turn, but the first real reply after reset should be concise and discoverable:
+
+```text
+bSmart — Loading bSmart.
+Hi! Welcome back.
+<compact startup/TODO summary>
+Info keywords: help, features, setup, projects, tasks, safety.
+<short question about continuing the current TODO item>
+```
+
+Help should be progressive:
+- `help`/`info` gives only the keyword line plus a short orientation.
+- `features` gives a brief numbered feature list from `bSmart_Features.md`.
+- A later numeric reference such as `2` or `tell me more about 2` expands only that item.
+- Keep responses short unless the operator asks for more detail.

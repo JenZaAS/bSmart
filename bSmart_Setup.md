@@ -19,6 +19,7 @@ steps:
   - configure_approval_mode_and_guardrails
   - configure_project_storage
   - configure_mail_storage
+  - configure_dreaming
   - create_content_root_if_missing
   - create_content_readme_if_missing
   - create_bSmart_Agent_from_template
@@ -54,7 +55,7 @@ workspace_bootstrap:
     bsmart_system_remote: https://github.com/JenZaAS/bSmart.git
     bsmart_system_updates: safe HTTPS fast-forward auto-pull
     HERMES.md: minimal hook only
-    HERMES_WRITE_SAFE_ROOT: /workspace
+    HERMES_WRITE_SAFE_ROOT: /opt/data:/workspace:/projects:/sandboxes
     TERMINAL_CWD: /workspace
   rule: all new AI agents should be bSmart-enabled unless the operator explicitly says otherwise
 
@@ -122,7 +123,8 @@ project_storage:
     safety_note: "Create and permission the host sandbox folder before adding the /sandboxes bind mount; otherwise Docker/Dokploy may auto-create the missing source as root:root and the container will see /sandboxes mounted but unwritable."
 
 mail_storage:
-  purpose: choose the canonical mailbox folder location for bMail/mailman state
+  status: paused_experiment
+  purpose: historical/optional mailbox folder location for bMail/mailman state; do not configure by default while bMail is paused
   spec_file: /workspace/bSmart/State/container-storage.yaml
   canonical_root: /mail
   override_env: BSMART_MAIL_ROOT
@@ -153,6 +155,51 @@ mail_storage:
     vps_local_host_prep_command_template: "sudo install -d -o 10000 -g 10000 -m 0775 <host-mail-folder>"
     shared_folder_host_prep_command_template: "mkdir -p <host-mail-folder>"
   layout_rule: mail is a top-level sibling root named `mail`, not a normal project folder and not stored in project Git by default
+
+dreaming:
+  purpose: scheduled bSmart content maintenance for this instance; improves local bSmart content, not bSmart-System itself
+  protocol: /workspace/bSmart-System/bSmart_Protocols/dreaming.md
+  config_paths:
+    - /workspace/bSmart/Projects/bSmart/data/bsmart-dreaming.yaml
+    - local bSmart_Agent.md dreaming section
+  trigger: ask when not configured as enabled, disabled, or ask_later
+  prompt_style: Telegram buttons when supported
+  prompt_text: |
+    bSmart - Dreaming
+
+    Enable scheduled bSmart content cleanup/compaction for this AI instance?
+
+    Daily Dreaming is low-token and focuses on today's/recent session content.
+    Weekly Dreaming is broader and focuses on stale/conflicting/verbose bSmart content.
+  choices:
+    - Yes — use defaults
+    - Customize schedule
+    - No — do not ask again
+    - Later — ask again
+  defaults:
+    timezone: Europe/Oslo
+    daily:
+      enabled: true
+      schedule: "0 2 * * *"
+      intent: around 04:00 Norway time; UTC schedule may be approximate across DST
+      token_budget: low
+      auto_apply_clear_changes: true
+    weekly:
+      enabled: true
+      schedule: "30 2 * * 6"
+      intent: Friday night/Saturday around 04:00 Norway time; UTC schedule may be approximate across DST
+      token_budget: moderate_bounded
+      auto_apply_clear_changes: true
+  disabled_behavior: record disabled locally so /new or setup does not keep prompting
+  backup:
+    hidden_root: /workspace/bSmart/.dreaming-backups
+    exclude_from_regular_search: true
+    required_before_change: true
+  safety:
+    - clear low-risk instance-content changes may be applied automatically only with backups
+    - ask before permanent deletion, project content changes, unclear conflict resolution, or meaning-changing rewrites
+    - do not deploy, push, chmod/chown, modify runtime state, or edit bSmart-System as Dreaming cleanup
+    - preserve decisions, approvals, safety notes, and active handoff state
 
 shared_group:
   purpose: keep bSmart-managed files editable by selected human and agent users

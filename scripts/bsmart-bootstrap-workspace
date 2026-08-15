@@ -228,7 +228,7 @@ sandboxes:
     print("  working_dir: /workspace")
     print("  environment:")
     print("    TERMINAL_CWD: /workspace")
-    print("    HERMES_WRITE_SAFE_ROOT: /workspace")
+    print("    HERMES_WRITE_SAFE_ROOT: /opt/data:/workspace:/projects:/sandboxes")
     print("  volumes:")
     print("    - <host-workspace>:/workspace")
     print("    - <host-hermes-data>:/opt/data")

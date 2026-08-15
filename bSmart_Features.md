@@ -12,11 +12,15 @@ feature_registry:
     index: name_only
     grouped: group + name + short_description
   display_commands:
+    - help
+    - info
+    - features
     - show features
     - show bSmart features
     - show feature index
     - show features by group
     - show feature <name>
+  progressive_help_rule: First answer briefly; if a numbered list was shown, a later number expands only that item.
 ```
 
 ## Display rules
@@ -42,7 +46,14 @@ commands:
     aliases:
       - show feature <name>
       - show bSmart feature <name>
-    output: Full feature card including files, longer description, commands, included capabilities, and notes.
+      - tell me more about <number>
+      - <number>
+    output: Compact feature card for the requested item; expand only if the user asks for more.
+  progressive_help:
+    aliases:
+      - help
+      - info
+    output: One or two short orientation sentences plus `Info keywords: help, features, setup, projects, tasks, safety.`
 ```
 
 ## Feature list
@@ -52,11 +63,12 @@ commands:
 3. Workdocs — Keep detailed notes for larger work.
 4. Library — Store and reuse durable knowledge.
 5. Decision Log — Record important decisions and approvals.
-6. Safety — Keep actions transparent and low-risk.
-7. Security Watch — Check visible VPS/container security drift.
-8. Setup — Initialize and maintain bSmart structure.
-9. Extensions — Enable optional add-on packs.
-10. Features — Show available bSmart capabilities.
+6. Dreaming — Improve local bSmart content while you sleep.
+7. Safety — Keep actions transparent and low-risk.
+8. Security Watch — Check visible VPS/container security drift.
+9. Setup — Initialize and maintain bSmart structure.
+10. Extensions — Enable optional add-on packs.
+11. Features — Show available bSmart capabilities.
 
 ## Feature index
 
@@ -65,11 +77,12 @@ commands:
 3. Workdocs
 4. Library
 5. Decision Log
-6. Safety
-7. Security Watch
-8. Setup
-9. Extensions
-10. Features
+6. Dreaming
+7. Safety
+8. Security Watch
+9. Setup
+10. Extensions
+11. Features
 
 ## Features by group
 
@@ -81,6 +94,7 @@ commands:
 ### Knowledge
 - Library — Store and reuse durable knowledge.
 - Decision Log — Record important decisions and approvals.
+- Dreaming — Improve local bSmart content while you sleep.
 
 ### System
 - Safety — Keep actions transparent and low-risk.
@@ -213,6 +227,49 @@ included_capabilities:
   - Important decision history
 notes:
   - Do not log secrets, routine tool output, or full transcripts.
+```
+
+### Dreaming
+
+```yaml
+name: Dreaming
+group: Knowledge
+status: active
+visibility: user-facing
+short_description: Improve local bSmart content while you sleep.
+files:
+  - /workspace/bSmart-System/bSmart_Protocols/dreaming.md
+  - /workspace/bSmart/Projects/bSmart/data/bsmart-dreaming.yaml
+  - /workspace/bSmart/Workdocs/dreaming/
+description: Runs scheduled content-quality checks for a bSmart instance. Daily Dreaming is low-token and focuses on recent session/content changes. Weekly Dreaming is broader and focuses on stale content, conflicts, duplication, and safe compaction opportunities. Clear low-risk instance-content changes may be applied automatically with hidden backups; unclear, project, or destructive changes require operator review.
+commands:
+  - show dreaming
+  - configure dreaming
+  - run daily dreaming
+  - run weekly dreaming
+  - dream review <run-id>
+  - dream inspect <action-id>
+  - dream undo <action-id>
+  - dream project <name>
+  - nap
+included_capabilities:
+  - Daily recent-session content cleanup
+  - Weekly broader content review
+  - Hidden backups and undo/review manifests
+  - Stale-content detection
+  - Conflict detection
+  - Token-saving compaction suggestions
+  - On-request Dream Project review
+  - End-of-session Nap handoff
+  - Per-instance opt-in/disable setup
+notes:
+  - Dreaming improves instance-local bSmart content, not bSmart-System itself.
+  - Hidden backups live under /workspace/bSmart/.dreaming-backups and should not be scanned during normal work.
+  - Ask before permanent deletion, unclear conflict resolution, project content changes, or bSmart-System/system/deploy/runtime changes.
+  - If multiple Dreaming asks are pending, list all items first in one-line summaries, then present them one-by-one with interactive choices/buttons when the user is present; cron reports should include the same compact list plus options for later review.
+  - Unhandled Dreaming asks persist in a small backlog until accepted/rejected/postponed/undone; no-op days should stay silent or update tiny state, not create bulky reports or repeat old asks.
+  - Dream reports and decisions should be terse by default: 3–8 chat lines for non-empty reports, one-line item summaries, one-sentence decision prompts, and details only on request.
+  - Setup should record disabled/no-ask choices so /new does not repeatedly prompt.
 ```
 
 ### Safety

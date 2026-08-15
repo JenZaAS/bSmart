@@ -79,11 +79,38 @@ local_paths:
   log: /workspace/bSmart/bSmart_Log.md
 
 mail_handling:
-  natural_language_trigger: when the user says "check your mail" or similar, check bSmart bMail first, not internet email/Himalaya, unless the user explicitly says email/Gmail/IMAP.
+  status: paused_experiment
+  natural_language_trigger: disabled by default while bMail/mailman is paused; when the user says "check your mail" or similar, clarify whether they mean bSmart bMail or external email unless this instance has explicitly re-enabled bMail.
   quick_check_command: python3 /workspace/bSmart-System/scripts/bMail check --mailbox /mail
   read_command_template: python3 /workspace/bSmart-System/scripts/bMail read --mailbox /mail --id <message-id>
   fallback_mailbox_paths:
     - /mail
     - ./mail
     - /workspace/bSmart/Mail
+
+dreaming:
+  status: ask_later
+  purpose: scheduled maintenance for instance-local bSmart content quality
+  protocol: /workspace/bSmart-System/bSmart_Protocols/dreaming.md
+  local_timezone: Europe/Oslo
+  daily:
+    enabled: ask
+    default_schedule: "0 2 * * *"
+    default_intent: around 04:00 Norway time; UTC schedule may be approximate across DST
+    token_budget: low
+    auto_apply_clear_changes: true
+  weekly:
+    enabled: ask
+    default_schedule: "30 2 * * 6"
+    default_intent: Friday night/Saturday around 04:00 Norway time; UTC schedule may be approximate across DST
+    token_budget: moderate_bounded
+    auto_apply_clear_changes: true
+  backup:
+    hidden_root: /workspace/bSmart/.dreaming-backups
+    exclude_from_regular_search: true
+    required_before_change: true
+  safety:
+    - clear low-risk instance-content changes may be applied automatically only with backups
+    - ask before permanent deletion, unclear conflict resolution, project content changes, or bSmart-System/system/deploy/runtime changes
+  disabled_behavior: if operator chooses no, record disabled so startup/setup does not keep prompting
 ```

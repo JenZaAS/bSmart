@@ -1,11 +1,25 @@
 # bSmart-System
 
-bSmart is a portable system layer for Hermes-style container agents. It keeps the reusable startup rules, setup procedures, protocols, templates, and versioned docs separate from the instance-specific content that lives in `/workspace/bSmart`.
+bSmart is a lightweight operating layer for AI assistants: it gives each agent persistent project context, safe working habits, setup conventions, and reusable feature protocols without locking the user into one model or tool. `bSmart-System` is the reusable, versioned part; each agent's private projects, TODOs, logs, and local state stay in a separate `bSmart` content root.
+
+## Feature overview
+
+- [Projects](#projects) — manage project context, folders, state, and project-specific agent focus.
+- [Tasks](#tasks) — keep current next actions and handoffs visible across sessions.
+- [Workdocs](#workdocs) — maintain detailed working notes for larger or multi-session tasks.
+- [Library](#library) — store reusable notes, references, templates, and archived outputs.
+- [Decision Log](#decision-log) — record important choices, approvals, and milestones.
+- [Dreaming](#dreaming) — optional scheduled review of local bSmart content for cleanup and handoffs.
+- [Safety](#safety) — apply read-first work habits, visible action notes, and approval gates.
+- [Security Watch](#security-watch) — optional low-noise read-only drift checks for admin/security instances.
+- [Setup](#setup) — bootstrap and maintain the system/content/extension folder structure.
+- [Extensions](#extensions) — add optional packs such as Fabric, bSearch, or Graphify.
+- [Features](#features) — show the feature list and drill into details from chat.
 
 ```yaml
 name: bSmart-System
 status: draft-v1
-purpose: Portable system layer for bSmart-enabled Hermes workspaces.
+purpose: Portable system layer for bSmart-enabled AI workspaces.
 system_root: /workspace/bSmart-System
 content_root: /workspace/bSmart
 extensions_root: /workspace/bSmart-Extensions
@@ -70,6 +84,15 @@ Bundled optional extensions may also ship inside the system repo under:
 /workspace/bSmart-System/bSmart-Extensions/
 ```
 
+## Setup procedure
+
+1. Prepare a persistent workspace for the AI instance.
+2. Clone or update this repo as `bSmart-System` inside that workspace.
+3. Create the instance-local `bSmart` content root and `bSmart-Extensions` root.
+4. Add the tiny host-framework startup hook, such as `HERMES.md`, that tells the agent to load `bSmart.md` at session start.
+5. Restart/redeploy the agent and verify with `/new`, then a short follow-up such as `Hi`.
+6. Complete instance setup by reviewing the generated/local `bSmart_Agent.md`, storage choices, projects, TODOs, and optional extensions.
+
 ## Install into a Hermes container workspace
 
 Use this when a Hermes container already has a persistent `/workspace` mount and should start loading bSmart on new sessions.
@@ -111,7 +134,7 @@ Required Compose/Dokploy defaults for every bSmart-enabled AI:
 working_dir: /workspace
 environment:
   TERMINAL_CWD: /workspace
-  HERMES_WRITE_SAFE_ROOT: /workspace
+  HERMES_WRITE_SAFE_ROOT: /opt/data:/workspace:/projects:/sandboxes
 volumes:
   - /opt/docker-workspace/ai/<slug>/workspace:/workspace
   - /opt/docker-workspace/ai/<slug>/hermes-data:/opt/data
@@ -349,6 +372,41 @@ Expected first real reply starts with the bSmart startup wording from `/workspac
 ### What belongs in setup vs install
 
 The installer should only bootstrap files and ask for the minimum local values needed to create them. The generated `/workspace/bSmart/bSmart_Agent.md` is intentionally local content; review and refine it after install using `bSmart_Setup.md` or by asking the agent to complete the bSmart setup for that instance.
+
+## Feature details
+
+### Projects
+Projects keep the assistant oriented around the right work area. A project can have its own folder, metadata, current state, TODOs, data notes, sandbox, and project-specific agent focus.
+
+### Tasks
+Tasks keep short, actionable next steps and handoff notes visible across sessions. bSmart favors concise progress reports and safe resume points over long transcript duplication.
+
+### Workdocs
+Workdocs are structured working documents for larger tasks, troubleshooting, verification, design work, and multi-session efforts. They can later be archived into the Library when useful.
+
+### Library
+The Library is for durable, reusable knowledge: notes, references, templates, examples, and completed outputs that should be easy to find and reuse.
+
+### Decision Log
+The Decision Log captures meaningful setup, update, approval, migration, and project milestones. It should not store secrets, routine tool output, or full transcripts.
+
+### Dreaming
+Dreaming is optional scheduled bSmart content maintenance. Daily Dreaming can review recent local content with a low token budget; Weekly Dreaming can look for stale notes, conflicts, duplication, and handoff improvements. It targets instance-local `/workspace/bSmart` content, not the reusable `bSmart-System` repo.
+
+### Safety
+Safety defines the everyday operating posture: inspect before changing, keep visible action notes short, ask for explicit approval before risky writes/deploys/permission changes, prefer reversible changes, and handle secrets carefully.
+
+### Security Watch
+Security Watch is an optional admin-owned check for visible VPS/container drift. It is intentionally read-only and low-noise; ordinary personal agents should not all run the same security scan.
+
+### Setup
+Setup creates and maintains the bSmart layout: reusable system repo, local content root, optional extension root, startup hook, templates, state files, project storage, and setup/re-setup questions.
+
+### Extensions
+Extensions provide optional add-on capability packs without mixing installed instance state into core bSmart. Bundled extensions can ship in `bSmart-System/bSmart-Extensions/`; installed copies live under `/workspace/bSmart-Extensions/`.
+
+### Features
+Features is the user-facing registry. In chat, the agent can show a short feature menu, a numbered list, or a detail card for one feature.
 
 ## Update rule
 

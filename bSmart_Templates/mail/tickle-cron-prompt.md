@@ -1,6 +1,8 @@
 # bSmart bMail Tickle Cron Prompt
 
-Use this as the Hermes cron prompt for a recipient-side bMail wake adapter.
+PAUSED EXPERIMENT: do not install this as a Hermes cron prompt unless Erling explicitly reactivates bMail/mailman. It is retained as historical/prototype reference while file-relay bMail is reassessed against alternatives such as tmux/direct-contact patterns.
+
+Historical use: Hermes cron prompt for a recipient-side bMail wake adapter.
 
 ```text
 You are running as this agent's bSmart bMail tickle handler.

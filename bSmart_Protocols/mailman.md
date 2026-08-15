@@ -4,9 +4,22 @@
 protocol:
   id: mailman
   title: bSmart Mailman / bMail
-  purpose: Deterministic file-mail delivery between persistent bSmart agents, with explicit routing policy, tickle markers, subagent traceability, and safe mail-triggered project work.
-  status: prototype_v1
+  purpose: Paused experimental design for deterministic file-mail delivery between persistent bSmart agents; retained for reference and manual inspection only while intra-agent communication is reassessed.
+  status: paused_experiment
+  active_use: false
+  paused_reason: Reboot/shared-mount failure caused repeated Hermes cron/chat noise; compare with tmux or more direct contact patterns before re-enabling.
 ```
+
+## Pause notice — 2026-08-13
+
+bMail/mailman is **not an active bSmart feature path right now**. Do not install, schedule, or encourage recipient-side bMail tickle cron jobs for new agents until Erling explicitly decides to resume this design.
+
+What remains acceptable:
+- read this protocol as historical/prototype reference;
+- manually inspect existing mailbox folders when explicitly asked;
+- use the scripts in isolated tests only, with no recurring cron/daemon and no automatic chat delivery.
+
+Before reactivation, reassess whether file-relay + cron tickle is the right intra-agent communication approach or whether tmux/direct-contact style patterns are better.
 
 ## Concept
 
@@ -189,7 +202,7 @@ Rule: **sender proposes context; receiver decides workspace**. The sender may in
 
 The mailman should not decide whether the recipient is busy and should not spawn subagents itself. It only delivers mail and, when configured, writes a wake marker.
 
-Real tickle v1 is recipient-side and Hermes-native:
+Real tickle v1 was recipient-side and Hermes-native, but is currently paused and must not be installed as a recurring job without explicit operator approval:
 
 ```yaml
 runtime_adapter:
@@ -205,7 +218,7 @@ runtime_adapter:
     - after handling a message, recipient should run bMail ack-wake for the related wake id
 ```
 
-Install pattern inside the recipient Hermes instance:
+Historical install pattern inside the recipient Hermes instance — **do not run while bMail is paused**:
 
 ```bash
 mkdir -p /opt/data/scripts

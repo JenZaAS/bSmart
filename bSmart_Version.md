@@ -2,7 +2,7 @@
 
 ```yaml
 current_version: 0.1.9-draft
-updated: 2026-08-11 15:39 UTC
+updated: 2026-08-15 22:55 UTC
 status: draft
 ```
 
@@ -11,6 +11,14 @@ status: draft
 ```yaml
 release_type: draft_update
 scope:
+  - update README top-level presentation with bSmart definition, linked feature overview, setup procedure, install flow, and feature detail sections
+  - add progressive help contract for `/new` greeting and keyword/number drill-down behavior
+  - expose help/info/features commands in the feature registry display rules
+  - add Dreaming as an opt-in bSmart feature/protocol for scheduled instance-local content cleanup, conflict detection, token-saving compaction, hidden backups, review/undo manifests, Dream Project, and Nap handoff
+  - clarify that Dreaming affects instance content (`/workspace/bSmart`), not reusable bSmart-System (`/workspace/bSmart-System`)
+  - allow clear low-risk Dreaming changes to be auto-applied only with hidden backups, while unclear/project/destructive/system/runtime changes require operator review
+  - document Daily Dreaming defaults for low-token recent-session content review around 04:00 Norway time
+  - document Weekly Dreaming defaults for broader Friday-night/Saturday stale/conflict/compaction review with bounded token use
   - add Security Watch as an opt-in/admin-owned bSmart feature and protocol for low-noise read-only VPS/container drift checks
   - clarify the minimal manual bSmart bootstrap shape and strengthen the HERMES.md hook so agents actually load bSmart.md before answering
   - add compact sensitive-action expansion for bSmart pre-action notes: only sensitive/approval-likely actions get a short meaning/risk/approval-scope hint, while routine notes stay brief
@@ -26,7 +34,7 @@ scope:
   - document that all newly initialized AI agents should run bSmart by default
   - clarify that bSmart-System must live as a workspace Git checkout, not as stale image-baked content
   - allow images/start wrappers to include only a tiny first-run bootstrap hook that fetches the live workspace helper
-  - standardize new-agent Compose defaults: working_dir=/workspace, TERMINAL_CWD=/workspace, HERMES_WRITE_SAFE_ROOT=/workspace
+  - standardize new-agent Compose defaults: working_dir=/workspace, TERMINAL_CWD=/workspace, HERMES_WRITE_SAFE_ROOT=/opt/data:/workspace:/projects:/sandboxes
   - separate bSmart-System Git from optional instance/content Git to avoid setup ambiguity
   - upgrade mailman/bMail prototype to v1 design: phone-book registry, send_policy modes, deny/allow precedence, file wake tickles, subagent trace fields, agent-communication project fallback, and pending integration workflow
   - add first-class `mail` storage root guidance: `/mail` in containers, sibling `mail/` folder in share/local layouts, and `mail_storage` in container-storage specs
