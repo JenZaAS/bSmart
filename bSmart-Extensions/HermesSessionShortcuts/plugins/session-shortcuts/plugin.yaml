@@ -1,0 +1,5 @@
+name: session-shortcuts
+version: 0.3.0
+description: "Session history shortcuts: /hist, /hresume, and /teleresume."
+author: "SschwAdmin"
+hooks: []

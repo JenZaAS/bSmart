@@ -60,6 +60,8 @@ modes:
 
 Dreaming is for **instance content**. It must not treat `/workspace/bSmart-System` as cleanup scope. The agent may be the main developer of bSmart-System, but Dreaming itself improves `/workspace/bSmart` and comparable per-instance content roots.
 
+Dreaming must also stay separate from **research/discovery/review jobs** such as bSearch, bSmart improvement scout, Hermes release watch, security watch, or browser/Chrome scouting. Those jobs own their own candidate lists, shortlists, pending review state, reports, and follow-up decisions. Dreaming may only note operational drift around those jobs (for example oversized stale reports, duplicate local files, or broken metadata). It must not copy their recommendations into the Dreaming backlog, re-present their shortlist as Dreaming items, score/archive their items, or otherwise become a second review queue for research output.
+
 Default posture balances automation with reversibility:
 - automatically apply low-risk, clear, instance-content improvements when configured to do so;
 - create a backup snapshot before every applied change;

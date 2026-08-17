@@ -10,3 +10,5 @@
 .env
 *.secret
 *.local
+__pycache__/
+*.py[cod]
