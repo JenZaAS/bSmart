@@ -57,7 +57,7 @@ secret_storage:
     - deployer/native secret objects mounted read-only into the container
     - service-level host secret directories mounted read-only, e.g. /opt/docker-workspace/<service>/secrets -> /run/secrets:ro
     - environment variables only when the operator accepts wider runtime exposure
-    - external/tailnet-reachable secret providers such as Tailscale Aperture when configured locally
+    - external vault/provider integrations when configured locally and allowed by their terms
     - manual operator-managed credentials
   public_system_rule: bSmart-System defines provider types and safe verification only; site-local provider defaults belong in the instance content root.
   avoid:

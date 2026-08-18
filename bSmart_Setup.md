@@ -71,14 +71,13 @@ secret_provider:
     - local_file_mount
     - environment_variable
     - docker_or_dokploy_secret
-    - tailscale_aperture
     - external_vault
     - manual
   guidance:
     - bSmart-System defines provider types and prompt flow only; it must not include site-local secrets, account names, endpoints, or mandatory provider choices
     - instance-local defaults may suggest a provider/profile and can be pushed into the instance by an admin tool such as SschwAdmin
     - never store secret values in /workspace/bSmart-System, /workspace/bSmart, project folders, logs, workdocs, or chat
-    - Tailscale Aperture or a tailnet-reachable secret service is an optional provider type, not a bSmart requirement
+    - external secret providers are optional and must be allowed by their terms; local file/deployer secrets are the default portable path
 
 instance_git:
   purpose: make the AI instance content/projects durable and syncable without mixing them into the bSmart system repo

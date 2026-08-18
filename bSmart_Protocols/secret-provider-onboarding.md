@@ -66,13 +66,6 @@ secret_provider_modes:
     notes:
       - prefer read-only file injection when available
       - record only logical names and mount paths
-  tailscale_aperture:
-    meaning: A Tailscale/tailnet-reachable secret service or gateway supplies secrets to authorized agents.
-    notes:
-      - optional integration, not required by public bSmart
-      - endpoint/profile metadata may be instance-local
-      - authorization should rely on tailnet identity and least privilege
-      - bSmart should request logical secret names, not raw values
   external_vault:
     meaning: A third-party or self-hosted vault provides secrets.
     examples:
@@ -99,8 +92,8 @@ prompt_flow:
   choices:
     - No secret provider
     - Mounted/local/deployer secrets
-    - Tailscale Aperture or tailnet secret service
-    - External vault / manual
+    - External vault
+    - Manual / no provider
   if_instance_defaults_exist:
     path: /workspace/bSmart/State/secret-provider-defaults.yaml
     behavior:
@@ -136,26 +129,6 @@ secret_provider_spec:
           optional: true
 ```
 
-```yaml
-tailscale_aperture_spec_example:
-  secret_provider:
-    mode: tailscale_aperture
-    endpoint: tailnet_or_service_endpoint_without_embedded_credentials
-    profile: instance_or_project_profile_name
-    lookup_policy:
-      request_by_logical_name: true
-      never_print_values: true
-      cache_to_disk: false
-    required_secret_names:
-      github_ssh_private_key:
-        alias: git/ssh/private-key
-      github_known_hosts:
-        alias: git/ssh/known-hosts
-      github_token:
-        alias: github/api/token
-        optional: true
-```
-
 ## Verification rules
 
 ```yaml
@@ -164,7 +137,7 @@ verification:
     - confirm provider config file exists
     - confirm required secret names are declared
     - confirm mounted secret files exist and have restrictive permissions, without reading contents
-    - confirm external provider can answer a metadata/health request without returning secret values
+    - confirm external vault/provider can answer a metadata/health request without returning secret values
     - confirm Git/API tools work through their normal no-secret-print commands
   forbidden_checks:
     - cat private keys or tokens

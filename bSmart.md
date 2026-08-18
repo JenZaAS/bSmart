@@ -89,10 +89,9 @@ secret_provider:
     - local_file_mount
     - environment_variable
     - docker_or_dokploy_secret
-    - tailscale_aperture
     - external_vault
     - manual
-  rule: Never store secret values in bSmart-System, bSmart content, project folders, logs, or chat. Tailscale Aperture/tailnet secret services are optional providers, not system requirements.
+  rule: Never store secret values in bSmart-System, bSmart content, project folders, logs, or chat. Local file/deployer secrets are the default portable path; external providers are optional only when allowed by their terms.
 
 project_storage:
   spec_file: /workspace/bSmart/State/container-storage.yaml

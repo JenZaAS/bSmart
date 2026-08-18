@@ -162,7 +162,7 @@ auth_methods:
       - use per command where possible
       - do not export globally unless operator accepts wider exposure
   secret_provider:
-    meaning: retrieve required credential material through the configured secret-provider protocol, including optional providers such as Tailscale Aperture/tailnet secret services
+    meaning: retrieve required credential material through the configured secret-provider protocol, such as local mounts, deployer secrets, or an external vault/provider allowed by the operator
     dependency: secret-provider-onboarding
   manual:
     meaning: operator performs credential steps outside the agent and reports only verification result

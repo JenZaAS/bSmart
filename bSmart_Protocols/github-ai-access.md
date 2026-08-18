@@ -91,7 +91,6 @@ secret_provider:
     - local_file_mount
     - docker_or_dokploy_secret
     - environment_variable
-    - tailscale_aperture
     - external_vault
     - manual
   logical_secret_names:

@@ -79,7 +79,7 @@ instance_defaults:
 preferred:
   - native deployer secrets mounted read-only into containers
   - service-level host secret directory mounted read-only, e.g. /opt/docker-workspace/<service>/secrets -> /run/secrets:ro
-  - optional external providers such as a Tailscale/tailnet-reachable secret service, when configured by the operator
+  - optional external vault/provider integrations, when configured by the operator and allowed by their terms
 permissions:
   directories: "0700 by the service runtime user where possible"
   private_keys: "0600"

@@ -1,9 +1,25 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.10-draft
-updated: 2026-08-18 06:49 UTC
+current_version: 0.1.11-draft
+updated: 2026-08-18 07:10 UTC
 status: draft
+```
+
+## 0.1.11-draft
+
+```yaml
+release_type: draft_update
+scope:
+  - remove a previously considered external secret-service provider from public bSmart-System because current terms make it unsuitable for this use
+  - keep secret-provider onboarding focused on portable local file mounts, Docker/Dokploy/deployer secrets, environment variables, external vault/provider integrations allowed by their terms, and manual handling
+  - update instance Git onboarding so credential handoff remains generic and does not suggest that removed provider
+  - update sanitized secret-provider defaults template to use /run/secrets local file mounts
+safety:
+  - avoids steering third-party bSmart users toward a provider whose terms may not permit the intended secret-management use
+  - preserves the no-secret-values-in-Git/docs/logs/chat boundary
+verification:
+  - searched bSmart-System for removed provider references after edit
 ```
 
 ## 0.1.10-draft
@@ -11,12 +27,11 @@ status: draft
 ```yaml
 release_type: draft_update
 scope:
-  - add generic secret-provider onboarding protocol for local mounts, deployer secrets, environment variables, Tailscale Aperture/tailnet secret services, external vaults, and manual handling
+  - add generic secret-provider onboarding protocol for local mounts, deployer secrets, environment variables, external vaults, and manual handling
   - add sanitized example defaults templates for instance Git and secret-provider setup
   - add generic instance Git onboarding protocol that separates no Git, local Git, existing remote, and create/request remote flows from auth choices
   - allow instance-local defaults files to suggest repo/provider/auth values without hardcoding those values into public bSmart-System
   - let instance Git onboarding hand off to secret-provider onboarding when Git credentials are needed and no provider is configured yet
-  - document that Tailscale Aperture is an optional secret-provider type usable beyond GitHub, not a GitHub-specific or required bSmart dependency
   - strengthen public-system neutrality: no hardcoded operator GitHub user, organization, repo pattern, host path, token name, SSH key name, endpoint, or secret value in reusable bSmart-System docs
 safety:
   - secret values remain excluded from bSmart-System, bSmart content, project folders, logs, workdocs, and chat
