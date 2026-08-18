@@ -52,14 +52,20 @@ approval_events_to_log:
 ```yaml
 secret_storage:
   principle: Keep credentials outside collaborative workspaces and outside Git repos.
-  preferred:
+  protocol: /workspace/bSmart-System/bSmart_Protocols/secret-provider-onboarding.md
+  provider_modes:
     - deployer/native secret objects mounted read-only into the container
     - service-level host secret directories mounted read-only, e.g. /opt/docker-workspace/<service>/secrets -> /run/secrets:ro
+    - environment variables only when the operator accepts wider runtime exposure
+    - external/tailnet-reachable secret providers such as Tailscale Aperture when configured locally
+    - manual operator-managed credentials
+  public_system_rule: bSmart-System defines provider types and safe verification only; site-local provider defaults belong in the instance content root.
   avoid:
     - /workspace/secrets
     - project folders
     - bSmart content/system repos
     - broad collaboration-group permission roots
+    - bSmart logs, TODOs, workdocs, or chat transcripts
   permissions:
     directories: "0700 by the service runtime user where possible"
     private_keys: "0600"

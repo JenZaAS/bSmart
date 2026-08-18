@@ -69,13 +69,30 @@ system_folders:
 
 instance_git:
   status: optional_but_recommended
+  protocol: /workspace/bSmart-System/bSmart_Protocols/instance-git-onboarding.md
+  defaults_file: /workspace/bSmart/State/instance-git-defaults.yaml
   setup_prompt: Ask whether this AI instance should use a Git repo for its bSmart content/projects.
   modes:
     - none
     - local_git_only
     - existing_remote
     - create_new_remote
-  rule: Do not force Git, but make the choice explicit during setup.
+  rule: Do not force Git, but make the choice explicit during setup. Keep bSmart-System generic; instance-local defaults may suggest repo/provider/auth values.
+
+secret_provider:
+  status: optional
+  protocol: /workspace/bSmart-System/bSmart_Protocols/secret-provider-onboarding.md
+  defaults_file: /workspace/bSmart/State/secret-provider-defaults.yaml
+  setup_prompt: Ask only when a feature needs credentials or the operator explicitly asks to configure secrets.
+  modes:
+    - none
+    - local_file_mount
+    - environment_variable
+    - docker_or_dokploy_secret
+    - tailscale_aperture
+    - external_vault
+    - manual
+  rule: Never store secret values in bSmart-System, bSmart content, project folders, logs, or chat. Tailscale Aperture/tailnet secret services are optional providers, not system requirements.
 
 project_storage:
   spec_file: /workspace/bSmart/State/container-storage.yaml
@@ -90,9 +107,10 @@ project_storage:
   setup_protocol: /workspace/bSmart-System/bSmart_Protocols/project-storage.md
   compose_change_required_for_projects: true
 github_ai_access:
-  machine_user: JenZaAI
-  profile: https://github.com/JenZaAI
-  protocol: /workspace/bSmart-System/bSmart_Protocols/github-ai-access.md
+  provider_protocol: /workspace/bSmart-System/bSmart_Protocols/github-ai-access.md
+  instance_defaults: /workspace/bSmart/State/instance-git-defaults.yaml
+  secret_provider: /workspace/bSmart/State/secret-provider.yaml
+  rule: Public bSmart-System defines generic GitHub access patterns only. Specific GitHub users, organizations, repo owners, signatures, token scopes, SSH key names, and secret-provider profiles belong in instance-local content.
 
 startup_sequence:
   - read this manifest

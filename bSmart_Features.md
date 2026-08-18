@@ -339,7 +339,7 @@ files:
   - /workspace/bSmart-System/bSmart_Templates/
   - /workspace/bSmart-System/bSmart_Protocols/
   - /workspace/bSmart/
-description: Creates, verifies, and repairs the local bSmart structure, including folders, templates, local state files, bootstrap behavior, content-root separation, and protocol discovery.
+description: Creates, verifies, and repairs the local bSmart structure, including folders, templates, local state files, bootstrap behavior, content-root separation, optional instance Git, secret-provider configuration, and protocol discovery.
 commands:
   - run bSmart setup
   - verify bSmart bootstrap
@@ -348,6 +348,8 @@ commands:
 included_capabilities:
   - Bootstrap chain
   - Local content root
+  - Optional instance Git onboarding
+  - Secret-provider onboarding
   - Protocol discovery
   - Template setup
   - Local state setup

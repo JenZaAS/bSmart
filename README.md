@@ -50,7 +50,19 @@ excludes:
 
 ## Secret storage boundary
 
-For GitHub repo access by AI containers, use the standard protocol in:
+For general secret-provider setup, use:
+
+```text
+/workspace/bSmart-System/bSmart_Protocols/secret-provider-onboarding.md
+```
+
+For instance Git setup, including optional handoff to the configured secret provider, use:
+
+```text
+/workspace/bSmart-System/bSmart_Protocols/instance-git-onboarding.md
+```
+
+For GitHub repo access by AI containers, use the provider-specific protocol in:
 
 ```text
 /workspace/bSmart-System/bSmart_Protocols/github-ai-access.md
@@ -58,9 +70,16 @@ For GitHub repo access by AI containers, use the standard protocol in:
 
 ```yaml
 rule: Do not store secrets under /workspace, bSmart repos, or project folders.
+public_system_boundary:
+  - bSmart-System defines provider types, prompt flow, and safe verification patterns
+  - bSmart-System must not hardcode one operator's GitHub user, repo owner, host paths, token names, SSH key names, vault endpoint, or secret values
+instance_defaults:
+  - local bSmart content may suggest defaults such as provider, profile, repo owner, actor, or secret provider
+  - defaults remain suggestions and must not contain secret values
 preferred:
   - native deployer secrets mounted read-only into containers
   - service-level host secret directory mounted read-only, e.g. /opt/docker-workspace/<service>/secrets -> /run/secrets:ro
+  - optional external providers such as a Tailscale/tailnet-reachable secret service, when configured by the operator
 permissions:
   directories: "0700 by the service runtime user where possible"
   private_keys: "0600"

@@ -1,0 +1,16 @@
+# bSmart instance Git defaults example
+# Copy to /workspace/bSmart/State/instance-git-defaults.yaml and edit for one instance.
+# Keep secret values out of this file.
+
+instance_git_defaults:
+  provider: github
+  owner_or_namespace: ExampleOrg
+  actor: example-machine-user-or-deploy-key
+  repo_pattern: bSmart_<AgentName>
+  default_branch: main
+  preferred_mode: existing_remote
+  auth_method: secret_provider
+  secret_provider_profile: example-git
+  direct_default_branch_push: false
+  prefer_branches_and_prs: true
+  ignore_nested_git: true

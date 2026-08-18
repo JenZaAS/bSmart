@@ -1,164 +1,193 @@
 # bSmart Protocol: GitHub access for AI containers
 
-This protocol defines the standard way bSmart/Hermes AI containers get access to GitHub repositories without placing credentials in images, repos, or workspaces.
+```yaml
+protocol:
+  id: github-ai-access
+  title: GitHub access for AI containers
+  purpose: Configure GitHub repository and API access for one bSmart-aware AI instance without placing credentials in images, repos, workspaces, logs, or chat.
+  use_when:
+    - instance-git-onboarding chooses GitHub as the provider
+    - an AI container needs GitHub clone, pull, push, PR, issue, or comment access
+    - troubleshooting GitHub SSH/token access for a bSmart instance
+  related_protocols:
+    - instance-git-onboarding
+    - secret-provider-onboarding
+```
 
-Use this for bSmart-aware admin/work containers that need controlled GitHub access.
+## Public-system boundary
+
+```yaml
+genericity:
+  rule: This protocol is reusable bSmart-System guidance and must not require one operator's GitHub account, organization, repo owner, host paths, SSH key names, token names, or secret-provider endpoint.
+  instance_specific_values_belong_in:
+    - /workspace/bSmart/State/instance-git-defaults.yaml
+    - /workspace/bSmart/State/instance-git.yaml
+    - /workspace/bSmart/State/secret-provider.yaml
+    - /workspace/bSmart/Docs/github/
+  examples_are_placeholders: true
+  never_store:
+    - private keys
+    - tokens
+    - unredacted secret-provider responses
+    - personal access token scopes tied to an actual secret value
+```
 
 ## Goals
 
-- Use the shared AI GitHub machine user: [JenZaAI](https://github.com/JenZaAI).
-- Grant repository access case-by-case, not globally.
-- Keep credentials outside Docker images, Git repositories, and `/workspace`.
-- Make every AI container use the same secrets/mount/runtime pattern.
-- Prefer branches and PRs for updates; avoid direct pushes to `main` unless explicitly approved.
+```yaml
+goals:
+  - grant repository access case-by-case, not globally
+  - keep credentials outside Docker images, Git repositories, /workspace, project folders, logs, and chat
+  - support different GitHub users, organizations, deploy keys, and auth policies per instance
+  - prefer branches and PRs for updates
+  - avoid direct pushes to main/default branch unless the operator explicitly approves
+```
 
 ## Identity and attribution
 
-GitHub identity:
-
-```text
-JenZaAI — https://github.com/JenZaAI
+```yaml
+github_identity:
+  choices:
+    - operator_personal_account
+    - project_or_org_machine_user
+    - repo_deploy_key
+    - GitHub App
+    - other operator-approved model
+  selection_rule: The reusable system asks or reads instance-local defaults; it does not hardcode the account.
 ```
 
-Public GitHub comments/posts must be shown to Erling in full before posting. Approval is for the exact text, not just the idea of posting.
+Public GitHub comments/posts must be shown to the operator in full before posting. Approval is for the exact text, not just the idea of posting.
 
-Default public comment signature:
-
-```markdown
-—
-Posted by [JenZaAI](https://github.com/JenZaAI) via [bSmart AI workflow](https://github.com/JenZaAS/bSmart), approved by [JenZAAS](https://github.com/JenZaAS).
-```
+Optional instance-local signature templates may live in `/workspace/bSmart/Docs/github/` or the instance Git defaults. Do not put one operator's mandatory public signature in this generic protocol.
 
 ## Credentials: SSH vs token
 
-Use both, for different jobs:
+Use SSH and token/API auth for different jobs:
 
 | Credential | Used for | Notes |
 |---|---|---|
-| SSH key | `git clone`, `git pull`, `git push` | Required/preferred for private repo git transport. |
-| GitHub token via `GH_TOKEN` | `gh` API actions: PR comments, issue comments, PR metadata, releases | SSH alone is not enough for GitHub API comments. |
+| SSH key or deploy key | `git clone`, `git pull`, `git push` | Preferred for private repo git transport. |
+| GitHub token / `GH_TOKEN` / GitHub App token | `gh` API actions: repo creation, PR comments, issue comments, PR metadata, releases | SSH alone is not enough for GitHub API comments. |
 
-The current shared `public_repo` token is suitable for public-repo comments only. It does not grant private repo contents access.
+```yaml
+credential_rules:
+  ssh:
+    - use a dedicated key per trusted instance or a repo-scoped deploy key when narrow access is enough
+    - pin GitHub host keys through known_hosts
+    - avoid StrictHostKeyChecking=no
+  token:
+    - use the minimum permissions/repository selection needed
+    - read from a secret provider or mounted file only for commands that need API access
+    - do not export globally unless the operator accepts broader runtime exposure
+  common_pitfall: A token may identify as the expected GitHub actor but still return 404 for private repos when repository selection or scopes are insufficient.
+```
 
-For private repository API operations, create/use a token with the minimum private-repo permissions required, or use SSH for git and limit token use to public comments.
+## Secret-provider integration
 
-## Host secrets layout
+```yaml
+secret_provider:
+  preferred_flow: configure through /workspace/bSmart-System/bSmart_Protocols/secret-provider-onboarding.md when credentials are not already mounted or otherwise available
+  supported_sources:
+    - local_file_mount
+    - docker_or_dokploy_secret
+    - environment_variable
+    - tailscale_aperture
+    - external_vault
+    - manual
+  logical_secret_names:
+    github_ssh_private_key:
+      required_for:
+        - git_ssh_transport
+    github_ssh_public_key:
+      optional: true
+      safe_to_show: true
+    github_known_hosts:
+      required_for:
+        - git_ssh_transport
+    github_token:
+      required_for:
+        - gh_api
+      optional: true
+```
 
-Each container gets its own host-side secrets directory mounted read-only as `/run/secrets`.
+## Container secrets pattern
 
-Examples:
+For Docker/Dokploy-like containers, each AI container should have its own secret source mounted read-only, commonly as `/run/secrets`.
+
+Generic expected files when using local file mounts:
 
 ```text
-/opt/docker-workspace/<service-a>/secrets
-/opt/docker-workspace/<service-b>/secrets
-/opt/docker-workspace/ai/<agent-slug>/secrets
+/run/secrets/<git-ssh-private-key>   # private SSH key; never print
+/run/secrets/<git-ssh-public-key>    # public SSH key; safe to show
+/run/secrets/<github-known-hosts>     # pinned GitHub host keys
+/run/secrets/<github-token>           # optional token for gh/API; never print
 ```
 
-Expected files when GitHub access is enabled:
-
-```text
-/run/secrets/jenzai_container_ed25519       # private SSH key; never print
-/run/secrets/jenzai_container_ed25519.pub   # public SSH key; safe to show
-/run/secrets/github_known_hosts             # pinned GitHub host keys
-/run/secrets/github_token                   # optional token for gh/API; never print
-```
-
-Host permissions for Hermes containers using UID/GID `10000`:
-
-```bash
-sudo chown root:10000 /opt/docker-workspace/<container>/secrets
-sudo chmod 750 /opt/docker-workspace/<container>/secrets
-sudo chown root:10000 /opt/docker-workspace/<container>/secrets/jenzai_container_ed25519 /opt/docker-workspace/<container>/secrets/github_token 2>/dev/null || true
-sudo chmod 640 /opt/docker-workspace/<container>/secrets/jenzai_container_ed25519 /opt/docker-workspace/<container>/secrets/github_token 2>/dev/null || true
-sudo chown root:10000 /opt/docker-workspace/<container>/secrets/jenzai_container_ed25519.pub /opt/docker-workspace/<container>/secrets/github_known_hosts 2>/dev/null || true
-sudo chmod 644 /opt/docker-workspace/<container>/secrets/jenzai_container_ed25519.pub /opt/docker-workspace/<container>/secrets/github_known_hosts 2>/dev/null || true
-```
-
-## Compose/runtime pattern
-
-Mount the whole secrets directory, not individual secret files inside an already read-only `/run/secrets` mount:
+Generic Compose pattern:
 
 ```yaml
 volumes:
-  - /opt/docker-workspace/<container>/secrets:/run/secrets:ro
-```
-
-Set SSH command for git operations:
-
-```yaml
+  - <host-or-deployer-secret-source>:/run/secrets:ro
 environment:
-  GIT_SSH_COMMAND: "ssh -i /run/secrets/jenzai_container_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/run/secrets/github_known_hosts"
+  GIT_SSH_COMMAND: "ssh -i /run/secrets/<git-ssh-private-key> -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/run/secrets/<github-known-hosts>"
 ```
 
-Recommended environment split:
+Recommended runtime split:
 
-- Put `GIT_SSH_COMMAND` in the container's runtime environment so ordinary `git fetch`, `git pull`, and `git push` automatically use the mounted JenZaAI SSH key and pinned GitHub host keys.
-- Keep `GH_TOKEN` file-based by default. For GitHub API actions, read it only for the command that needs it, e.g. `GH_TOKEN="$(cat /run/secrets/github_token)" gh ...`.
-- Do not export `GH_TOKEN` globally unless the operator explicitly accepts that broader runtime exposure.
-- Do not set `StrictHostKeyChecking=no`.
-
-Implementation lookup rule:
-
-- bSmart-System defines the abstract standard only. Instance-specific Compose, Dokploy, helper-script, and path details should live in the local bSmart content/docs for that AI instance.
-- When setting up or troubleshooting an instance, first look for local implementation notes such as:
-  - `/workspace/bSmart/Docs/github/JENZAI_GITHUB_ACCESS_PLAN.md`
-  - `/workspace/bSmart/Docs/admin/`
-  - the instance's blueprint/source notes if visible to that agent or admin container
-- If the local implementation details are missing, propose a small setup workflow: identify the container/service slug, secrets host path, target repositories, desired permissions, Compose/Dokploy environment update, redeploy step, and verification commands. Do not invent site-local paths.
+- Put `GIT_SSH_COMMAND` in the container environment when ordinary `git fetch`, `git pull`, and `git push` should automatically use the mounted key.
+- Keep `GH_TOKEN` file-based or provider-supplied by default; pass it per command, e.g. `GH_TOKEN="$(cat /run/secrets/<github-token>)" gh ...`.
+- Do not print tokens or private keys.
 
 ## GitHub-side repo access workflow
 
-For each private repo:
+For a private repo:
 
-1. In GitHub, add [JenZaAI](https://github.com/JenZaAI) to the repo or an appropriate team.
-2. Grant the least permission needed:
-   - `Read` for inspect-only work.
-   - `Write` for branch pushes and PRs.
-   - Avoid admin unless truly required.
-3. Protect `main` where possible:
+1. Choose the GitHub actor for this instance: machine user, personal account, GitHub App, or deploy key.
+2. Grant least privilege to the exact repository or repository set:
+   - Read for inspection/pull-only work.
+   - Write for branch pushes and PRs.
+   - Admin only when truly required.
+3. Protect `main`/default branch where practical:
    - require PR before merge,
    - avoid direct pushes by AI containers unless explicitly approved.
-4. Add the container's public SSH key to the JenZaAI GitHub account if it is not already present.
+4. Add public SSH key or configure deploy key/App credentials if using SSH transport.
+5. Configure token/App permissions only when API actions are needed.
 
 ## Container-side verification
 
-Inside the target container:
+Inside the target container, verify without printing secret values.
 
 ```bash
 id
 ls -l /run/secrets
-ssh-keygen -lf /run/secrets/jenzai_container_ed25519.pub
-GIT_SSH_COMMAND="ssh -i /run/secrets/jenzai_container_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/run/secrets/github_known_hosts" \
+ssh-keygen -lf /run/secrets/<git-ssh-public-key>
+GIT_SSH_COMMAND="ssh -i /run/secrets/<git-ssh-private-key> -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/run/secrets/<github-known-hosts>" \
   git ls-remote git@github.com:<owner>/<repo>.git HEAD
 ```
 
-If `gh` is needed and `/run/secrets/github_token` exists:
+If `gh` is needed and a token is available as a mounted file:
 
 ```bash
-GH_TOKEN="$(cat /run/secrets/github_token)" gh auth status
-GH_TOKEN="$(cat /run/secrets/github_token)" gh api user --jq '.login + " " + .html_url'
+GH_TOKEN="$(cat /run/secrets/<github-token>)" gh auth status
+GH_TOKEN="$(cat /run/secrets/<github-token>)" gh api user --jq '.login + " " + .html_url'
 ```
+
+Expected actor should match the instance-local default or operator-selected account.
 
 If plain `git` fails with `Permission denied (publickey)` but an explicit command using the mounted key works, the live runtime is probably missing `GIT_SSH_COMMAND` or running from stale Compose/Dokploy configuration. Update the authoritative deployment configuration, redeploy/recreate the container, then verify the environment inside the live container.
 
-Expected user:
-
-```text
-JenZaAI https://github.com/JenZaAI
-```
-
 ## Clone/update workflow
 
-Clone private repos into that container's project storage, usually `/projects`:
+Clone private repos into the configured project or content root, depending on purpose:
 
 ```bash
-git clone git@github.com:<owner>/<repo>.git /projects/<repo>
+git clone git@github.com:<owner>/<repo>.git <target-path>
 ```
 
 For updates:
 
 ```bash
-cd /projects/<repo>
+cd <target-path>
 git status
 git switch -c ai/<short-task-name>
 # edit/test
@@ -167,40 +196,33 @@ git commit -m "<concise message>"
 git push -u origin ai/<short-task-name>
 ```
 
-Then create a PR with `gh` if token/API auth exists, or ask Erling to open the PR manually.
+Then create a PR with `gh` if token/API auth exists, or ask the operator to open the PR manually.
 
-## Generic example: grant one AI container access to one private repo
+## Instance-local defaults example
 
-1. Choose the target container/service slug, e.g. `<agent-slug>`.
-2. Choose the target repository, e.g. `<owner>/<repo>`.
-3. In GitHub, grant the machine user or GitHub App access to `<owner>/<repo>` with the least permission needed.
-4. Put that container's SSH key, public key, known-hosts file, and optional token into its host secrets directory:
+This example belongs in an instance-local defaults file, not as a public-system requirement:
 
-```text
-/opt/docker-workspace/<agent-slug>/secrets/jenzai_container_ed25519
-/opt/docker-workspace/<agent-slug>/secrets/jenzai_container_ed25519.pub
-/opt/docker-workspace/<agent-slug>/secrets/github_known_hosts
-/opt/docker-workspace/<agent-slug>/secrets/github_token        # optional for gh/API
-```
-
-5. Redeploy the container so `/run/secrets` and `GIT_SSH_COMMAND` are active.
-6. Verify inside the container:
-
-```bash
-git ls-remote git@github.com:<owner>/<repo>.git HEAD
-```
-
-7. Clone into project storage:
-
-```bash
-git clone git@github.com:<owner>/<repo>.git /projects/<repo>
+```yaml
+instance_git_defaults:
+  provider: github
+  owner_or_namespace: ExampleOrg
+  actor: example-machine-user
+  repo_pattern: bSmart_<AgentName>
+  auth_method: secret_provider
+  secret_provider_profile: example-github
+  prefer_branches_and_prs: true
+  direct_default_branch_push: false
 ```
 
 ## Guardrails
 
-- Never print or paste private keys/tokens into chats, logs, docs, or commits.
-- Never bake credentials into images.
-- Never commit credentials to bSmart or project repositories.
-- Prefer per-container SSH keys even when using the same JenZaAI account.
-- If a shared token is used, treat rotation as affecting every container that received it.
-- Public GitHub comments require full-text approval by Erling before posting.
+```yaml
+guardrails:
+  - never print or paste private keys/tokens into chats, logs, docs, or commits
+  - never bake credentials into images
+  - never commit credentials to bSmart or project repositories
+  - prefer least-privilege, per-instance or per-repo credentials
+  - treat shared tokens as higher blast-radius and document rotation impact locally
+  - public GitHub comments require full-text operator approval before posting
+  - if the target PR was superseded/closed, check for the successor and ask before posting to the new target unless approval clearly covers it
+```

@@ -14,6 +14,7 @@ steps:
   - run_or_offer_streamlined_workspace_bootstrap_helper
   - verify_system_root_public_https_git
   - verify_compose_defaults_working_dir_terminal_cwd_and_safe_root
+  - configure_secret_provider_if_needed_or_requested
   - configure_instance_git_only_if_operator_wants_content_git
   - configure_optional_shared_group
   - configure_approval_mode_and_guardrails
@@ -59,17 +60,51 @@ workspace_bootstrap:
     TERMINAL_CWD: /workspace
   rule: all new AI agents should be bSmart-enabled unless the operator explicitly says otherwise
 
+secret_provider:
+  purpose: configure how this bSmart instance retrieves credentials for Git, APIs, mail, webhooks, model providers, or deployment integrations without storing secret values in bSmart files or Git
+  protocol: /workspace/bSmart-System/bSmart_Protocols/secret-provider-onboarding.md
+  spec_file: /workspace/bSmart/State/secret-provider.yaml
+  defaults_file: /workspace/bSmart/State/secret-provider-defaults.yaml
+  default: ask only when a feature needs credentials or the operator explicitly asks to configure secrets
+  choices:
+    - none
+    - local_file_mount
+    - environment_variable
+    - docker_or_dokploy_secret
+    - tailscale_aperture
+    - external_vault
+    - manual
+  guidance:
+    - bSmart-System defines provider types and prompt flow only; it must not include site-local secrets, account names, endpoints, or mandatory provider choices
+    - instance-local defaults may suggest a provider/profile and can be pushed into the instance by an admin tool such as SschwAdmin
+    - never store secret values in /workspace/bSmart-System, /workspace/bSmart, project folders, logs, workdocs, or chat
+    - Tailscale Aperture or a tailnet-reachable secret service is an optional provider type, not a bSmart requirement
+
 instance_git:
   purpose: make the AI instance content/projects durable and syncable without mixing them into the bSmart system repo
+  protocol: /workspace/bSmart-System/bSmart_Protocols/instance-git-onboarding.md
+  spec_file: /workspace/bSmart/State/instance-git.yaml
+  defaults_file: /workspace/bSmart/State/instance-git-defaults.yaml
   default: ask only for /workspace/bSmart content; do not confuse this with bSmart-System Git, which is required system infrastructure
   choices:
     - none
     - local_git_only
     - existing_remote
     - create_new_remote
+  auth_choices:
+    - none_pull_only
+    - existing_ssh_agent
+    - mounted_ssh_key
+    - deploy_key
+    - token_file
+    - secret_provider
+    - manual
   guidance:
-    - recommend a private instance repo for persistent AI instances
-    - allow no Git when the operator wants a temporary/local-only instance
+    - recommend a private instance repo for persistent AI instances, but allow no Git for temporary/local-only instances
+    - do not hardcode a GitHub user, organization, repo owner, repo pattern, SSH key name, token name, or host path in public bSmart-System
+    - read instance-local defaults first when present, but treat them as suggestions rather than system requirements
+    - allow different agents to use different Git hosts, accounts, repositories, and auth models
+    - if auth_method is secret_provider and no secret provider is configured, offer to run secret-provider onboarding first
     - do not store secrets in the instance repo
     - if Git is enabled, keep nested external code repos ignored unless the operator explicitly wants submodules
   nested_git_helper: /workspace/bSmart-System/scripts/bsmart-ignore-nested-git
