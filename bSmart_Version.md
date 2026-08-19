@@ -2,7 +2,7 @@
 
 ```yaml
 current_version: 0.1.11-draft
-updated: 2026-08-18 07:10 UTC
+updated: 2026-08-19 06:01 UTC
 status: draft
 ```
 
@@ -11,6 +11,7 @@ status: draft
 ```yaml
 release_type: draft_update
 scope:
+  - add canonical State protocol for active/current project ownership, Free Mode, state changes, and drift handling; feature-specific protocols should reference it rather than restating the rule
   - remove a previously considered external secret-service provider from public bSmart-System because current terms make it unsuitable for this use
   - keep secret-provider onboarding focused on portable local file mounts, Docker/Dokploy/deployer secrets, environment variables, external vault/provider integrations allowed by their terms, and manual handling
   - update instance Git onboarding so credential handoff remains generic and does not suggest that removed provider
@@ -20,6 +21,7 @@ safety:
   - preserves the no-secret-values-in-Git/docs/logs/chat boundary
 verification:
   - searched bSmart-System for removed provider references after edit
+  - read back State and Dreaming protocol edits and verified SschwAdmin still has `threadripper` in bSmart_State.md
 ```
 
 ## 0.1.10-draft

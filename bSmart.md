@@ -105,6 +105,11 @@ project_storage:
   local_bsmart_sandbox_root: ./bSmart/Sandboxes
   setup_protocol: /workspace/bSmart-System/bSmart_Protocols/project-storage.md
   compose_change_required_for_projects: true
+
+state_management:
+  protocol: /workspace/bSmart-System/bSmart_Protocols/state.md
+  rule: Active/current project state is governed by the state protocol; feature-specific protocols should reference it rather than restating ownership rules.
+
 github_ai_access:
   provider_protocol: /workspace/bSmart-System/bSmart_Protocols/github-ai-access.md
   instance_defaults: /workspace/bSmart/State/instance-git-defaults.yaml

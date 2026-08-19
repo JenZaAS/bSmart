@@ -66,7 +66,8 @@ Default posture balances automation with reversibility:
 - automatically apply low-risk, clear, instance-content improvements when configured to do so;
 - create a backup snapshot before every applied change;
 - write a change manifest so any Dream action can be reviewed or undone later;
-- ask the operator when the change is unclear, potentially destructive, touches active project meaning, or would alter audit/safety-relevant content;
+- follow `/workspace/bSmart-System/bSmart_Protocols/state.md` for active/current project ownership and drift handling;
+- ask the operator when the change is unclear, potentially destructive, would change canonical state, changes project goals/TODO meaning, or would alter audit/safety-relevant content;
 - never remove approvals, audit-relevant decisions, safety notes, or active handoff state merely to save tokens;
 - do **not** edit `/workspace/bSmart-System`, deploy, push, chmod/chown, or modify runtime/host state as part of Dreaming.
 
@@ -245,13 +246,14 @@ Interactive decision UX:
 ## Daily run guidelines
 
 Daily Dreaming should be cheap:
-1. Inspect only recent session context, recent bSmart logs/TODO changes, active project state, and files modified in the last 24–36 hours.
-2. Avoid active project content unless the recent work clearly requires a nap/handoff update; normal project cleanup belongs to Dream Project.
-3. Identify stale handoff items, duplicate TODOs, unresolved conflicts, and obvious compaction opportunities.
-4. Auto-apply only clear low-risk instance-content changes with backups; ask for unclear or meaning-changing changes.
-5. Produce at most 3 user-visible findings.
-6. Write a short dated report under `/workspace/bSmart/Workdocs/dreaming/`.
-7. Deliver a compact summary with review/undo commands.
+1. Inspect only recent session context, recent bSmart logs/TODO changes, the canonical state file named by `/workspace/bSmart-System/bSmart_Protocols/state.md`, and files modified in the last 24–36 hours.
+2. For active/current project drift, apply the state protocol's drift-handling rules instead of restating ownership here.
+3. Avoid active project content unless the recent work clearly requires a nap/handoff update; normal project cleanup belongs to Dream Project.
+4. Identify stale handoff items, duplicate TODOs, unresolved conflicts, and obvious compaction opportunities.
+5. Auto-apply only clear low-risk instance-content changes with backups; ask for unclear or meaning-changing changes.
+6. Produce at most 3 user-visible findings.
+7. Write a short dated report under `/workspace/bSmart/Workdocs/dreaming/`.
+8. Deliver a compact summary with review/undo commands.
 
 ## Weekly run guidelines
 

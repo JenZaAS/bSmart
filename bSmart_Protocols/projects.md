@@ -19,6 +19,12 @@ paths:
 ```
 
 ```yaml
+state_management:
+  protocol: /workspace/bSmart-System/bSmart_Protocols/state.md
+  rule: Project creation/listing may use state, but active/current project ownership and Free Mode rules are defined by the State protocol.
+```
+
+```yaml
 path_resolution:
   rule:
     - resolve ./projects relative to the folder containing the startup hook, e.g. AGENTS.md
