@@ -2,7 +2,7 @@
 
 ```yaml
 current_version: 0.1.11-draft
-updated: 2026-08-19 06:01 UTC
+updated: 2026-08-19 17:55 UTC
 status: draft
 ```
 
@@ -16,12 +16,18 @@ scope:
   - keep secret-provider onboarding focused on portable local file mounts, Docker/Dokploy/deployer secrets, environment variables, external vault/provider integrations allowed by their terms, and manual handling
   - update instance Git onboarding so credential handoff remains generic and does not suggest that removed provider
   - update sanitized secret-provider defaults template to use /run/secrets local file mounts
+  - add Improvement Scout as a visible user-facing bSmart feature distinct from bSearch and Dreaming
+  - add bundled bSelective prototype for MATLAB-first selective source-context retrieval
+  - document bWorkflow and bSelective in the bundled extension manifest
 safety:
   - avoids steering third-party bSmart users toward a provider whose terms may not permit the intended secret-management use
   - preserves the no-secret-values-in-Git/docs/logs/chat boundary
 verification:
   - searched bSmart-System for removed provider references after edit
   - read back State and Dreaming protocol edits and verified SschwAdmin still has `threadripper` in bSmart_State.md
+  - verified the feature registry now lists Improvement Scout and describes its source-list/proposal workflow
+  - bSelective unit tests pass in both packaged and installed extension copies
+  - exercised bSelective CLI against a temporary MATLAB class for summary and exact method-source retrieval
 ```
 
 ## 0.1.10-draft

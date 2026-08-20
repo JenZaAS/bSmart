@@ -64,11 +64,12 @@ commands:
 4. Library — Store and reuse durable knowledge.
 5. Decision Log — Record important decisions and approvals.
 6. Dreaming — Improve local bSmart content while you sleep.
-7. Safety — Keep actions transparent and low-risk.
-8. Security Watch — Check visible VPS/container security drift.
-9. Setup — Initialize and maintain bSmart structure.
-10. Extensions — Enable optional add-on packs.
-11. Features — Show available bSmart capabilities.
+7. Improvement Scout — Find external ideas to improve bSmart itself.
+8. Safety — Keep actions transparent and low-risk.
+9. Security Watch — Check visible VPS/container security drift.
+10. Setup — Initialize and maintain bSmart structure.
+11. Extensions — Enable optional add-on packs.
+12. Features — Show available bSmart capabilities.
 
 ## Feature index
 
@@ -78,11 +79,12 @@ commands:
 4. Library
 5. Decision Log
 6. Dreaming
-7. Safety
-8. Security Watch
-9. Setup
-10. Extensions
-11. Features
+7. Improvement Scout
+8. Safety
+9. Security Watch
+10. Setup
+11. Extensions
+12. Features
 
 ## Features by group
 
@@ -95,6 +97,7 @@ commands:
 - Library — Store and reuse durable knowledge.
 - Decision Log — Record important decisions and approvals.
 - Dreaming — Improve local bSmart content while you sleep.
+- Improvement Scout — Find external ideas to improve bSmart itself.
 
 ### System
 - Safety — Keep actions transparent and low-risk.
@@ -272,6 +275,36 @@ notes:
   - Setup should record disabled/no-ask choices so /new does not repeatedly prompt.
 ```
 
+### Improvement Scout
+
+```yaml
+name: Improvement Scout
+group: Knowledge
+status: active
+visibility: user-facing
+short_description: Find external ideas to improve bSmart itself.
+files:
+  - /workspace/bSmart/Projects/bSmart/data/bsmart-improvement-scout.yaml
+  - /workspace/bSmart/Projects/bSmart/data/bsmart-improvement-scout-*.md
+  - Hermes cron job: bSmart improvement scout
+description: Runs a scheduled bSmart-focused research pass over selected sources such as Hermes, agent CLI ecosystems, MCP tooling, GitHub trends, Fabric, and operator-added URLs. It looks for practical ideas, releases, tools, and patterns that could improve bSmart without bloating it. It prepares accept/reject/postpone recommendations only; it does not edit bSmart-System or deploy changes without later operator acceptance.
+commands:
+  - show improvement scout
+  - run improvement scout
+  - bSmart add <url>
+included_capabilities:
+  - Weekly external source review
+  - Curated source list with cursor state
+  - Up to ten source inspections per scheduled run
+  - Up to three recommendations per run
+  - Accept/reject/postpone proposal workflow
+  - Operator-added source URLs
+notes:
+  - This is distinct from bSearch, which is broader knowledge discovery and curation.
+  - This is distinct from Dreaming, which improves local bSmart content/state rather than scouting external ideas.
+  - Current SschwAdmin cron job is `bSmart improvement scout` (`eb2f57b305a5`), scheduled Sunday 01:30 UTC.
+```
+
 ### Safety
 
 ```yaml
@@ -376,6 +409,9 @@ commands:
 included_capabilities:
   - Optional prompt packs
   - External workflow libraries
+  - Bundled knowledge discovery (`bSearch`)
+  - Bundled workflow memory (`bWorkflow`)
+  - Bundled selective source-context retrieval (`bSelective`)
 notes:
   - Extensions are discovered from /workspace/bSmart-Extensions subfolders.
 ```

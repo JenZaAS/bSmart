@@ -10,7 +10,15 @@ project:
   agent_focus: <what-the-agent-should-focus-on>
 ```
 
-## Decisions
+## Project structure
+
+- `data/` — raw/supporting project material.
+- `knowledge/` — curated reusable knowledge specific to this project.
+- `decisions.md` — project-specific decisions and approvals.
+- `workdocs/` — project-local working documents for larger work.
+- `sandbox/` — disposable/derived execution or test area; not the source of truth.
+
+## Current focus
 
 ## Tasks
 

@@ -176,6 +176,18 @@ extensions:
       packaging: bundled_optional
       source_path: /workspace/bSmart-System/bSmart-Extensions/bSearch
       purpose: AI-driven knowledge search and curation extension with scheduled discovery, user-interest profiling, and feedback learning.
+    bWorkflow:
+      path: /workspace/bSmart-Extensions/bWorkflow
+      optional: true
+      packaging: bundled_optional
+      source_path: /workspace/bSmart-System/bSmart-Extensions/bWorkflow
+      purpose: Reusable workflow/procedure memory backed by instance-local Markdown under /workspace/bSmart/Workflows.
+    bSelective:
+      path: /workspace/bSmart-Extensions/bSelective
+      optional: true
+      packaging: bundled_optional
+      source_path: /workspace/bSmart-System/bSmart-Extensions/bSelective
+      purpose: Deterministic selective source-context acquisition, initially focused on MATLAB .m files.
 ```
 
 ## Agent instruction

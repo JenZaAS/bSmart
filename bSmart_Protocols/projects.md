@@ -52,6 +52,25 @@ project_structure:
     - project.md
     - data/README.md
     - sandbox/README.md
+    - knowledge/README.md
+    - decisions.md
+    - workdocs/README.md
+  meaning:
+    data: Raw/supporting project material such as inputs, exports, screenshots, source artifacts, and temporary research notes.
+    knowledge: Curated reusable knowledge specific to this project. Use the global Library only when the material is broadly reusable across projects or the bSmart instance. `knowledge/` is preferred over `library/` inside projects to avoid confusion with software libraries.
+    decisions: A single project decision file for choices, approvals, rejected options, and migration/design decisions specific to this project.
+    workdocs: Project-local working documents for larger or multi-session work within this project.
+    sandbox: Disposable or derived execution/build/test workspace notes; not the source of truth.
+  onboarding_rule: Create these defaults for new projects to reduce friction. If a folder stays empty, keep its README as guidance rather than asking the operator to decide up front.
+  existing_project_rule: Existing projects do not need a forced migration. If an existing project lacks `knowledge/`, `decisions.md`, or `workdocs/` and the operator asks to add one, create the missing standard file/folder from the corresponding template.
+```
+
+```yaml
+templates:
+  project: /workspace/bSmart-System/bSmart_Templates/project.template.md
+  project_knowledge_readme: /workspace/bSmart-System/bSmart_Templates/project-knowledge.README.template.md
+  project_decisions: /workspace/bSmart-System/bSmart_Templates/project-decisions.template.md
+  project_workdocs_readme: /workspace/bSmart-System/bSmart_Templates/project-workdocs.README.template.md
 ```
 
 ```yaml
