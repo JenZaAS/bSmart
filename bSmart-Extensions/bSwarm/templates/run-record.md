@@ -42,7 +42,22 @@ run_stats:
   context_pressure: unknown
   evidence_count: ...
   verification_count: ...
+  context_stats:
+    bselective_calls: ...
+    whole_file_reads: ...
+    tool_output_chars_total: ...
+    target_related_tool_output_chars: ...
+    fresh_input_tokens: unknown
+    output_tokens: unknown
+    reasoning_tokens: unknown
+    cache_read_tokens: unknown
 ```
+
+## Role plan
+
+- Shape: programmer | architect -> programmer | programmer -> supervisor | architect -> programmer -> supervisor
+- Architect context brief: <exact files/functions/regions, required changes, forbidden changes>
+- Supervisor acceptance criteria: <compact pass/fail criteria>
 
 ## Branch results
 

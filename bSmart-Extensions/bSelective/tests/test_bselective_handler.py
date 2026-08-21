@@ -7,6 +7,8 @@ from pathlib import Path
 
 from bselective_handler import get_item, list_items
 
+HANDLER = Path(__file__).resolve().parents[1] / "bselective_handler.py"
+
 
 SAMPLE_CLASS = """classdef SegyFile < handle
     %SEGYFILE Read SEG-Y data and headers.
@@ -108,11 +110,35 @@ class BSelectiveHandlerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             file = Path(tmp) / "SegyFile.m"
             file.write_text(SAMPLE_CLASS, encoding="utf-8")
-            list_out = subprocess.check_output([sys.executable, "bselective_handler.py", "list", str(file), "functions"], text=True)
-            get_out = subprocess.check_output([sys.executable, "bselective_handler.py", "get", str(file), "constant", "DefaultFormat"], text=True)
+            list_out = subprocess.check_output([sys.executable, str(HANDLER), "list", str(file), "functions"], text=True)
+            get_out = subprocess.check_output([sys.executable, str(HANDLER), "get", str(file), "constant", "DefaultFormat"], text=True)
 
         self.assertIn("loadHeaders", list_out)
         self.assertIn("DefaultFormat", get_out)
+
+
+    def test_cli_list_defaults_to_compact_text(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            file = Path(tmp) / "SegyFile.m"
+            file.write_text(SAMPLE_CLASS, encoding="utf-8")
+            list_out = subprocess.check_output([sys.executable, str(HANDLER), "list", str(file), "all"], text=True)
+
+        self.assertIn("class: SegyFile", list_out)
+        self.assertIn("functions:", list_out)
+        self.assertIn("loadHeaders", list_out)
+        self.assertIn("accessors:", list_out)
+        self.assertNotIn('"file"', list_out)
+        self.assertNotIn('"kind"', list_out)
+
+    def test_cli_list_json_remains_available(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            file = Path(tmp) / "SegyFile.m"
+            file.write_text(SAMPLE_CLASS, encoding="utf-8")
+            list_out = subprocess.check_output([sys.executable, str(HANDLER), "list", str(file), "all", "--format", "json", "--compact"], text=True)
+
+        result = json.loads(list_out)
+        self.assertEqual(result["class"], "SegyFile")
+        self.assertEqual(result["kind"], "all")
 
 
 if __name__ == "__main__":

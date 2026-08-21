@@ -5,7 +5,9 @@ bswarm_run:
   intent: review
   ab_testing: off
   bselective: all_off
+  roles: [programmer]
   statistics: on
+  context_stats: on
   max_depth: 1
   max_total_child_agents: 3
   max_iterations: 5

@@ -86,13 +86,55 @@ Modes:
 
 When active, record adapter, slices, whole-file fallbacks, and missing context.
 
-## 6. Role output contract
+## 6. Recommended run shapes
+
+Choose the smallest role chain that fits the task:
+
+- 1 agent: `programmer` — simple direct implementation.
+- 2 agents: `architect -> programmer` — large files or unclear context.
+- 2 agents: `programmer -> supervisor` — simple work needing review.
+- 3 agents: `architect -> programmer -> supervisor` — important or risky work.
+
+For bSelective-heavy runs, the architect should own most context discovery. The programmer should receive the exact target file, exact functions/line regions, required changes, forbidden changes, and concise relevant context. This reduces repeated broad reading and makes bSelective more useful.
+
+## 7. Roles
+
+### Supervisor
+
+Quality/evidence role. Responsibilities:
+
+- define acceptance criteria;
+- review outputs;
+- judge pass/fail/revise;
+- avoid broad implementation.
+
+### Architect
+
+Context/design role. Responsibilities:
+
+- read knowledge first;
+- use bSelective sparingly;
+- identify files/functions/regions;
+- write a precise programmer brief;
+- avoid diving into all details.
+
+### Programmer
+
+Implementation role. Responsibilities:
+
+- follow architect brief;
+- edit target/duplicate files;
+- run available checks;
+- report diff, verification, and risks;
+- avoid re-architecting unless blocked.
+
+## 8. Role output contract
 
 All child outputs should be concise and structured:
 
 ```yaml
 role_output:
-  role: implementer | reviewer | context_scout | critic | supervisor | worker
+  role: architect | programmer | supervisor | implementer | reviewer | context_scout | critic | worker
   branch_id: <id>
   parent_branch_id: <id or none>
   outcome: reached | not_reached | partial | inconclusive | blocked | unsafe
@@ -123,20 +165,36 @@ supervisor_judgement:
   final_branch_recommendation: accept | reject | revise | inconclusive
 ```
 
-## 7. Statistics
+## 9. Statistics
 
 Stats are part of v1. Record what is available cheaply; use `unknown` rather than spending extra tokens to measure.
 
 Track at minimum:
 
 - mode, intent, outcome;
-- supervisor/worker counts;
+- supervisor/architect/programmer/worker counts;
 - retry count;
 - evidence and verification counts;
 - token estimate and context pressure when available;
 - bSelective slice and whole-file signals when relevant.
 
-## 8. Final report
+For bSelective/bSwarm comparison runs, also record context stats when cheaply available:
+
+```yaml
+context_stats:
+  bselective_calls: N
+  whole_file_reads: N
+  tool_output_chars_total: N
+  target_related_tool_output_chars: N | unknown
+  fresh_input_tokens: N | unknown
+  output_tokens: N | unknown
+  reasoning_tokens: N | unknown
+  cache_read_tokens: N | unknown
+```
+
+Tool-output characters matter because tool output becomes later model input context. If exact token counts are unavailable, record character counts and mark tokens `unknown`.
+
+## 10. Final report
 
 Keep it quick-glance:
 

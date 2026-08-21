@@ -333,11 +333,91 @@ def find_symbol_references(symbol: str, scope: str | Path) -> list[dict[str, Any
     return _refs(symbol, scope)
 
 
-def _print(value: Any) -> None:
+
+def _compact_name(signature: dict[str, Any]) -> str:
+    name = signature.get("name") or "<unknown>"
+    args = signature.get("args") or "(...)"
+    if args == "()":
+        return f"{name}()"
+    if len(args) > 32:
+        args = "(...)"
+    return f"{name}{args}"
+
+
+def _function_range(signature: dict[str, Any]) -> str:
+    return f"{signature.get('start_line', '?')}-{signature.get('end_line', '?')}"
+
+
+def format_list_text(data: dict[str, Any], compact: bool = True) -> str:
+    """Format list output for token-conscious agent use."""
+    lines: list[str] = []
+    file = Path(data.get("file", ""))
+    try:
+        line_count = len(_read_lines(file)) if file else 0
+    except Exception:
+        line_count = 0
+    funcs = data.get("functions", []) or []
+    props = data.get("properties", []) or []
+    constants = data.get("constants", []) or []
+    getters = data.get("getters", []) or []
+    setters = data.get("setters", []) or []
+
+    if data.get("class"):
+        lines.append(f"class: {data['class']}")
+    if line_count:
+        lines.append(f"lines: {line_count}")
+    if "header_lines" in data:
+        lines.append(f"header_lines: {data.get('header_lines', 0)}")
+
+    if props or constants:
+        private = [p for p in props if "private" in str(p.get("attributes", "")).lower()]
+        public = [p for p in props if "private" not in str(p.get("attributes", "")).lower() and not p.get("constant")]
+        constant_count = len(constants) if constants else len([p for p in props if p.get("constant")])
+        lines.append("")
+        lines.append("properties:")
+        lines.append(f"  total: {len(props)}")
+        lines.append(f"  constants: {constant_count}")
+        if private:
+            lines.append(f"  private: {len(private)}")
+        if public:
+            lines.append(f"  public: {len(public)}")
+
+    if funcs:
+        normal_funcs = [f for f in funcs if not str(f.get("name", "")).lower().startswith(("get.", "set."))]
+        accessor_count = len(funcs) - len(normal_funcs)
+        display_funcs = normal_funcs if compact else funcs
+        lines.append("")
+        lines.append("functions:")
+        for f in display_funcs:
+            lines.append(f"  {_function_range(f)} {_compact_name(f)}")
+        if compact and accessor_count:
+            lines.append("")
+            lines.append("accessors:")
+            lines.append(f"  getters/setters: {accessor_count} collapsed")
+    elif getters or setters:
+        lines.append("")
+        lines.append("accessors:")
+        lines.append(f"  getters/setters: {len(getters) + len(setters)}")
+
+    if "references" in data:
+        refs = data.get("references", []) or []
+        lines.append("")
+        lines.append(f"references: {len(refs)}")
+        for ref in refs if not compact else refs[:20]:
+            lines.append(f"  {ref.get('file')}:{ref.get('line')} {ref.get('text')}")
+        if compact and len(refs) > 20:
+            lines.append(f"  ... {len(refs) - 20} more")
+
+    return "\n".join(lines).rstrip() + "\n"
+
+def _print(value: Any, *, output_format: str = "json", compact: bool = False, list_output: bool = False) -> None:
     if isinstance(value, str):
         print(value, end="")
+    elif output_format == "text" and list_output:
+        print(format_list_text(value, compact=compact), end="")
     else:
-        print(json.dumps(value, indent=2, ensure_ascii=False))
+        indent = None if compact else 2
+        print(json.dumps(value, indent=indent, ensure_ascii=False))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -348,17 +428,21 @@ def main(argv: list[str] | None = None) -> int:
     list_parser.add_argument("file")
     list_parser.add_argument("kind", nargs="?", default="all")
     list_parser.add_argument("target", nargs="?")
+    list_parser.add_argument("--format", choices=["text", "json"], default="text", help="Output format; text is compact for agent use")
+    list_parser.add_argument("--compact", action="store_true", help="Collapse verbose details; implied for text list output")
 
     get_parser = subparsers.add_parser("get", help="Get selected MATLAB context")
     get_parser.add_argument("file")
     get_parser.add_argument("kind")
     get_parser.add_argument("target", nargs="?")
+    get_parser.add_argument("--format", choices=["json"], default="json", help="Get output is JSON unless selected source is plain text")
+    get_parser.add_argument("--compact", action="store_true", help="Use compact JSON without pretty indentation")
 
     args = parser.parse_args(argv)
     if args.command == "list":
-        _print(list_items(args.file, args.kind, args.target))
+        _print(list_items(args.file, args.kind, args.target), output_format=args.format, compact=args.compact or args.format == "text", list_output=True)
     elif args.command == "get":
-        _print(get_item(args.file, args.kind, args.target))
+        _print(get_item(args.file, args.kind, args.target), output_format=args.format, compact=args.compact)
     else:  # pragma: no cover
         parser.error(f"Unknown command {args.command!r}")
     return 0

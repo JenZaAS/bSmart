@@ -37,3 +37,22 @@ python3 bselective_handler.py get MyClass.m all
 ## Session use
 
 bSelective is off by default. To turn it on for a session, paste/read `bselective-matlab.md` once; the prompt then stays in context for that session.
+
+
+## Compact agent output
+
+Use compact text list output for agent context discovery:
+
+```bash
+bselective_handler.py list DTM_ModelTemplates.m outline --format text
+bselective_handler.py list DTM_ModelTemplates.m functions --format text
+bselective_handler.py list DTM_ModelTemplates.m all --compact
+```
+
+The CLI `list` command defaults to compact text because tool output becomes later model input. Avoid pretty JSON for normal agent use. JSON remains available for scripts:
+
+```bash
+bselective_handler.py list DTM_ModelTemplates.m all --format json --compact
+```
+
+Default compact output avoids repeated `file`/`kind` keys, full source snippets, duplicate constants under both constants and properties, and expanded getters/setters unless explicitly requested.
