@@ -11,7 +11,8 @@ import json
 import re
 import sys
 
-SECTION_RE = re.compile(r"^\s*(classdef|properties|methods|function|end)\b(.*)$", re.IGNORECASE)
+SECTION_RE = re.compile(r"^\s*(classdef|properties|methods|function|if|for|parfor|while|switch|try|spmd|arguments|end)\b(.*)$", re.IGNORECASE)
+BLOCK_START_KEYWORDS = {"classdef", "properties", "methods", "function", "if", "for", "parfor", "while", "switch", "try", "spmd", "arguments"}
 CLASSDEF_RE = re.compile(r"^\s*classdef\s+(?:\([^)]*\)\s*)?(?P<name>[A-Za-z]\w*)", re.IGNORECASE)
 FUNCTION_RE = re.compile(
     r"^\s*function\s+(?:(?P<outputs>\[[^\]]+\]|[A-Za-z]\w*)\s*=\s*)?(?P<name>[A-Za-z]\w*(?:\.[A-Za-z]\w*)?)\s*(?P<args>\([^)]*\))?",
@@ -71,7 +72,7 @@ def _find_matching_end(lines: list[str], start_index: int) -> int:
         if not match:
             continue
         keyword = match.group(1).lower()
-        if keyword in {"classdef", "properties", "methods", "function"}:
+        if keyword in BLOCK_START_KEYWORDS:
             depth += 1
             started = True
         elif keyword == "end" and started:

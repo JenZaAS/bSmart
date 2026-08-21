@@ -56,3 +56,8 @@ bselective_handler.py list DTM_ModelTemplates.m all --format json --compact
 ```
 
 Default compact output avoids repeated `file`/`kind` keys, full source snippets, duplicate constants under both constants and properties, and expanded getters/setters unless explicitly requested.
+
+
+## Nested control-flow hardening
+
+`get FILE function NAME` tracks MATLAB block depth for nested `if`, `for`, `parfor`, `while`, `switch`, `try`, `spmd`, and `arguments` blocks so method/function slices do not stop at the first nested `end`. This is still a lightweight deterministic parser; use `get FILE all` as the explicit fallback when syntax is unusual or the slice looks incomplete.

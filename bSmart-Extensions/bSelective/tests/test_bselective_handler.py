@@ -44,6 +44,32 @@ SAMPLE_CLASS = """classdef SegyFile < handle
 end
 """
 
+CONTROL_FLOW_CLASS = """classdef ControlFlowExample
+    methods
+        function out = compute(obj, values)
+            out = 0;
+            if isempty(values)
+                out = -1;
+            else
+                for idx = 1:numel(values)
+                    if values(idx) > 0
+                        out = out + values(idx);
+                    end
+                end
+            end
+            while out > 100
+                out = out - 10;
+            end
+            out = out + 1;
+        end
+
+        function untouched(obj)
+            disp('untouched');
+        end
+    end
+end
+"""
+
 
 class BSelectiveHandlerTests(unittest.TestCase):
     def test_list_all_lists_extractable_parts_not_full_source(self):
@@ -75,6 +101,21 @@ class BSelectiveHandlerTests(unittest.TestCase):
 
         self.assertIn("function headers = loadHeaders(obj)", result["source"])
         self.assertNotIn("function obj = SegyFile", result["source"])
+
+    def test_get_function_handles_nested_control_flow_blocks(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            file = Path(tmp) / "ControlFlowExample.m"
+            file.write_text(CONTROL_FLOW_CLASS, encoding="utf-8")
+            result = get_item(file, "function", "compute")
+
+        source = result["source"]
+        self.assertIn("if isempty(values)", source)
+        self.assertIn("for idx = 1:numel(values)", source)
+        self.assertIn("while out > 100", source)
+        self.assertIn("out = out + 1;", source)
+        self.assertNotIn("function untouched", source)
+        self.assertGreater(result["end_line"], 15)
+
 
     def test_get_property_and_constant_property(self):
         with tempfile.TemporaryDirectory() as tmp:
