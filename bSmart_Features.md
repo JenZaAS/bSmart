@@ -412,6 +412,7 @@ included_capabilities:
   - Bundled knowledge discovery (`bSearch`)
   - Bundled workflow memory (`bWorkflow`)
   - Bundled selective source-context retrieval (`bSelective`)
+  - Bundled multi-agent orchestration protocol (`bSwarm`)
 notes:
   - Extensions are discovered from /workspace/bSmart-Extensions subfolders.
 ```

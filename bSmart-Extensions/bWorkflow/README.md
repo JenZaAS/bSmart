@@ -4,6 +4,12 @@ bWorkflow is the bSmart reusable workflow/procedure memory extension.
 
 It answers: **How do we reliably perform this task?**
 
+## Source ideas and influences
+
+- Operator idea/source: Erling's bSmart coding-feature design split: `bWorkflow` for reusable procedure memory, `bSelective` for selective context acquisition, and `bGauntlet`/future `bSwarm` for evidence-driven multi-agent review/orchestration.
+- External inspiration: Recursive Language Models (RLM), especially programmatic handling of context and task state outside the active prompt.
+- Design boundary: bWorkflow belongs to Erling's bSmart design and bSmart's Markdown-first workflow library. It should not be described as borrowing the Prime Agent application/harness layer or Continual Harness self-refinement model.
+
 ## Storage model
 
 - Packaged runtime source: `/workspace/bSmart-System/bSmart-Extensions/bWorkflow`

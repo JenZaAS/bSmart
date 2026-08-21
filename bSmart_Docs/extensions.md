@@ -61,3 +61,55 @@ setup_default: no
 ```
 
 Setup may ask whether to install/enable the Graphify evaluation kit when the AI container will run codebase/tool-comparison experiments.
+
+## bWorkflow
+
+```yaml
+name: bWorkflow
+path: /workspace/bSmart-Extensions/bWorkflow
+source_path: /workspace/bSmart-System/bSmart-Extensions/bWorkflow
+status: optional_bundled_extension
+purpose:
+  - reusable workflow/procedure memory
+  - Markdown-authoritative workflow catalogues
+  - compact workflow trust/evidence counters
+install_model: copy_or_sync_from_bundled_source
+setup_default: yes
+```
+
+bWorkflow stores learned workflow content under `/workspace/bSmart/Workflows`, not in the packaged system tree by default.
+
+## bSelective
+
+```yaml
+name: bSelective
+path: /workspace/bSmart-Extensions/bSelective
+source_path: /workspace/bSmart-System/bSmart-Extensions/bSelective
+status: optional_bundled_extension
+purpose:
+  - deterministic selective source-context retrieval
+  - initial MATLAB `.m` adapter
+  - whole-file fallback when selective slices are insufficient
+install_model: copy_or_sync_from_bundled_source
+setup_default: yes
+```
+
+bSelective is off by default in a session; agents enable it by reading the adapter prompt/protocol when relevant.
+
+## bSwarm
+
+```yaml
+name: bSwarm
+path: /workspace/bSmart-Extensions/bSwarm
+source_path: /workspace/bSmart-System/bSmart-Extensions/bSwarm
+status: optional_bundled_extension
+purpose:
+  - chat-driven multi-agent orchestration protocol
+  - unsupervised and supervised swarm modes
+  - A/B report and self-improving comparisons
+  - run statistics and bSelective integration
+install_model: copy_or_sync_from_bundled_source
+setup_default: yes
+```
+
+bSwarm v1 is a chat protocol, not a command handler. It uses concise run specs, grouped editing, Hermes delegation where useful, and Markdown run records.

@@ -1,0 +1,13 @@
+bswarm_run:
+  goal: "<one-line goal>"
+  scope: "<path/reference or none>"
+  mode: unsupervised
+  intent: review
+  ab_testing: off
+  bselective: all_off
+  statistics: on
+  max_depth: 1
+  max_total_child_agents: 3
+  max_iterations: 5
+  max_worker_attempts_per_supervisor: 5
+  safety: read_only

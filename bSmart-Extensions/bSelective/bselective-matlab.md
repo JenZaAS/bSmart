@@ -26,3 +26,5 @@ bselective get MyClass.m all
 
 `list all` lists extractable parts. `get all` reads the whole file.
 Whole-file reads are allowed when they are the smallest reliable context.
+
+Source note: bSelective is inspired by Erling's bSmart selective-context design and by RLM context-as-variable ideas. This prompt implements only the narrow MATLAB selective-retrieval rule; it does not borrow the Prime Agent application/harness layer.

@@ -188,6 +188,12 @@ extensions:
       packaging: bundled_optional
       source_path: /workspace/bSmart-System/bSmart-Extensions/bSelective
       purpose: Deterministic selective source-context acquisition, initially focused on MATLAB .m files.
+    bSwarm:
+      path: /workspace/bSmart-Extensions/bSwarm
+      optional: true
+      packaging: bundled_optional
+      source_path: /workspace/bSmart-System/bSmart-Extensions/bSwarm
+      purpose: Chat-driven multi-agent orchestration protocol with unsupervised/supervised modes, A/B comparison, statistics, and bSelective integration.
 ```
 
 ## Agent instruction
