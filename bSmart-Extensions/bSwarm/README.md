@@ -101,12 +101,20 @@ branches:
 
 1. Read `bswarm-protocol.md`.
 2. Create a short run spec from `templates/run-spec.yaml`.
-3. Show the concise summary to Erling before launch.
-4. For editable evaluation runs, duplicate the original target into per-branch files under the run folder.
-5. Keep prior generated-run archive paths out of worker prompts unless explicitly comparing against old generated code.
-6. Run the selected bSwarm through chat/delegation.
-7. Save architect plans as `*/architect-plan.md` where applicable.
-8. Save a run record using `templates/run-record.md`, including per-stage and branch-total statistics.
+3. Run preflight QC before launch. For `architect`, `bSelective architect`, `cascade`, and `bSelective cascade`, verify the active adapter can do true nested dispatch when the architect is expected to spawn coders; under Hermes this means `delegation.orchestrator_enabled=true`, `delegation.max_spawn_depth >= 2`, and `delegation.child_timeout_seconds` large enough for the planned run, commonly `1200` seconds.
+4. Show the concise summary and any blocking settings warning to Erling before launch.
+5. For editable evaluation runs, duplicate the original target into per-branch files under the run folder.
+6. Keep prior generated-run archive paths out of worker prompts unless explicitly comparing against old generated code.
+7. Run the selected bSwarm through chat/delegation.
+8. Save architect plans as `*/architect-plan.md` where applicable.
+9. Save a run record using `templates/run-record.md`, including preflight QC, per-stage statistics, and branch-total statistics.
+
+Adapter note: bSwarm is intended to be CLI-agnostic, but nested cascade checks
+are runtime-specific. If running under OpenCode, Codex, Claude, or an unknown
+adapter, do not apply Hermes config assumptions blindly; either verify that
+adapter's nested-worker mechanism or explicitly downgrade the run to
+`supervisor_mediated_architect_handoff` / `supervisor_mediated_cascade` and
+record that it is not true nested architect dispatch.
 
 ## Source ideas and influences
 

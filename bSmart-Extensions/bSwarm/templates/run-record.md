@@ -6,6 +6,8 @@
 - Outcome: reached | not_reached | partial | inconclusive | blocked | unsafe
 - Workflow keyword: ordinary | bSelective | architect | bSelective architect | cascade | bSelective cascade
 - Workflow: direct | architect_handoff | architect_taskflow
+- Runtime adapter: hermes | opencode | codex | claude | unknown
+- Preflight QC: passed | blocked | downgraded | not_run
 - Mode: unsupervised | supervised
 - A/B: off | report | self_improving
 - bSelective: all_off | all_on | mixed_ab
@@ -57,6 +59,32 @@ bswarm_run:
     max_iterations: ...
     max_worker_attempts_per_supervisor: ...
   safety: ...
+```
+
+## Preflight QC
+
+Run before launching agents. If this blocks, do not start the cascade.
+
+```yaml
+preflight_qc:
+  adapter: hermes | opencode | codex | claude | unknown
+  status: passed | blocked | downgraded | not_run
+  planned_timeout_seconds: 1200
+  checks:
+    delegation.orchestrator_enabled:
+      required: true
+      observed: unknown
+      result: passed | failed | not_applicable
+    delegation.max_spawn_depth:
+      required: ">= 2"
+      observed: unknown
+      result: passed | failed | not_applicable
+    delegation.child_timeout_seconds:
+      required: ">= planned_timeout_seconds"
+      observed: unknown
+      result: passed | failed | not_applicable
+  warning_to_user: <exact warning shown, or none>
+  action_taken: start | stop_for_settings | downgrade_to_supervisor_mediated_architect_handoff | downgrade_to_supervisor_mediated_cascade
 ```
 
 ## Statistics

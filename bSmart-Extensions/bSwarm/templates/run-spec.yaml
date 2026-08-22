@@ -16,7 +16,25 @@ bswarm_run:
   max_total_child_agents: 3
   max_iterations: 5
   max_worker_attempts_per_supervisor: 5
+  planned_timeout_seconds: 1200
   safety: read_only
+
+  preflight_qc:
+    adapter: hermes # hermes | opencode | codex | claude | unknown
+    status: pending # pending | passed | blocked | downgraded
+    required_for_nested_architect_dispatch:
+      delegation.orchestrator_enabled:
+        required: true
+        observed: unknown
+      delegation.max_spawn_depth:
+        required: ">= 2"
+        observed: unknown
+      delegation.child_timeout_seconds:
+        required: ">= planned_timeout_seconds"
+        observed: unknown
+    recommended_for_bselective_cascade:
+      delegation.child_timeout_seconds: 1200
+    adapter_note: "If not running under Hermes, verify adapter-specific nested workers or downgrade to supervisor_mediated_architect_handoff/supervisor_mediated_cascade."
 
   keyword_normalization:
     ordinary:

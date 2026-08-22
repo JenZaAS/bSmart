@@ -56,6 +56,33 @@ class BSwarmProtocolTests(unittest.TestCase):
             self.assertIn(term, combined)
         self.assertIn('Mixed architect/coder context modes are internal experimental overrides', combined)
 
+    def test_architect_and_cascade_preflight_qc_checks_runtime_adapter_and_hermes_settings(self):
+        combined = '\n'.join([
+            self.read('bswarm-protocol.md'),
+            self.read('templates/run-spec.yaml'),
+            self.read('templates/run-record.md'),
+            self.read('README.md'),
+        ])
+        for term in [
+            'Preflight QC',
+            'preflight_qc',
+            'adapter: hermes',
+            'opencode',
+            'delegation.orchestrator_enabled',
+            'delegation.max_spawn_depth',
+            'delegation.child_timeout_seconds',
+            'planned_timeout_seconds: 1200',
+            'required_for_nested_architect_dispatch',
+            'recommended_for_bselective_cascade',
+            'supervisor_mediated_architect_handoff',
+            'supervisor_mediated_cascade',
+            'stop_for_settings',
+            'downgrade_to_supervisor_mediated_architect_handoff',
+            'downgrade_to_supervisor_mediated_cascade',
+        ]:
+            self.assertIn(term, combined)
+        self.assertRegex(combined, re.compile(r'max_spawn_depth.*>= 2', re.DOTALL))
+
     def test_protocol_requires_concise_outputs_and_no_nested_swarm(self):
         text = self.read('bswarm-protocol.md').lower()
         self.assertIn('never launch another bswarm', text)

@@ -115,7 +115,54 @@ bswarm_run:
 
 Offer: start, edit keyword, edit A/B/C branches, edit statistics, edit budgets, edit safety, cancel.
 
-## 2. Defaults
+## 2. Preflight QC before launch
+
+Before launching any run, do a short preflight QC and show blocking warnings
+instead of starting a run that is likely to fail. For `architect`,
+`bSelective architect`, `cascade`, and especially `bSelective cascade`, this is
+mandatory if the run expects the architect subagent itself to dispatch coder
+subagents. Earlier staged handoff runs can work with lower spawn depth because
+the parent/supervisor runs architect first, then manually hands the plan to a
+coder; that is `supervisor_mediated_architect_handoff`, not nested architect
+dispatch.
+
+Record the detected CLI/runtime adapter. bSwarm is portable, but nested
+delegation checks are adapter-specific:
+
+- `hermes` adapter: check live Hermes config and the current tool schema.
+- `opencode`, `codex`, `claude`, or unknown adapter: do not assume Hermes
+  nested delegation exists; require an adapter-specific nested-worker mechanism
+  or downgrade to a supervisor-mediated cascade after telling the user.
+
+Hermes cascade preflight checks:
+
+```yaml
+preflight_qc:
+  adapter: hermes | opencode | codex | claude | unknown
+  required_for_nested_architect_dispatch:
+    delegation.orchestrator_enabled: true
+    delegation.max_spawn_depth: ">= 2"
+    delegation.child_timeout_seconds: ">= planned_timeout_seconds"
+  recommended_for_bselective_cascade:
+    delegation.child_timeout_seconds: 1200
+```
+
+If a required check fails, stop and report a concise settings warning with the
+exact observed value and the suggested command when known, for example:
+
+```text
+bSwarm preflight blocked: nested architect dispatch needs Hermes delegation.max_spawn_depth >= 2.
+Observed: delegation.max_spawn_depth = 1.
+Suggested fix: hermes config set delegation.max_spawn_depth 2, then start /new or /restart before rerunning.
+```
+
+Do not silently continue as a true nested architect/cascade run when the adapter
+cannot verify nested child dispatch. Either ask the user to fix settings, or
+explicitly switch the run spec to `supervisor_mediated_architect_handoff` or
+`supervisor_mediated_cascade` and record that it is not true nested
+architect-dispatch.
+
+## 3. Defaults
 
 Use these unless Erling changes them:
 
@@ -126,7 +173,7 @@ Use these unless Erling changes them:
 - `statistics: on`;
 - `safety: read_only`.
 
-## 3. Top-level modes
+## 4. Top-level modes
 
 ### unsupervised
 
@@ -147,7 +194,7 @@ Supervisor retry rules:
 - return `partial`, `not_reached`, or `inconclusive` instead of looping;
 - never launch another bSwarm.
 
-## 4. Explicit subagent modes
+## 5. Explicit subagent modes
 
 These are stage semantics for bSwarm-style Hermes test runs. Name them explicitly in prompts and run records.
 
@@ -268,7 +315,7 @@ Coder verification checklist:
 - original source unchanged;
 - runtime/test status recorded if available.
 
-## 5. A/B/C testing
+## 6. A/B/C testing
 
 A/B model:
 
@@ -339,7 +386,7 @@ cascade_defaults:
   re_evaluate_after_each_task: true
 ```
 
-## 6. bSelective
+## 7. bSelective
 
 Modes:
 
@@ -351,7 +398,7 @@ When active, record adapter, slices, whole-file fallbacks, and missing context.
 
 For bSelective-heavy architect/coder runs, the architect should own most context discovery. The coder should receive the exact target file, exact functions/line regions, required changes, forbidden changes, and concise relevant context. This reduces repeated broad reading and makes bSelective more useful.
 
-## 7. Safety / contamination rules
+## 8. Safety / contamination rules
 
 For generated-code evaluation runs:
 
@@ -363,7 +410,7 @@ For generated-code evaluation runs:
 - direct workers and coders edit only their allowed duplicate file;
 - architects do not edit implementation files.
 
-## 8. Recommended run shapes
+## 9. Recommended run shapes
 
 Choose the smallest role chain that fits the task:
 
@@ -372,7 +419,7 @@ Choose the smallest role chain that fits the task:
 - 2 agents: `coder -> supervisor` — simple work needing review.
 - 3 agents: `architect -> coder -> supervisor` — important or risky work.
 
-## 9. Role output contract
+## 10. Role output contract
 
 All child outputs should be concise and structured:
 
@@ -427,7 +474,7 @@ supervisor_judgement:
   final_branch_recommendation: accept | reject | revise | inconclusive
 ```
 
-## 10. Statistics
+## 11. Statistics
 
 Stats are part of v1. Record what is available cheaply; use `unknown` rather than spending extra tokens to measure.
 
@@ -457,7 +504,7 @@ Architect/coder runs should make it possible to answer:
 - did architect/coder split improve quality vs direct ordinary?
 - did the split reduce or increase total tokens/tool calls?
 
-## 11. Final report
+## 12. Final report
 
 Keep it quick-glance:
 
