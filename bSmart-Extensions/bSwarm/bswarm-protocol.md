@@ -20,9 +20,24 @@ bswarm_run:
   max_iterations: 5
   max_worker_attempts_per_supervisor: 5
   safety: read_only | propose_patches | approved_writes
+  branches:
+    ordinary:
+      pattern: direct_worker
+      context_mode: ordinary
+      stages: [coder]
+    bselective_architect_coder:
+      pattern: architect_coder
+      architect_context_mode: bselective
+      coder_context_mode: plan_plus_targeted_ordinary
+      stages: [architect, coder]
+    ordinary_architect_coder:
+      pattern: architect_coder
+      architect_context_mode: ordinary
+      coder_context_mode: plan_plus_targeted_ordinary
+      stages: [architect, coder]
 ```
 
-Offer: start, edit mode/roles, edit A/B, edit statistics, edit budgets, edit context/bSelective, edit safety, cancel.
+Offer: start, edit mode/roles, edit A/B/C branches, edit statistics, edit budgets, edit context/bSelective, edit safety, cancel.
 
 ## 2. Defaults
 
@@ -35,17 +50,17 @@ Use these unless Erling changes them:
 - `statistics: on`;
 - `safety: read_only`.
 
-## 3. Modes
+## 3. Top-level modes
 
 ### unsupervised
 
-Coordinator launches workers directly.
+Coordinator launches workers or branch stages directly.
 
-Use for breadth, speed, or independent perspectives.
+Use for breadth, speed, independent perspectives, and most A/B/C comparison runs.
 
 ### supervised
 
-Coordinator launches supervisors/evaluators. Each supervisor launches or evaluates worker attempts.
+Coordinator acts as supervisor mode or launches supervisors/evaluators. Each supervisor launches or evaluates worker attempts.
 
 Use when correctness/evidence matters enough to justify extra cost.
 
@@ -56,7 +71,105 @@ Supervisor retry rules:
 - return `partial`, `not_reached`, or `inconclusive` instead of looping;
 - never launch another bSwarm.
 
-## 4. A/B testing
+## 4. Explicit subagent modes
+
+These are stage semantics for bSwarm-style Hermes test runs. Name them explicitly in prompts and run records.
+
+### Supervisor mode
+
+Purpose: orchestration and statistics only.
+
+Rules:
+
+- creates/validates the run folder;
+- creates duplicate branch files when the test permits file edits;
+- dispatches branch workers/stages;
+- does not directly edit target implementation files unless explicitly asked;
+- shields prior generated-code artifacts: do not include previous generated-run paths in worker prompts;
+- collects per-branch and per-stage stats;
+- writes run artifacts:
+  - `run-spec.yaml`;
+  - branch output files;
+  - `architect-plan.md` files, if applicable;
+  - `run-record.md`;
+  - `tool-read-stats.md`;
+  - `comparison.md`;
+  - cross-run stats index updates such as `/projects/DigSoftware/workstreams/dd1d/ab-testing/stats-index.md`.
+
+Supervisor verification must not trust child self-reports until directly checked:
+
+- branch file exists;
+- diff stats are available;
+- no conflict markers;
+- exactly one `classdef` for MATLAB class duplicates;
+- original source unchanged;
+- runtime/test status recorded if available.
+
+### Architect mode
+
+Purpose: context discovery and implementation design, not direct coding.
+
+Rules:
+
+- must not edit implementation files;
+- reads only enough context to produce a concrete implementation plan;
+- writes a concise `architect-plan.md` for coder handoff;
+- for bSelective architect branches, use bSelective first where possible:
+  - `list FILE all --compact`;
+  - `list FILE functions --format text`;
+  - targeted `get FILE function NAME`;
+  - avoid whole-file fallback unless necessary and record it if used;
+- for ordinary architect branches, use ordinary file/search tools only; no bSelective and no code-knowledge file unless the run explicitly permits it;
+- keep output small enough to pass to coder without broad tool-output context.
+
+Architect plan contract:
+
+```yaml
+architect_plan:
+  target_file_path: <allowed duplicate file>
+  relevant_regions:
+    - function_or_section: <name>
+      lines: <start-end or start-?>
+      why: <short>
+  proposed_ui_placement: <short>
+  controls_or_fields:
+    - <exact name/control/field to add or modify>
+  callbacks_or_helpers:
+    - <needed callback/helper method>
+  persistent_state_fields:
+    - <field or none>
+  forbidden_changes:
+    - <e.g. original source file, previous-generated-runs>
+  risks:
+    - <top risks>
+  verification_checks:
+    - <branch file exists/no conflict markers/etc.>
+```
+
+### Coder mode
+
+Purpose: implement the architect plan in the allowed duplicate file.
+
+Rules:
+
+- edits only the branch duplicate file;
+- receives the design brief and architect plan;
+- should not re-run broad discovery unless the architect plan is insufficient;
+- if it needs more context, it may do targeted reads/searches and must report them;
+- must not inspect previous generated-run archives unless explicitly permitted;
+- reports concise summary, changed file, diff stats, tool/read behavior, caveats.
+
+Coder verification checklist:
+
+- branch file exists;
+- no conflict markers;
+- exactly one `classdef`;
+- expected UI scaffolding strings present;
+- diff stat against original source;
+- original source unchanged;
+- runtime/test status recorded if available.
+
+## 5. A/B/C testing
 
 A/B model:
 
@@ -74,9 +187,30 @@ Common templates:
 - mode comparison: `unsupervised` vs `supervised`;
 - bSelective comparison: ordinary context vs bSelective-guided context;
 - workflow comparison: workflow A vs workflow B;
-- prompt/rubric comparison: prompt A vs prompt B.
+- prompt/rubric comparison: prompt A vs prompt B;
+- staged-context comparison: direct ordinary worker vs bSelective architect/coder vs ordinary architect/coder.
 
-## 5. bSelective
+For DD1D-style A/B/C runs, use:
+
+```yaml
+branches:
+  ordinary:
+    pattern: direct_worker
+    context_mode: ordinary
+    stages: [coder]
+  bselective_architect_coder:
+    pattern: architect_coder
+    architect_context_mode: bselective
+    coder_context_mode: plan_plus_targeted_ordinary
+    stages: [architect, coder]
+  ordinary_architect_coder:
+    pattern: architect_coder
+    architect_context_mode: ordinary
+    coder_context_mode: plan_plus_targeted_ordinary
+    stages: [architect, coder]
+```
+
+## 6. bSelective
 
 Modes:
 
@@ -86,70 +220,69 @@ Modes:
 
 When active, record adapter, slices, whole-file fallbacks, and missing context.
 
-## 6. Recommended run shapes
+For bSelective-heavy architect/coder runs, the architect should own most context discovery. The coder should receive the exact target file, exact functions/line regions, required changes, forbidden changes, and concise relevant context. This reduces repeated broad reading and makes bSelective more useful.
+
+## 7. Safety / contamination rules
+
+For generated-code evaluation runs:
+
+- never edit the real/original target source unless explicitly approved;
+- duplicate source into branch files under the new run folder;
+- do not include previous generated-run paths in worker prompts;
+- do not allow workers to inspect `previous-generated-runs/` unless the test explicitly compares against old generated code;
+- do not compare to prior generated code until after all workers finish;
+- direct workers and coders edit only their allowed duplicate file;
+- architects do not edit implementation files.
+
+## 8. Recommended run shapes
 
 Choose the smallest role chain that fits the task:
 
-- 1 agent: `programmer` — simple direct implementation.
-- 2 agents: `architect -> programmer` — large files or unclear context.
-- 2 agents: `programmer -> supervisor` — simple work needing review.
-- 3 agents: `architect -> programmer -> supervisor` — important or risky work.
+- 1 agent: `coder` — simple direct implementation.
+- 2 agents: `architect -> coder` — large files or unclear context.
+- 2 agents: `coder -> supervisor` — simple work needing review.
+- 3 agents: `architect -> coder -> supervisor` — important or risky work.
 
-For bSelective-heavy runs, the architect should own most context discovery. The programmer should receive the exact target file, exact functions/line regions, required changes, forbidden changes, and concise relevant context. This reduces repeated broad reading and makes bSelective more useful.
-
-## 7. Roles
-
-### Supervisor
-
-Quality/evidence role. Responsibilities:
-
-- define acceptance criteria;
-- review outputs;
-- judge pass/fail/revise;
-- avoid broad implementation.
-
-### Architect
-
-Context/design role. Responsibilities:
-
-- read knowledge first;
-- use bSelective sparingly;
-- identify files/functions/regions;
-- write a precise programmer brief;
-- avoid diving into all details.
-
-### Programmer
-
-Implementation role. Responsibilities:
-
-- follow architect brief;
-- edit target/duplicate files;
-- run available checks;
-- report diff, verification, and risks;
-- avoid re-architecting unless blocked.
-
-## 8. Role output contract
+## 9. Role output contract
 
 All child outputs should be concise and structured:
 
 ```yaml
 role_output:
-  role: architect | programmer | supervisor | implementer | reviewer | context_scout | critic | worker
+  role: architect | coder | supervisor | worker
   branch_id: <id>
+  stage: architect | coder | supervisor | direct_worker
   parent_branch_id: <id or none>
   outcome: reached | not_reached | partial | inconclusive | blocked | unsafe
   confidence: low | medium | high
   summary: <1-3 bullets or short paragraph>
+  changed_files: [<paths or none>]
+  artifacts: [<architect-plan.md/branch-output.md/etc.>]
   evidence: [top 3-5]
   verification: [compact list]
   risks: [top 3]
   missing_context: [top 3]
   recommended_next_step: <one action or none>
   statistics_delta:
+    duration_seconds: unknown
+    api_calls: unknown
     tool_calls: unknown
+    tool_calls_by_type: {}
+    bselective_calls: 0
     bselective_used: true | false
     selective_slice_count: 0
     whole_file_reads: unknown
+    input_tokens: unknown
+    output_tokens: unknown
+    reasoning_tokens: unknown
+    cache_read_tokens: unknown
+    fresh_total_tokens: unknown
+    total_with_cache_read_tokens: unknown
+    total_tool_output_chars: unknown
+    target_related_tool_output_chars: unknown
+    diff_added_lines: unknown
+    diff_removed_lines: unknown
+    matlab_runtime_verification: not_run | passed | failed | partial
 ```
 
 Supervisor judgement adds:
@@ -165,36 +298,37 @@ supervisor_judgement:
   final_branch_recommendation: accept | reject | revise | inconclusive
 ```
 
-## 9. Statistics
+## 10. Statistics
 
 Stats are part of v1. Record what is available cheaply; use `unknown` rather than spending extra tokens to measure.
 
-Track at minimum:
+Collect both per-stage and combined per-branch stats:
 
-- mode, intent, outcome;
-- supervisor/architect/programmer/worker counts;
-- retry count;
-- evidence and verification counts;
-- token estimate and context pressure when available;
-- bSelective slice and whole-file signals when relevant.
+- duration seconds;
+- API calls;
+- tool calls;
+- tool calls by type;
+- bSelective calls;
+- whole-file reads/fallbacks;
+- input tokens;
+- output tokens;
+- reasoning tokens;
+- cache-read tokens;
+- fresh total tokens = input + output + reasoning;
+- total with cache-read tokens;
+- total tool-output chars;
+- target-related tool-output chars;
+- diff added/removed lines;
+- whether MATLAB/runtime verification ran.
 
-For bSelective/bSwarm comparison runs, also record context stats when cheaply available:
+Architect/coder runs should make it possible to answer:
 
-```yaml
-context_stats:
-  bselective_calls: N
-  whole_file_reads: N
-  tool_output_chars_total: N
-  target_related_tool_output_chars: N | unknown
-  fresh_input_tokens: N | unknown
-  output_tokens: N | unknown
-  reasoning_tokens: N | unknown
-  cache_read_tokens: N | unknown
-```
+- did bSelective reduce architect discovery context?
+- did the coder avoid repeating discovery?
+- did architect/coder split improve quality vs direct ordinary?
+- did the split reduce or increase total tokens/tool calls?
 
-Tool-output characters matter because tool output becomes later model input context. If exact token counts are unavailable, record character counts and mark tokens `unknown`.
-
-## 10. Final report
+## 11. Final report
 
 Keep it quick-glance:
 
@@ -202,7 +336,7 @@ Keep it quick-glance:
 - outcome;
 - key evidence;
 - unresolved disagreements;
-- statistics summary;
+- stage and branch statistics summary;
 - budget/limit status;
 - one next action.
 

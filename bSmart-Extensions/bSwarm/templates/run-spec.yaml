@@ -5,7 +5,7 @@ bswarm_run:
   intent: review
   ab_testing: off
   bselective: all_off
-  roles: [programmer]
+  roles: [coder]
   statistics: on
   context_stats: on
   max_depth: 1
@@ -13,3 +13,38 @@ bswarm_run:
   max_iterations: 5
   max_worker_attempts_per_supervisor: 5
   safety: read_only
+
+  # Branch/stage shape for A/B/C runs. Remove branches not in scope.
+  branches:
+    ordinary:
+      pattern: direct_worker
+      context_mode: ordinary
+      duplicate_file: "<run-folder>/ordinary/<target-copy>.m"
+      stages:
+        - coder
+    bselective_architect_coder:
+      pattern: architect_coder
+      architect_context_mode: bselective
+      coder_context_mode: plan_plus_targeted_ordinary
+      duplicate_file: "<run-folder>/bselective-architect-coder/<target-copy>.m"
+      artifacts:
+        architect_plan: "<run-folder>/bselective-architect-coder/architect-plan.md"
+      stages:
+        - architect
+        - coder
+    ordinary_architect_coder:
+      pattern: architect_coder
+      architect_context_mode: ordinary
+      coder_context_mode: plan_plus_targeted_ordinary
+      duplicate_file: "<run-folder>/ordinary-architect-coder/<target-copy>.m"
+      artifacts:
+        architect_plan: "<run-folder>/ordinary-architect-coder/architect-plan.md"
+      stages:
+        - architect
+        - coder
+
+  contamination_rules:
+    duplicate_source_before_edits: true
+    original_source_read_only: true
+    excluded_worker_paths:
+      - "previous-generated-runs/"

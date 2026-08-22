@@ -42,5 +42,63 @@ class BSwarmProtocolTests(unittest.TestCase):
         for section in ['## Summary', '## Statistics', '## Branch results', '## Evidence', '## Verification']:
             self.assertIn(section, text)
 
+    def test_run_spec_supports_direct_and_architect_coder_branches(self):
+        text = self.read('templates/run-spec.yaml')
+        for term in [
+            'branches:',
+            'ordinary:',
+            'pattern: direct_worker',
+            'bselective_architect_coder:',
+            'ordinary_architect_coder:',
+            'pattern: architect_coder',
+            'architect_context_mode: bselective',
+            'architect_context_mode: ordinary',
+            'coder_context_mode: plan_plus_targeted_ordinary',
+            '- architect',
+            '- coder',
+        ]:
+            self.assertIn(term, text)
+
+    def test_protocol_defines_supervisor_architect_coder_semantics(self):
+        text = self.read('bswarm-protocol.md').lower()
+        for term in [
+            'supervisor mode',
+            'architect mode',
+            'coder mode',
+            'does not directly edit target implementation files',
+            'must not edit implementation files',
+            'edits only the branch duplicate file',
+            'do not include previous generated-run paths',
+            'previous-generated-runs',
+            'architect-plan.md',
+            'stats-index.md',
+        ]:
+            self.assertIn(term, text)
+
+    def test_run_record_separates_stage_and_branch_statistics(self):
+        text = self.read('templates/run-record.md')
+        for term in [
+            '## Stage statistics',
+            '## Branch total statistics',
+            'architect-plan.md',
+            'fresh_total_tokens',
+            'total_with_cache_read_tokens',
+            'diff_added_lines',
+            'matlab_runtime_verification',
+        ]:
+            self.assertIn(term, text)
+
+    def test_readme_documents_abc_architect_coder_usage(self):
+        text = self.read('README.md')
+        for term in [
+            'supervisor',
+            'architect',
+            'coder',
+            'bselective_architect_coder',
+            'ordinary_architect_coder',
+            'direct_worker',
+        ]:
+            self.assertIn(term, text)
+
 if __name__ == '__main__':
     unittest.main()

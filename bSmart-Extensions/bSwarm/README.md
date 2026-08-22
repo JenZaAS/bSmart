@@ -10,8 +10,16 @@ V1 is a chat-driven protocol, not a command handler. Use it by drafting a concis
 
 ## Modes
 
-- `unsupervised` — coordinator launches workers directly.
-- `supervised` — coordinator launches supervisors/evaluators, each supervising worker attempts.
+Top-level modes:
+
+- `unsupervised` — coordinator launches workers or branch stages directly.
+- `supervised` — coordinator/supervisors validate outputs and retry only for diagnosed gaps.
+
+Explicit subagent stage modes:
+
+- `supervisor` — creates/validates run folders, duplicates allowed files, dispatches stages, verifies child self-reports, and records statistics. It does not directly edit target implementation files unless explicitly asked.
+- `architect` — discovers context and writes a concise implementation plan. It must not edit implementation files.
+- `coder` — implements in the allowed branch duplicate file and verifies the result.
 
 `gauntlet` is retained only as the source/metaphor for pressure-testing.
 
@@ -26,13 +34,46 @@ V1 is a chat-driven protocol, not a command handler. Use it by drafting a concis
 - `all_on` — all relevant subagents use bSelective.
 - `mixed_ab` — some branches use bSelective and some do not, to evaluate its value.
 
+## Branch patterns
+
+- `direct_worker` — one ordinary coder/worker plans and edits directly in its duplicate file.
+- `architect_coder` — architect discovers context and writes `architect-plan.md`; coder implements from that plan.
+
+Example A/B/C run shape:
+
+```yaml
+branches:
+  ordinary:
+    pattern: direct_worker
+    context_mode: ordinary
+    stages:
+      - coder
+  bselective_architect_coder:
+    pattern: architect_coder
+    architect_context_mode: bselective
+    coder_context_mode: plan_plus_targeted_ordinary
+    stages:
+      - architect
+      - coder
+  ordinary_architect_coder:
+    pattern: architect_coder
+    architect_context_mode: ordinary
+    coder_context_mode: plan_plus_targeted_ordinary
+    stages:
+      - architect
+      - coder
+```
+
 ## Use
 
 1. Read `bswarm-protocol.md`.
 2. Create a short run spec from `templates/run-spec.yaml`.
 3. Show the concise summary to Erling before launch.
-4. Run the selected bSwarm through chat/delegation.
-5. Save a run record using `templates/run-record.md`.
+4. For editable evaluation runs, duplicate the original target into per-branch files under the run folder.
+5. Keep prior generated-run archive paths out of worker prompts unless explicitly comparing against old generated code.
+6. Run the selected bSwarm through chat/delegation.
+7. Save architect plans as `*/architect-plan.md` where applicable.
+8. Save a run record using `templates/run-record.md`, including per-stage and branch-total statistics.
 
 ## Source ideas and influences
 
