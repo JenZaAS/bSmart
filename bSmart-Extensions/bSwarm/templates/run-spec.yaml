@@ -1,6 +1,10 @@
 bswarm_run:
   goal: "<one-line goal>"
   scope: "<path/reference or none>"
+  # User-facing compact workflow keyword. Do not expose mixed stage combinations
+  # unless this is a controlled experiment.
+  workflow_keyword: ordinary
+  workflow: direct
   mode: unsupervised
   intent: review
   ab_testing: off
@@ -14,6 +18,37 @@ bswarm_run:
   max_worker_attempts_per_supervisor: 5
   safety: read_only
 
+  keyword_normalization:
+    ordinary:
+      context_mode: ordinary
+      workflow: direct
+    bSelective:
+      context_mode: bselective
+      workflow: direct
+    architect:
+      context_mode: ordinary
+      workflow: architect_handoff
+      coder_context_mode: ordinary
+    bSelective architect:
+      context_mode: bselective
+      workflow: architect_handoff
+      coder_context_mode: bselective
+    cascade:
+      context_mode: ordinary
+      workflow: architect_taskflow
+      coder_context_mode: ordinary
+    bSelective cascade:
+      context_mode: bselective
+      workflow: architect_taskflow
+      coder_context_mode: bselective
+
+  cascade_defaults:
+    max_tasks: 4
+    max_coder_attempts_per_task: 1
+    max_patch_calls_per_coder: 3
+    stop_after_acceptance: true
+    re_evaluate_after_each_task: true
+
   # Branch/stage shape for A/B/C runs. Remove branches not in scope.
   branches:
     ordinary:
@@ -22,26 +57,54 @@ bswarm_run:
       duplicate_file: "<run-folder>/ordinary/<target-copy>.m"
       stages:
         - coder
-    bselective_architect_coder:
-      pattern: architect_coder
-      architect_context_mode: bselective
-      coder_context_mode: plan_plus_targeted_ordinary
-      duplicate_file: "<run-folder>/bselective-architect-coder/<target-copy>.m"
-      artifacts:
-        architect_plan: "<run-folder>/bselective-architect-coder/architect-plan.md"
+    bselective:
+      pattern: direct_worker
+      context_mode: bselective
+      duplicate_file: "<run-folder>/bselective/<target-copy>.m"
       stages:
-        - architect
         - coder
-    ordinary_architect_coder:
+    architect:
       pattern: architect_coder
       architect_context_mode: ordinary
-      coder_context_mode: plan_plus_targeted_ordinary
-      duplicate_file: "<run-folder>/ordinary-architect-coder/<target-copy>.m"
+      coder_context_mode: ordinary
+      duplicate_file: "<run-folder>/architect/<target-copy>.m"
       artifacts:
-        architect_plan: "<run-folder>/ordinary-architect-coder/architect-plan.md"
+        architect_plan: "<run-folder>/architect/architect-plan.md"
       stages:
         - architect
         - coder
+    bselective_architect:
+      pattern: architect_coder
+      architect_context_mode: bselective
+      coder_context_mode: bselective
+      duplicate_file: "<run-folder>/bselective-architect/<target-copy>.m"
+      artifacts:
+        architect_plan: "<run-folder>/bselective-architect/architect-plan.md"
+      stages:
+        - architect
+        - coder
+    cascade:
+      pattern: architect_taskflow
+      architect_context_mode: ordinary
+      coder_context_mode: ordinary
+      duplicate_file: "<run-folder>/cascade/<target-copy>.m"
+      artifacts:
+        architect_plan: "<run-folder>/cascade/architect-plan.md"
+      stages:
+        - architect
+        - coder
+        - architect_evaluation
+    bselective_cascade:
+      pattern: architect_taskflow
+      architect_context_mode: bselective
+      coder_context_mode: bselective
+      duplicate_file: "<run-folder>/bselective-cascade/<target-copy>.m"
+      artifacts:
+        architect_plan: "<run-folder>/bselective-cascade/architect-plan.md"
+      stages:
+        - architect
+        - coder
+        - architect_evaluation
 
   contamination_rules:
     duplicate_source_before_edits: true

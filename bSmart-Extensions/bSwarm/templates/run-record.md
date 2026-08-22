@@ -4,6 +4,8 @@
 
 - Goal: <one line>
 - Outcome: reached | not_reached | partial | inconclusive | blocked | unsafe
+- Workflow keyword: ordinary | bSelective | architect | bSelective architect | cascade | bSelective cascade
+- Workflow: direct | architect_handoff | architect_taskflow
 - Mode: unsupervised | supervised
 - A/B: off | report | self_improving
 - bSelective: all_off | all_on | mixed_ab
@@ -17,6 +19,8 @@
 bswarm_run:
   goal: ...
   scope: ...
+  workflow_keyword: ...
+  workflow: ...
   mode: ...
   intent: ...
   ab_testing: ...
@@ -26,16 +30,27 @@ bswarm_run:
     ordinary:
       pattern: direct_worker
       stages: [coder]
-    bselective_architect_coder:
+    bselective:
+      pattern: direct_worker
+      stages: [coder]
+    architect:
       pattern: architect_coder
       stages: [architect, coder]
       artifacts:
-        architect_plan: bselective-architect-coder/architect-plan.md
-    ordinary_architect_coder:
+        architect_plan: architect/architect-plan.md
+    bselective_architect:
       pattern: architect_coder
       stages: [architect, coder]
       artifacts:
-        architect_plan: ordinary-architect-coder/architect-plan.md
+        architect_plan: bselective-architect/architect-plan.md
+    cascade:
+      pattern: architect_taskflow
+      stages: [architect, coder, architect_evaluation]
+    bselective_cascade:
+      pattern: architect_taskflow
+      stages: [architect, coder, architect_evaluation]
+      artifacts:
+        architect_plan: bselective-cascade/architect-plan.md
   budgets:
     max_depth: ...
     max_total_child_agents: ...
@@ -150,7 +165,7 @@ Architect plans should include one-line region reasons only and should not paste
 | Branch | Stage/Role | Variant | Outcome | Confidence | Summary | Artifact |
 |---|---|---|---|---|---|---|
 | ordinary | coder | ordinary direct_worker | partial | medium | ... | <branch-output.md> |
-| bselective_architect_coder | architect | bSelective architect | partial | medium | ... | bselective-architect-coder/architect-plan.md |
+| bselective_architect | architect | bSelective architect | partial | medium | ... | bselective-architect/architect-plan.md |
 
 ## Evidence
 
@@ -171,8 +186,8 @@ Architect plans should include one-line region reasons only and should not paste
 Only include when A/B or A/B/C is enabled.
 
 - Style: report | self_improving
-- Variants: ordinary direct_worker vs bselective_architect_coder vs ordinary_architect_coder
-- Winner: ordinary | bselective_architect_coder | ordinary_architect_coder | tie | inconclusive | none
+- Variants: ordinary vs bselective vs architect vs bselective_architect vs cascade vs bselective_cascade
+- Winner: ordinary | bselective | architect | bselective_architect | cascade | bselective_cascade | tie | inconclusive | none
 - Did bSelective reduce architect discovery context? yes | no | inconclusive
 - Did coder avoid repeating discovery? yes | no | inconclusive
 - Did architect/coder improve quality? yes | no | inconclusive

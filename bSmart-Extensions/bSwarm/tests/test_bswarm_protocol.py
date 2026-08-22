@@ -32,6 +32,30 @@ class BSwarmProtocolTests(unittest.TestCase):
         for term in ['unsupervised', 'supervised', 'report', 'self_improving', 'all_off', 'all_on', 'mixed_ab']:
             self.assertIn(term, text)
 
+    def test_compact_workflow_keywords_are_normalized(self):
+        combined = '\n'.join([
+            self.read('bswarm-protocol.md'),
+            self.read('templates/run-spec.yaml'),
+            self.read('README.md'),
+        ])
+        for term in [
+            'workflow_keyword',
+            'ordinary',
+            'bSelective',
+            'architect',
+            'bSelective architect',
+            'cascade',
+            'bSelective cascade',
+            'workflow: direct',
+            'workflow: architect_handoff',
+            'workflow: architect_taskflow',
+            'coder_context_mode: bselective',
+            'max_tasks: 4',
+            're_evaluate_after_each_task: true',
+        ]:
+            self.assertIn(term, combined)
+        self.assertIn('Mixed architect/coder context modes are internal experimental overrides', combined)
+
     def test_protocol_requires_concise_outputs_and_no_nested_swarm(self):
         text = self.read('bswarm-protocol.md').lower()
         self.assertIn('never launch another bswarm', text)
@@ -48,14 +72,20 @@ class BSwarmProtocolTests(unittest.TestCase):
             'branches:',
             'ordinary:',
             'pattern: direct_worker',
-            'bselective_architect_coder:',
-            'ordinary_architect_coder:',
+            'bselective:',
+            'architect:',
+            'bselective_architect:',
+            'cascade:',
+            'bselective_cascade:',
             'pattern: architect_coder',
+            'pattern: architect_taskflow',
             'architect_context_mode: bselective',
             'architect_context_mode: ordinary',
-            'coder_context_mode: plan_plus_targeted_ordinary',
+            'coder_context_mode: bselective',
+            'coder_context_mode: ordinary',
             '- architect',
             '- coder',
+            '- architect_evaluation',
         ]:
             self.assertIn(term, text)
 
@@ -94,9 +124,10 @@ class BSwarmProtocolTests(unittest.TestCase):
             'supervisor',
             'architect',
             'coder',
-            'bselective_architect_coder',
-            'ordinary_architect_coder',
+            'bselective_architect',
+            'bselective_cascade',
             'direct_worker',
+            'architect_taskflow',
         ]:
             self.assertIn(term, text)
 

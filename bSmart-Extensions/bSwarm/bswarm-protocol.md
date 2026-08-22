@@ -4,12 +4,74 @@ Use this protocol when Erling asks to run a bSwarm before a dedicated command ha
 
 ## 1. Draft concise run spec
 
-Show this quick-glance summary before launching agents:
+Show this quick-glance summary before launching agents. Prefer the compact
+workflow keyword interface unless Erling asks for internal branch/stage detail:
+
+```text
+ordinary
+bSelective
+architect
+bSelective architect
+cascade
+bSelective cascade
+```
+
+Keyword meanings:
+
+| Keyword | Meaning |
+|---|---|
+| `ordinary` | Direct ordinary coder; no bSelective context tooling. |
+| `bSelective` | Direct bSelective-enabled coder. |
+| `architect` | Ordinary architect → ordinary coder, using one compact handoff. |
+| `bSelective architect` | bSelective architect → bSelective coder, using one compact handoff. |
+| `cascade` | Ordinary architect-led stepwise workflow: decompose, dispatch one coder task, evaluate, re-plan, continue. |
+| `bSelective cascade` | bSelective architect-led stepwise workflow with bSelective-enabled coders. |
+
+Normalization rules:
+
+- `ordinary` is the default direct mode and may be omitted internally.
+- `architect` implies an architect followed by a coder.
+- `cascade` implies architect-led stepwise execution; it is not a direct-coder mode.
+- `bSelective` applies to all relevant stages by default.
+- `bSelective architect` means bSelective architect and bSelective coder.
+- `bSelective cascade` means bSelective architect, bSelective coders, and architect evaluation/replanning between tasks.
+- Do not expose mixed bSelective architect → ordinary coder combinations as normal user-facing modes; keep them only for controlled experiments.
+
+Internal normalization:
+
+```yaml
+ordinary:
+  context_mode: ordinary
+  workflow: direct
+bSelective:
+  context_mode: bselective
+  workflow: direct
+architect:
+  context_mode: ordinary
+  workflow: architect_handoff
+  coder_context_mode: ordinary
+bSelective architect:
+  context_mode: bselective
+  workflow: architect_handoff
+  coder_context_mode: bselective
+cascade:
+  context_mode: ordinary
+  workflow: architect_taskflow
+  coder_context_mode: ordinary
+bSelective cascade:
+  context_mode: bselective
+  workflow: architect_taskflow
+  coder_context_mode: bselective
+```
+
+Then show the normalized run summary:
 
 ```yaml
 bswarm_run:
   goal: <one-line goal>
   scope: <path/reference or none>
+  workflow_keyword: ordinary | bSelective | architect | bSelective architect | cascade | bSelective cascade
+  workflow: direct | architect_handoff | architect_taskflow
   mode: unsupervised | supervised
   intent: review | design | compare | implement | other
   ab_testing: off | report | self_improving
@@ -25,19 +87,33 @@ bswarm_run:
       pattern: direct_worker
       context_mode: ordinary
       stages: [coder]
-    bselective_architect_coder:
-      pattern: architect_coder
-      architect_context_mode: bselective
-      coder_context_mode: plan_plus_targeted_ordinary
-      stages: [architect, coder]
-    ordinary_architect_coder:
+    bselective:
+      pattern: direct_worker
+      context_mode: bselective
+      stages: [coder]
+    architect:
       pattern: architect_coder
       architect_context_mode: ordinary
-      coder_context_mode: plan_plus_targeted_ordinary
+      coder_context_mode: ordinary
       stages: [architect, coder]
+    bselective_architect:
+      pattern: architect_coder
+      architect_context_mode: bselective
+      coder_context_mode: bselective
+      stages: [architect, coder]
+    cascade:
+      pattern: architect_taskflow
+      architect_context_mode: ordinary
+      coder_context_mode: ordinary
+      stages: [architect, coder, architect_evaluation]
+    bselective_cascade:
+      pattern: architect_taskflow
+      architect_context_mode: bselective
+      coder_context_mode: bselective
+      stages: [architect, coder, architect_evaluation]
 ```
 
-Offer: start, edit mode/roles, edit A/B/C branches, edit statistics, edit budgets, edit context/bSelective, edit safety, cancel.
+Offer: start, edit keyword, edit A/B/C branches, edit statistics, edit budgets, edit safety, cancel.
 
 ## 2. Defaults
 
@@ -213,7 +289,8 @@ Common templates:
 - prompt/rubric comparison: prompt A vs prompt B;
 - staged-context comparison: direct ordinary worker vs bSelective architect/coder vs ordinary architect/coder.
 
-For DD1D-style A/B/C runs, use:
+For DD1D-style A/B/C runs, use the keyword normalization unless deliberately
+testing an internal override. The normal compact branch names are:
 
 ```yaml
 branches:
@@ -221,16 +298,45 @@ branches:
     pattern: direct_worker
     context_mode: ordinary
     stages: [coder]
-  bselective_architect_coder:
-    pattern: architect_coder
-    architect_context_mode: bselective
-    coder_context_mode: plan_plus_targeted_ordinary
-    stages: [architect, coder]
-  ordinary_architect_coder:
+  bselective:
+    pattern: direct_worker
+    context_mode: bselective
+    stages: [coder]
+  architect:
     pattern: architect_coder
     architect_context_mode: ordinary
-    coder_context_mode: plan_plus_targeted_ordinary
+    coder_context_mode: ordinary
     stages: [architect, coder]
+  bselective_architect:
+    pattern: architect_coder
+    architect_context_mode: bselective
+    coder_context_mode: bselective
+    stages: [architect, coder]
+  cascade:
+    pattern: architect_taskflow
+    architect_context_mode: ordinary
+    coder_context_mode: ordinary
+    stages: [architect, coder, architect_evaluation]
+  bselective_cascade:
+    pattern: architect_taskflow
+    architect_context_mode: bselective
+    coder_context_mode: bselective
+    stages: [architect, coder, architect_evaluation]
+```
+
+Mixed combinations such as bSelective architect → ordinary coder may be used as
+internal experimental overrides, but should not be offered as normal user-facing
+keywords.
+
+Cascade safeguards:
+
+```yaml
+cascade_defaults:
+  max_tasks: 4
+  max_coder_attempts_per_task: 1
+  max_patch_calls_per_coder: 3
+  stop_after_acceptance: true
+  re_evaluate_after_each_task: true
 ```
 
 ## 6. bSelective

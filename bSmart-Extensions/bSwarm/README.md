@@ -10,6 +10,17 @@ V1 is a chat-driven protocol, not a command handler. Use it by drafting a concis
 
 ## Modes
 
+Compact user-facing workflow keywords:
+
+- `ordinary` — direct ordinary coder; no bSelective context tooling.
+- `bSelective` — direct bSelective-enabled coder.
+- `architect` — ordinary architect → ordinary coder, using one compact handoff.
+- `bSelective architect` — bSelective architect → bSelective coder, using one compact handoff.
+- `cascade` — ordinary architect-led stepwise workflow.
+- `bSelective cascade` — bSelective architect-led stepwise workflow with bSelective-enabled coders.
+
+Mixed architect/coder context modes are internal experimental overrides, not normal user-facing modes.
+
 Top-level modes:
 
 - `unsupervised` — coordinator launches workers or branch stages directly.
@@ -38,6 +49,7 @@ Explicit subagent stage modes:
 
 - `direct_worker` — one ordinary coder/worker plans and edits directly in its duplicate file.
 - `architect_coder` — architect discovers context and writes `architect-plan.md`; coder implements from that plan.
+- `architect_taskflow` — architect decomposes, dispatches one bounded coder task, evaluates, re-plans, then continues within cascade limits.
 
 Example A/B/C run shape:
 
@@ -48,20 +60,41 @@ branches:
     context_mode: ordinary
     stages:
       - coder
-  bselective_architect_coder:
-    pattern: architect_coder
-    architect_context_mode: bselective
-    coder_context_mode: plan_plus_targeted_ordinary
+  bselective:
+    pattern: direct_worker
+    context_mode: bselective
     stages:
-      - architect
       - coder
-  ordinary_architect_coder:
+  architect:
     pattern: architect_coder
     architect_context_mode: ordinary
-    coder_context_mode: plan_plus_targeted_ordinary
+    coder_context_mode: ordinary
     stages:
       - architect
       - coder
+  bselective_architect:
+    pattern: architect_coder
+    architect_context_mode: bselective
+    coder_context_mode: bselective
+    stages:
+      - architect
+      - coder
+  cascade:
+    pattern: architect_taskflow
+    architect_context_mode: ordinary
+    coder_context_mode: ordinary
+    stages:
+      - architect
+      - coder
+      - architect_evaluation
+  bselective_cascade:
+    pattern: architect_taskflow
+    architect_context_mode: bselective
+    coder_context_mode: bselective
+    stages:
+      - architect
+      - coder
+      - architect_evaluation
 ```
 
 ## Use
