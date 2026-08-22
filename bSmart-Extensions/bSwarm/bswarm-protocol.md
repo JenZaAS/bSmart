@@ -109,11 +109,29 @@ Supervisor verification must not trust child self-reports until directly checked
 
 Purpose: context discovery and implementation design, not direct coding.
 
+Architect handoff is a context-budget artifact for the coder, not a design essay. This compact handoff is a default bSwarm role behavior; future run prompts do not need to restate it unless they deliberately override the budget.
+
+Default architect handoff budget for prototype/evaluation runs:
+
+```yaml
+architect_handoff_defaults:
+  target_words: 350-500
+  hard_max_words: 700
+  max_relevant_regions: 6
+  max_must_implement_bullets: 6
+  no_tool_transcripts: true
+  no_long_source_quotes: true
+  no_full_bselective_output: true
+```
+
 Rules:
 
 - must not edit implementation files;
 - reads only enough context to produce a concrete implementation plan;
 - writes a concise `architect-plan.md` for coder handoff;
+- treats the handoff as a context-budget artifact for the coder;
+- uses one-line reasons for relevant regions;
+- keeps `must_implement`, `defer`, and `do_not_implement` sharply separated;
 - for bSelective architect branches, use bSelective first where possible:
   - `list FILE all --compact`;
   - `list FILE functions --format text`;
@@ -127,19 +145,24 @@ Architect plan contract:
 ```yaml
 architect_plan:
   target_file_path: <allowed duplicate file>
+  budget:
+    target_words: 350-500
+    hard_max_words: 700
+    max_relevant_regions: 6
+    max_must_implement_bullets: 6
+    no_tool_transcripts: true
+    no_long_source_quotes: true
+    no_full_bselective_output: true
   relevant_regions:
     - function_or_section: <name>
       lines: <start-end or start-?>
-      why: <short>
-  proposed_ui_placement: <short>
-  controls_or_fields:
-    - <exact name/control/field to add or modify>
-  callbacks_or_helpers:
-    - <needed callback/helper method>
-  persistent_state_fields:
-    - <field or none>
-  forbidden_changes:
-    - <e.g. original source file, previous-generated-runs>
+      why: <one-line reason only>
+  must_implement:
+    - <required change, max 6 bullets>
+  defer:
+    - <explicitly postponed item or none>
+  do_not_implement:
+    - <forbidden change or none>
   risks:
     - <top risks>
   verification_checks:

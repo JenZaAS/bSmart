@@ -100,5 +100,27 @@ class BSwarmProtocolTests(unittest.TestCase):
         ]:
             self.assertIn(term, text)
 
+    def test_architect_handoff_defaults_are_compact_and_token_aware(self):
+        protocol = self.read('bswarm-protocol.md').lower()
+        run_spec = self.read('templates/run-spec.yaml').lower()
+        run_record = self.read('templates/run-record.md').lower()
+        readme = self.read('README.md').lower()
+        combined = '\n'.join([protocol, run_spec, run_record, readme])
+        for term in [
+            'default architect handoff budget',
+            'target_words: 350-500',
+            'hard_max_words: 700',
+            'max_relevant_regions: 6',
+            'max_must_implement_bullets: 6',
+            'no_tool_transcripts: true',
+            'no_long_source_quotes: true',
+            'no_full_bselective_output: true',
+            'must_implement',
+            'defer',
+            'do_not_implement',
+            'context-budget artifact',
+        ]:
+            self.assertIn(term, combined)
+
 if __name__ == '__main__':
     unittest.main()

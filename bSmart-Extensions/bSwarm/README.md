@@ -18,7 +18,7 @@ Top-level modes:
 Explicit subagent stage modes:
 
 - `supervisor` — creates/validates run folders, duplicates allowed files, dispatches stages, verifies child self-reports, and records statistics. It does not directly edit target implementation files unless explicitly asked.
-- `architect` — discovers context and writes a concise implementation plan. It must not edit implementation files.
+- `architect` — discovers context and writes a concise implementation plan. It must not edit implementation files. Its handoff is a default context-budget artifact: target 350-500 words, hard max 700 words, max 6 relevant regions, max 6 `must_implement` bullets, no tool transcripts, no long source quotes, and no full bSelective output.
 - `coder` — implements in the allowed branch duplicate file and verifies the result.
 
 `gauntlet` is retained only as the source/metaphor for pressure-testing.

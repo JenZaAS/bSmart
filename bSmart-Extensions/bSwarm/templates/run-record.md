@@ -120,6 +120,31 @@ Record combined architect+coder totals for architect/coder branches, and direct 
 - Coder brief: <architect-plan.md path, allowed duplicate file, verification checks>
 - Supervisor acceptance criteria: <compact pass/fail criteria>
 
+## Architect handoff defaults
+
+Default architect handoff budget: the architect plan is a context-budget artifact, not a design essay or transcript dump.
+
+```yaml
+architect_handoff_defaults:
+  target_words: 350-500
+  hard_max_words: 700
+  max_relevant_regions: 6
+  max_must_implement_bullets: 6
+  no_tool_transcripts: true
+  no_long_source_quotes: true
+  no_full_bselective_output: true
+  required_sections:
+    - target_file_path
+    - relevant_regions
+    - must_implement
+    - defer
+    - do_not_implement
+    - risks
+    - verification_checks
+```
+
+Architect plans should include one-line region reasons only and should not paste full bSelective output.
+
 ## Branch results
 
 | Branch | Stage/Role | Variant | Outcome | Confidence | Summary | Artifact |
