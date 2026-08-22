@@ -70,6 +70,35 @@ CONTROL_FLOW_CLASS = """classdef ControlFlowExample
 end
 """
 
+DTM_STYLE_CLASS = """classdef DTMStyleExample < handle
+    properties
+        FH
+        RPM
+    end
+
+    methods
+        function flag = hasFH(obj), flag = ~isempty(obj.FH) && ishandle(obj.FH); end
+
+        function out = compute(obj, values)
+            out = 0;
+            if isempty(values)
+                out = -1;
+            else
+                for idx = 1:numel(values)
+                    if values(idx) > 0
+                        out = out + values(idx);
+                    end
+                end
+            end
+        end
+
+        function changeRPM(obj, rpm)
+            obj.RPM = rpm;
+        end
+    end
+end
+"""
+
 
 class BSelectiveHandlerTests(unittest.TestCase):
     def test_list_all_lists_extractable_parts_not_full_source(self):
@@ -116,6 +145,42 @@ class BSelectiveHandlerTests(unittest.TestCase):
         self.assertNotIn("function untouched", source)
         self.assertGreater(result["end_line"], 15)
 
+    def test_inline_end_methods_do_not_make_adjacent_method_ranges_broad(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            file = Path(tmp) / "DTMStyleExample.m"
+            file.write_text(DTM_STYLE_CLASS, encoding="utf-8")
+            listed = list_items(file, "functions")["functions"]
+            has_fh = get_item(file, "function", "hasFH")
+            compute = get_item(file, "function", "compute")
+            change_rpm = get_item(file, "function", "changeRPM")
+            self.assertIsInstance(has_fh, dict)
+            self.assertIsInstance(compute, dict)
+            self.assertIsInstance(change_rpm, dict)
+            list_out = subprocess.check_output([sys.executable, str(HANDLER), "list", str(file), "functions"], text=True)
+
+        ranges = {item["name"]: (item["start_line"], item["end_line"]) for item in listed}
+        self.assertEqual(ranges["hasFH"], (8, 8))
+        self.assertEqual(ranges["compute"], (10, 21))
+        self.assertEqual(ranges["changeRPM"], (23, 25))
+        self.assertEqual((has_fh["start_line"], has_fh["end_line"]), ranges["hasFH"])
+        self.assertEqual((compute["start_line"], compute["end_line"]), ranges["compute"])
+        self.assertEqual((change_rpm["start_line"], change_rpm["end_line"]), ranges["changeRPM"])
+        self.assertNotIn("function out = compute", has_fh["source"])
+        self.assertNotIn("function changeRPM", compute["source"])
+        self.assertIn("8-8 hasFH(obj)", list_out)
+        self.assertIn("10-21 compute(obj, values)", list_out)
+        self.assertIn("23-25 changeRPM(obj, rpm)", list_out)
+
+    def test_unmatched_function_end_is_reported_as_unknown_not_file_end(self):
+        sample = """function out = broken(values)\nif isempty(values)\n    out = [];\n"""
+        with tempfile.TemporaryDirectory() as tmp:
+            file = Path(tmp) / "broken.m"
+            file.write_text(sample, encoding="utf-8")
+            listed = list_items(file, "functions")["functions"]
+            list_out = subprocess.check_output([sys.executable, str(HANDLER), "list", str(file), "functions"], text=True)
+
+        self.assertIsNone(listed[0]["end_line"])
+        self.assertIn("1-? broken(values)", list_out)
 
     def test_get_property_and_constant_property(self):
         with tempfile.TemporaryDirectory() as tmp:

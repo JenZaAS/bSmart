@@ -26,7 +26,7 @@ class Block:
     kind: str
     name: str | None
     start_line: int
-    end_line: int
+    end_line: int | None
     header: str
     attributes: str = ""
 
@@ -61,25 +61,60 @@ def _first_help_block(lines: list[str]) -> list[str]:
     return help_lines
 
 
-def _find_matching_end(lines: list[str], start_index: int) -> int:
+def _strip_matlab_comment(line: str) -> str:
+    """Return code before a MATLAB comment, preserving quoted strings enough for keyword scans."""
+    out: list[str] = []
+    in_string = False
+    idx = 0
+    while idx < len(line):
+        char = line[idx]
+        if char == "'":
+            out.append(char)
+            if in_string and idx + 1 < len(line) and line[idx + 1] == "'":
+                out.append(line[idx + 1])
+                idx += 2
+                continue
+            in_string = not in_string
+            idx += 1
+            continue
+        if char == "%" and not in_string:
+            break
+        out.append(char)
+        idx += 1
+    return "".join(out)
+
+
+def _line_block_events(line: str) -> list[tuple[int, int]]:
+    """Return ordered block-depth changes for statement-level MATLAB block keywords."""
+    code = _strip_matlab_comment(line)
+    if not code.strip():
+        return []
+    events: list[tuple[int, int]] = []
+    start_match = re.match(
+        r"^\s*(classdef|properties|methods|function|if|parfor|for|while|switch|try|spmd|arguments)\b",
+        code,
+        re.IGNORECASE,
+    )
+    if start_match:
+        events.append((start_match.start(1), 1))
+    for end_match in re.finditer(r"(?:(?<=^)|(?<=[,;]))\s*end\s*(?=$|[,;])", code, re.IGNORECASE):
+        events.append((end_match.start(), -1))
+    return sorted(events, key=lambda item: item[0])
+
+
+def _find_matching_end(lines: list[str], start_index: int) -> int | None:
     depth = 0
     started = False
     for idx in range(start_index, len(lines)):
-        stripped = lines[idx].strip()
-        if not stripped or stripped.startswith("%"):
-            continue
-        match = SECTION_RE.match(lines[idx])
-        if not match:
-            continue
-        keyword = match.group(1).lower()
-        if keyword in BLOCK_START_KEYWORDS:
-            depth += 1
-            started = True
-        elif keyword == "end" and started:
-            depth -= 1
-            if depth <= 0:
-                return idx + 1
-    return len(lines)
+        for _, delta in _line_block_events(lines[idx]):
+            if delta > 0:
+                depth += delta
+                started = True
+            elif delta < 0 and started:
+                depth += delta
+                if depth <= 0:
+                    return idx + 1
+    return None
 
 
 def _discover_blocks(lines: list[str]) -> list[Block]:
@@ -136,7 +171,7 @@ def _properties(lines: list[str], names: list[str] | None = None, constants_only
         is_constant = "constant" in block.attributes.lower()
         if constants_only and not is_constant:
             continue
-        for line_no in range(block.start_line + 1, block.end_line):
+        for line_no in range(block.start_line + 1, block.end_line or block.start_line):
             stripped = lines[line_no - 1].strip()
             if not stripped or stripped.startswith("%") or stripped.lower() == "end":
                 continue
@@ -165,7 +200,8 @@ def _functions(lines: list[str], names: list[str] | None = None) -> list[dict[st
 def _function_source(lines: list[str], name: str) -> dict[str, Any]:
     for block in _discover_blocks(lines):
         if block.kind == "function" and block.name and block.name.lower() == name.lower():
-            return {**_signature(block), "source": "\n".join(lines[block.start_line - 1 : block.end_line]) + "\n"}
+            end_line = block.end_line or block.start_line
+            return {**_signature(block), "source": "\n".join(lines[block.start_line - 1 : end_line]) + "\n"}
     raise KeyError(f"Function/method not found: {name}")
 
 
@@ -346,7 +382,9 @@ def _compact_name(signature: dict[str, Any]) -> str:
 
 
 def _function_range(signature: dict[str, Any]) -> str:
-    return f"{signature.get('start_line', '?')}-{signature.get('end_line', '?')}"
+    start = signature.get("start_line", "?")
+    end = signature.get("end_line")
+    return f"{start}-{end if end is not None else '?'}"
 
 
 def format_list_text(data: dict[str, Any], compact: bool = True) -> str:
