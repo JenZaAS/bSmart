@@ -197,7 +197,8 @@ dreaming:
   config_paths:
     - /workspace/bSmart/Projects/bSmart/data/bsmart-dreaming.yaml
     - local bSmart_Agent.md dreaming section
-  trigger: ask when not configured as enabled, disabled, or ask_later
+  trigger: on setup and on `/new` when status is missing or `ask_later`; skip only when status is `disabled`; continue silently when status is `enabled`
+  opt_out: `No — do not ask again` records `status: disabled` in instance-local content
   prompt_style: Telegram buttons when supported
   prompt_text: |
     bSmart - Dreaming

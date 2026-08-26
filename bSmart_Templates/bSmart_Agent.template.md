@@ -92,6 +92,7 @@ dreaming:
   status: ask_later
   purpose: scheduled maintenance for instance-local bSmart content quality
   protocol: /workspace/bSmart-System/bSmart_Protocols/dreaming.md
+  startup_setup_gate: prompt on `/new` while status is missing or `ask_later`; skip only when status is `disabled`
   local_timezone: Europe/Oslo
   daily:
     enabled: ask

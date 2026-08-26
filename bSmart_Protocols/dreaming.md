@@ -92,14 +92,23 @@ Backups are mandatory before applied changes. Prefer reversible rewrite/archive 
 
 ## Setup prompt rule
 
-During bSmart setup or re-setup, if Dreaming is not configured for this instance, ask:
+During bSmart setup and on `/new`, inspect the instance-local Dreaming status before the normal TODO startup summary.
+
+```yaml
+startup_gate:
+  missing_or_ask_later: trigger_setup_prompt
+  enabled: continue_without_repeating_setup
+  disabled: skip_setup_prompt_until_operator_requests_it
+```
+
+If the status is missing or `ask_later`, ask:
 
 > Enable bSmart Dreaming for this AI instance?
 
 Recommended choices:
 1. `Yes — use defaults` — daily around 04:00 and weekly Friday night/Saturday around 04:00 Norway time.
 2. `Customize schedule` — operator specifies daily and weekly frequency/time.
-3. `No — do not ask again` — record disabled in local `bSmart_Agent.md` so `/new` does not keep prompting.
+3. `No — do not ask again` — record `status: disabled` in local `bSmart_Agent.md` or another instance-local config so `/new` does not keep prompting.
 4. `Later — ask again on future setup/startup`.
 
 Record the choice in instance-local `bSmart_Agent.md` or another local bSmart state/config file. Do not hardcode all containers to run Dreaming.

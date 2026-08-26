@@ -141,6 +141,9 @@ startup_sequence:
   - if startup check reports project storage setup_required, immediately prompt the operator with Telegram buttons using clarify choices from bSmart_Protocols/project-storage.md before the normal TODO prompt
   - read bSmart_State.md when present
   - read bSmart_TODO.md when present
+  - inspect local Dreaming status after loading instance content
+  - if Dreaming status is missing or ask_later, trigger the Dreaming setup prompt before the normal TODO prompt
+  - if Dreaming status is enabled, continue without repeating setup; if disabled, do not ask again unless the operator requests Dreaming setup
   - use bHistory.md on request or when a recent completion summary needs historical context; do not load the full diary by default
   - scan bSmart_Protocols summaries and load relevant protocols
   - first visible assistant reply starts with: "bSmart — Loading bSmart."
