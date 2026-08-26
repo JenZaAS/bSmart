@@ -194,9 +194,12 @@ Dreaming interaction must be terse by default. Use detail files for depth; chat 
 
 Defaults:
 - no-op run: silent, or tiny state only;
-- non-empty scheduled report: aim for 3–8 lines in chat;
-- item list: max one line per item;
-- decision prompt: one sentence plus choices;
+- non-empty scheduled report: aim for 3–8 short, plain-language lines in chat;
+- explain what was found and done in everyday words, without intimidating internal terminology;
+- do not include filenames, backup paths, backup filenames, run IDs, action IDs, manifests, or internal commands in normal delivery;
+- mention a safety copy only generically unless the user asks for details;
+- summarize the number of earlier pending items and describe only the next item in plain language;
+- decision prompt: one clear sentence plus simple choices;
 - details only on `Inspect details` or explicit request;
 - avoid repeating file lists, diffs, backups, and rationale in chat unless needed for the current decision.
 
@@ -236,11 +239,11 @@ Two-step detail UX:
 
 Interactive decision UX:
 - When Dreaming finds pending asks in a live user session, present them as interactive choices/buttons when the platform supports it.
-- For a single pending ask, offer choices such as `Accept`, `Reject`, `Postpone`, and `Inspect details`.
-- For multiple pending asks, first list **all** pending items in a compact review list, max one line per item.
-- After showing the full list, present the first pending item for decision with choices such as `Accept`, `Reject`, `Postpone`, and `Inspect details`.
+- For a single pending ask, offer simple choices such as `Review it now`, `Later`, `Skip it`, and `Show details`.
+- For multiple pending asks, say how many are waiting and summarize only the next item in plain language; do not expose internal IDs by default.
+- Present the first pending item for decision with simple choices such as `Review it now`, `Later`, `Skip it`, and `Show details`.
 - Process pending asks one-by-one. After each response/action, move to the next pending item until all are handled or the user stops/postpones the review.
-- For scheduled cron delivery, the user may be absent; include the compact one-line list plus command/options in the report, then handle the next reply interactively when the user returns.
+- For scheduled cron delivery, the user may be absent; deliver only a short human summary and the next clear follow-up choice. Keep IDs, paths, commands, and detailed review options in the report/detail flow, not the normal message.
 - Do not force the operator to type exact command syntax when an interactive choice can safely express the decision.
 
 ## Daily run guidelines
