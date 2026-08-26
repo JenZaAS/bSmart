@@ -1,6 +1,6 @@
 # bSmart-System
 
-bSmart is a lightweight operating layer for AI assistants: it gives each agent persistent project context, safe working habits, setup conventions, and reusable feature protocols without locking the user into one model or tool. `bSmart-System` is the reusable, versioned part; each agent's private projects, TODOs, logs, and local state stay in a separate `bSmart` content root.
+bSmart is a lightweight **AI harness**: an operating layer around an AI assistant that provides persistent project context, safe working habits, setup conventions, and reusable feature protocols without locking the user into one model or tool. `bSmart-System` is the reusable, versioned part; each agent's private projects, TODOs, logs, and local state stay in a separate `bSmart` content root.
 
 ## Feature overview
 
@@ -9,7 +9,9 @@ bSmart is a lightweight operating layer for AI assistants: it gives each agent p
 - [Workdocs](#workdocs) — maintain detailed working notes for larger or multi-session tasks.
 - [Library](#library) — store reusable notes, references, templates, and archived outputs.
 - [Decision Log](#decision-log) — record important choices, approvals, and milestones.
+- [History](#history) — keep a concise diary of completed work.
 - [Dreaming](#dreaming) — optional scheduled review of local bSmart content for cleanup and handoffs.
+- [Improvement Scout](#improvement-scout) — find external ideas to improve bSmart itself.
 - [Safety](#safety) — apply read-first work habits, visible action notes, and approval gates.
 - [Security Watch](#security-watch) — optional low-noise read-only drift checks for admin/security instances.
 - [Setup](#setup) — bootstrap and maintain the system/content/extension folder structure.
@@ -409,8 +411,14 @@ The Library is for durable, reusable knowledge: notes, references, templates, ex
 ### Decision Log
 The Decision Log captures meaningful setup, update, approval, migration, and project milestones. It should not store secrets, routine tool output, or full transcripts.
 
+### History
+History is a concise diary of meaningful completed work. It keeps the current TODO focused while retaining a lightweight record with optional links to detailed decisions, workdocs, project files, or published changes.
+
 ### Dreaming
 Dreaming is optional scheduled bSmart content maintenance. Daily Dreaming can review recent local content with a low token budget; Weekly Dreaming can look for stale notes, conflicts, duplication, and handoff improvements. It targets instance-local `/workspace/bSmart` content, not the reusable `bSmart-System` repo.
+
+### Improvement Scout
+Improvement Scout is a scheduled, bounded research pass over selected external sources. It looks for practical ideas, tools, releases, and patterns that could improve bSmart, then prepares accept/reject/postpone recommendations without editing the system or deploying changes automatically.
 
 ### Safety
 Safety defines the everyday operating posture: inspect before changing, keep visible action notes short, ask for explicit approval before risky writes/deploys/permission changes, prefer reversible changes, and handle secrets carefully.
