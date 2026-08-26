@@ -6,6 +6,7 @@
 ├── bSmart_Agent.md
 ├── bSmart_State.md
 ├── bSmart_TODO.md
+├── bHistory.md
 ├── bSmart_Log.md
 ├── Projects/
 ├── Workdocs/

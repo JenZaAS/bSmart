@@ -26,6 +26,7 @@ steps:
   - create_bSmart_Agent_from_template
   - create_bSmart_State_from_template
   - create_bSmart_TODO_from_template
+  - create_bHistory_from_template
   - create_bSmart_Log_from_template
   - create_content_folders
   - verify_minimal_HERMES_hook

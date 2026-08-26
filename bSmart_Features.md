@@ -63,13 +63,14 @@ commands:
 3. Workdocs — Keep detailed notes for larger work.
 4. Library — Store and reuse durable knowledge.
 5. Decision Log — Record important decisions and approvals.
-6. Dreaming — Improve local bSmart content while you sleep.
-7. Improvement Scout — Find external ideas to improve bSmart itself.
-8. Safety — Keep actions transparent and low-risk.
-9. Security Watch — Check visible VPS/container security drift.
-10. Setup — Initialize and maintain bSmart structure.
-11. Extensions — Enable optional add-on packs.
-12. Features — Show available bSmart capabilities.
+6. History — Keep a concise diary of completed work.
+7. Dreaming — Improve local bSmart content while you sleep.
+8. Improvement Scout — Find external ideas to improve bSmart itself.
+9. Safety — Keep actions transparent and low-risk.
+10. Security Watch — Check visible VPS/container security drift.
+11. Setup — Initialize and maintain bSmart structure.
+12. Extensions — Enable optional add-on packs.
+13. Features — Show available bSmart capabilities.
 
 ## Feature index
 
@@ -78,13 +79,14 @@ commands:
 3. Workdocs
 4. Library
 5. Decision Log
-6. Dreaming
-7. Improvement Scout
-8. Safety
-9. Security Watch
-10. Setup
-11. Extensions
-12. Features
+6. History
+7. Dreaming
+8. Improvement Scout
+9. Safety
+10. Security Watch
+11. Setup
+12. Extensions
+13. Features
 
 ## Features by group
 
@@ -96,6 +98,7 @@ commands:
 ### Knowledge
 - Library — Store and reuse durable knowledge.
 - Decision Log — Record important decisions and approvals.
+- History — Keep a concise diary of completed work.
 - Dreaming — Improve local bSmart content while you sleep.
 - Improvement Scout — Find external ideas to improve bSmart itself.
 
@@ -230,6 +233,32 @@ included_capabilities:
   - Important decision history
 notes:
   - Do not log secrets, routine tool output, or full transcripts.
+```
+
+### History
+
+```yaml
+name: History
+group: Knowledge
+status: active
+visibility: user-facing
+short_description: Keep a concise diary of completed work.
+files:
+  - /workspace/bSmart/bHistory.md
+  - /workspace/bSmart-System/bSmart_Protocols/history.md
+  - /workspace/bSmart-System/bSmart_Templates/bHistory.template.md
+description: Records meaningful completed tasks and milestones as short dated bullets, with optional references to detailed decisions, workdocs, project files, or published changes.
+commands:
+  - show bHistory
+  - show recent history
+  - search bHistory <query>
+included_capabilities:
+  - Concise completed-work diary
+  - Optional references to detail records
+  - Recent-history lookup
+notes:
+  - bHistory is not a TODO list, decision log, workdoc, transcript, or backup manifest.
+  - Do not load the full diary by default; search it or read its recent tail when needed.
 ```
 
 ### Dreaming

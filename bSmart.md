@@ -51,6 +51,8 @@ content_files:
   state_local: ./bSmart/bSmart_State.md
   todo: /workspace/bSmart/bSmart_TODO.md
   todo_local: ./bSmart/bSmart_TODO.md
+  history: /workspace/bSmart/bHistory.md
+  history_local: ./bSmart/bHistory.md
   log: /workspace/bSmart/bSmart_Log.md
   log_local: ./bSmart/bSmart_Log.md
   container_storage: /workspace/bSmart/State/container-storage.yaml
@@ -132,13 +134,14 @@ github_ai_access:
 
 startup_sequence:
   - read this manifest
-  - run python3 /workspace/bSmart-System/scripts/bsmart-startup-check --auto-pull when the helper exists; use the local ./bSmart-System path on non-container agents
+  - run python3 /workspace/bSmart-System/scripts/bsmart-startup-check --auto-pull when the helper exists; use the local ./bSmart-System path on non-container agents; if the checkout is read-only or a platform lacks Linux-only helpers such as findmnt, continue with direct Git checks and report the skipped cache/mount inference
   - check content root exists
   - if bSmart_Agent.md missing, run bSmart_Setup.md
   - read bSmart_Agent.md
   - if startup check reports project storage setup_required, immediately prompt the operator with Telegram buttons using clarify choices from bSmart_Protocols/project-storage.md before the normal TODO prompt
   - read bSmart_State.md when present
   - read bSmart_TODO.md when present
+  - use bHistory.md on request or when a recent completion summary needs historical context; do not load the full diary by default
   - scan bSmart_Protocols summaries and load relevant protocols
   - first visible assistant reply starts with: "bSmart — Loading bSmart."
   - then say: "Hi! Welcome back."

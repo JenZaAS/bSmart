@@ -1,5 +1,7 @@
 # bSmart TODO
 
+Keep this file short and actionable. Completed history belongs in `/workspace/bSmart/bHistory.md`.
+
 ```yaml
 current:
   - status: current
