@@ -203,7 +203,7 @@ description: Stores reusable notes, references, templates, completed outputs, an
 commands:
   - show library
   - search library <query>
-  - create bKnowledge <filename>
+  - create bKnowledge <source>
 included_capabilities:
   - Reusable knowledge storage
   - Concise project code-knowledge/navigation items
