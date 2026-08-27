@@ -203,13 +203,16 @@ description: Stores reusable notes, references, templates, completed outputs, an
 commands:
   - show library
   - search library <query>
+  - create bKnowledge <filename>
 included_capabilities:
   - Reusable knowledge storage
+  - Concise project code-knowledge/navigation items
   - Reference material
   - Templates and examples
   - Archived completed outputs
 notes:
   - Library is top-level because exposing it encourages active user interaction and curation.
+  - Project-local bKnowledge is stored under the active project's `knowledge/general/` or `knowledge/code/`; it is not placed in the global Library by default.
   - Archive is an action or state within Projects, Workdocs, and Library, not a separate top-level feature.
 ```
 

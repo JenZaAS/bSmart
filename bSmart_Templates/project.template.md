@@ -14,8 +14,10 @@ project:
 
 - `data/` — raw/supporting project material.
 - `knowledge/` — curated reusable knowledge specific to this project.
+  - `knowledge/general/` — file-independent project/domain knowledge.
+  - `knowledge/code/` — concise source-specific or codebase-navigation knowledge.
 - `decisions.md` — project-specific decisions and approvals.
-- `workdocs/` — project-local working documents for larger work.
+- `workdocs/` — project-local working documents, investigations, and handoffs; not the final home for concise knowledge items.
 - `sandbox/` — disposable/derived execution or test area; not the source of truth.
 
 ## Current focus

@@ -53,16 +53,18 @@ project_structure:
     - data/README.md
     - sandbox/README.md
     - knowledge/README.md
+    - knowledge/general/
+    - knowledge/code/
     - decisions.md
     - workdocs/README.md
   meaning:
     data: Raw/supporting project material such as inputs, exports, screenshots, source artifacts, and temporary research notes.
-    knowledge: Curated reusable knowledge specific to this project. Use the global Library only when the material is broadly reusable across projects or the bSmart instance. `knowledge/` is preferred over `library/` inside projects to avoid confusion with software libraries.
+    knowledge: Curated reusable knowledge specific to this project. `knowledge/general/` holds file-independent project/domain knowledge; `knowledge/code/` holds source-specific or codebase-navigation knowledge. Use the global Library only when the material is broadly reusable across projects or the bSmart instance. `knowledge/` is preferred over `library/` inside projects to avoid confusion with software libraries.
     decisions: A single project decision file for choices, approvals, rejected options, and migration/design decisions specific to this project.
     workdocs: Project-local working documents for larger or multi-session work within this project.
     sandbox: Disposable or derived execution/build/test workspace notes; not the source of truth.
   onboarding_rule: Create these defaults for new projects to reduce friction. If a folder stays empty, keep its README as guidance rather than asking the operator to decide up front.
-  existing_project_rule: Existing projects do not need a forced migration. If an existing project lacks `knowledge/`, `decisions.md`, or `workdocs/` and the operator asks to add one, create the missing standard file/folder from the corresponding template.
+  existing_project_rule: Existing projects do not need a forced migration. If an existing project lacks `knowledge/`, `knowledge/general/`, `knowledge/code/`, `decisions.md`, or `workdocs/` and the operator asks to add one, create the missing standard file/folder from the corresponding template or the knowledge protocol.
 ```
 
 ```yaml
