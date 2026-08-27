@@ -29,6 +29,7 @@ steps:
   - create_bHistory_from_template
   - create_bSmart_Log_from_template
   - create_content_folders
+  - create_default_AGENTS_hook
   - verify_minimal_HERMES_hook
   - offer_optional_extensions
   - offer_show_available_features
@@ -57,6 +58,7 @@ workspace_bootstrap:
     bsmart_system_remote: https://github.com/JenZaAS/bSmart.git
     bsmart_system_updates: safe HTTPS fast-forward auto-pull
     HERMES.md: minimal hook only
+    AGENTS.md: default OpenCode/local-agent bootstrap contract
     HERMES_WRITE_SAFE_ROOT: /opt/data:/workspace:/projects:/sandboxes
     TERMINAL_CWD: /workspace
   rule: all new AI agents should be bSmart-enabled unless the operator explicitly says otherwise
@@ -315,6 +317,19 @@ path: /workspace/HERMES.md
 required_line: At session start, read /workspace/bSmart-System/bSmart.md and follow it.
 action:
   - inspect existing HERMES.md
+  - show proposed change
+  - apply only with operator approval
+```
+
+## AGENTS.md hook
+
+```yaml
+path: /workspace/AGENTS.md
+template: /workspace/bSmart-System/bSmart_Templates/AGENTS.md
+purpose: default startup contract for OpenCode and other local agents
+action:
+  - create during onboarding when missing
+  - inspect an existing file before changing it
   - show proposed change
   - apply only with operator approval
 ```

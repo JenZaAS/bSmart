@@ -96,7 +96,8 @@ legacy_migration: move /workspace/secrets to the service-level secret directory,
 ├── bSmart-System/       # this git repo; safe to update
 ├── bSmart/              # local content/state; not overwritten by system updates
 ├── bSmart-Extensions/   # installed optional extension packs, e.g. Fabric or bSearch
-└── HERMES.md            # tiny Hermes hook outside bSmart
+├── HERMES.md            # tiny Hermes hook outside bSmart
+└── AGENTS.md            # OpenCode/local-agent startup contract
 ```
 
 Bundled optional extensions may also ship inside the system repo under:
@@ -110,7 +111,7 @@ Bundled optional extensions may also ship inside the system repo under:
 1. Prepare a persistent workspace for the AI instance.
 2. Clone or update this repo as `bSmart-System` inside that workspace.
 3. Create the instance-local `bSmart` content root and `bSmart-Extensions` root.
-4. Add the tiny host-framework startup hook, such as `HERMES.md`, that tells the agent to load `bSmart.md` at session start.
+4. Add the host-framework startup hooks, such as `HERMES.md` and `AGENTS.md`, that tell the agent to load `bSmart.md` at session start.
 5. Restart/redeploy the agent and verify with `/new`, then a short follow-up such as `Hi`.
 6. Complete instance setup by reviewing the generated/local `bSmart_Agent.md`, storage choices, projects, TODOs, and optional extensions.
 
@@ -130,7 +131,7 @@ At session start, before answering the user, read /workspace/bSmart-System/bSmar
 EOF
 ```
 
-That HERMES hook is intentionally tiny. For Hermes or another harness system, create the equivalent startup file in the directory the harness actually reads at session start, and put only the single bootstrap instruction there.
+That HERMES hook is intentionally tiny. The streamlined installer also creates a default `AGENTS.md` for OpenCode and other local agents. For another harness system, create the equivalent startup file in the directory the harness actually reads at session start.
 
 ### Recommended streamlined installer
 

@@ -18,6 +18,34 @@ from pathlib import Path
 
 DEFAULT_REPO_URL = "https://github.com/JenZaAS/bSmart.git"
 HERMES_HOOK = "At session start, read /workspace/bSmart-System/bSmart.md and follow it.\n"
+AGENTS_HOOK = """# bSmart Startup
+
+This workspace may be shared by Codex on the host and OpenCode in Docker. Before
+handling user input, identify the runtime and resolve paths accordingly:
+
+- Docker: if `/.dockerenv` exists, use `/workspace` as the workspace root.
+- Host: use the directory containing this file as the workspace root.
+- Projects: use a usable `BSMART_PROJECT_ROOT` if set; otherwise use `/projects`
+  in Docker or `<workspace>/projects` on the host.
+- Sandboxes: use a usable `BSMART_SANDBOX_ROOT` if set; otherwise use
+  `/sandboxes` in Docker or `<workspace>/sandboxes` on the host, but only if the
+  directory exists. Do not create one without approval.
+
+Verify paths before using them. When bSmart documents refer to `/workspace/...`,
+map those references to the resolved workspace paths above.
+
+Do not modify `bSmart-System` by default. Report any required system changes and
+wait for explicit operator approval before editing that repository.
+
+Read `<workspace>/bSmart-System/bSmart.md` immediately and follow its startup
+sequence before responding. This includes reading `bSmart_Agent.md`,
+`bSmart_State.md`, `bSmart_TODO.md`, and relevant protocols.
+
+The first response must start with `bSmart — Loading bSmart.`, then say
+`Hi! Welcome back.`, report Mode, active project, and current workstream when
+present, include `Info keywords: help, features, setup, projects, tasks, safety.`,
+and ask whether to continue the current TODO item.
+"""
 
 
 def run(cmd: list[str], *, cwd: Path | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -130,6 +158,8 @@ def main() -> int:
     files_created: list[str] = []
     if write_if_missing(workspace / "HERMES.md", HERMES_HOOK):
         files_created.append("HERMES.md")
+    if write_if_missing(workspace / "AGENTS.md", AGENTS_HOOK):
+        files_created.append("AGENTS.md")
 
     agent_md = f"""# bSmart agent profile
 
@@ -213,6 +243,7 @@ sandboxes:
         files_created.append("bSmart/State/container-storage.yaml")
 
     chown_tree(workspace / "HERMES.md", args.uid, args.gid) if (workspace / "HERMES.md").exists() else None
+    chown_tree(workspace / "AGENTS.md", args.uid, args.gid) if (workspace / "AGENTS.md").exists() else None
     for p in [workspace / "bSmart-System", content_root, workspace / "bSmart-Extensions"]:
         chown_tree(p, args.uid, args.gid)
 
