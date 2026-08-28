@@ -4,8 +4,8 @@
 
 - Goal: <one line>
 - Outcome: reached | not_reached | partial | inconclusive | blocked | unsafe
-- Workflow keyword: ordinary | bSelective | architect | bSelective architect | cascade | bSelective cascade
-- Workflow: direct | architect_handoff | architect_taskflow
+- Workflow keyword: ordinary | bSelective | architect | bSelective architect | cascade | bSelective cascade | critcascade
+- Workflow: direct | architect_handoff | architect_taskflow | critcascade
 - Runtime adapter: hermes | opencode | codex | claude | unknown
 - Preflight QC: passed | blocked | downgraded | not_run
 - Mode: unsupervised | supervised
@@ -57,6 +57,7 @@ bswarm_run:
     max_depth: ...
     max_total_child_agents: ...
     max_iterations: ...
+    max_critique_rounds: 3
     max_worker_attempts_per_supervisor: ...
   safety: ...
 ```
@@ -194,6 +195,19 @@ Architect plans should include one-line region reasons only and should not paste
 |---|---|---|---|---|---|---|
 | ordinary | coder | ordinary direct_worker | partial | medium | ... | <branch-output.md> |
 | bselective_architect | architect | bSelective architect | partial | medium | ... | bselective-architect/architect-plan.md |
+
+## Critcascade review
+
+Only include for `critcascade` runs. Complete and verify one task before the next;
+the architect reviews and updates the remaining plan before each next task.
+
+| Round | Critic | Score (1-10) | Critical issues | Required changes | Status | Decision |
+|---:|---|---:|---|---|---|---|
+| 1 | architect_critic | ... | ... | ... | complete | pass |
+| 1 | programmer_critic | ... | ... | ... | complete | revise |
+
+- Knowledge consulted: `<bKnowledge references>`
+- Concise durable lessons extracted: `<none or entries>`
 
 ## Evidence
 

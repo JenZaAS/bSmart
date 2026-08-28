@@ -15,6 +15,7 @@ bswarm_run:
   max_depth: 1
   max_total_child_agents: 3
   max_iterations: 5
+  max_critique_rounds: 3
   max_worker_attempts_per_supervisor: 5
   planned_timeout_seconds: 1200
   safety: read_only
@@ -123,6 +124,19 @@ bswarm_run:
         - architect
         - coder
         - architect_evaluation
+    critcascade:
+      pattern: critcascade
+      architect_context_mode: bselective
+      coder_context_mode: bselective
+      max_depth: 3
+      max_critique_rounds: 3
+      stages:
+        - architect
+        - architect_critic
+        - coder
+        - programmer_critic
+        - architect_revision
+        - coder_fix
 
   contamination_rules:
     duplicate_source_before_edits: true

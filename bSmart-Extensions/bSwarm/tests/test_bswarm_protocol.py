@@ -158,6 +158,40 @@ class BSwarmProtocolTests(unittest.TestCase):
         ]:
             self.assertIn(term, text)
 
+    def test_critcascade_contract_is_depth_three_and_stepwise(self):
+        combined = '\\n'.join([
+            self.read('bswarm-protocol.md'),
+            self.read('templates/run-spec.yaml'),
+            self.read('templates/run-record.md'),
+            self.read('README.md'),
+        ])
+        for term in [
+            'critcascade',
+            'max_depth: 3',
+            'architect_critic',
+            'programmer_critic',
+            'score: 1-10',
+            'bKnowledge',
+            'one task at a time',
+            'review and update the remaining plan',
+            'stop at 8 or higher',
+            'max_critique_rounds: 3',
+        ]:
+            self.assertIn(term, combined)
+
+    def test_critcascade_has_concise_critic_contract_and_knowledge_rules(self):
+        text = self.read('bswarm-protocol.md')
+        for term in [
+            'critical_issues',
+            'important_issues',
+            'required_changes',
+            'verification_needed',
+            'general knowledge',
+            'concise durable lessons',
+            'must not edit implementation files',
+        ]:
+            self.assertIn(term, text)
+
     def test_architect_handoff_defaults_are_compact_and_token_aware(self):
         protocol = self.read('bswarm-protocol.md').lower()
         run_spec = self.read('templates/run-spec.yaml').lower()

@@ -108,6 +108,7 @@ purpose:
   - unsupervised and supervised swarm modes
   - A/B report and self-improving comparisons
   - run statistics and bSelective integration
+  - `critcascade`: depth-3 stepwise cascade with architect/programmer critics and bounded score-based repair loops
 install_model: copy_or_sync_from_bundled_source
 setup_default: yes
 ```

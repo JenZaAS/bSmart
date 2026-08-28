@@ -14,6 +14,7 @@ architect
 bSelective architect
 cascade
 bSelective cascade
+critcascade
 ```
 
 Keyword meanings:
@@ -26,6 +27,7 @@ Keyword meanings:
 | `bSelective architect` | bSelective architect → bSelective coder, using one compact handoff. |
 | `cascade` | Ordinary architect-led stepwise workflow: decompose, dispatch one coder task, evaluate, re-plan, continue. |
 | `bSelective cascade` | bSelective architect-led stepwise workflow with bSelective-enabled coders. |
+| `critcascade` | Depth-3 bSelective cascade with architect/programmer critics and score-based repair loops. |
 
 Normalization rules:
 
@@ -35,6 +37,7 @@ Normalization rules:
 - `bSelective` applies to all relevant stages by default.
 - `bSelective architect` means bSelective architect and bSelective coder.
 - `bSelective cascade` means bSelective architect, bSelective coders, and architect evaluation/replanning between tasks.
+- `critcascade` means bSelective cascade with maximum depth 3, one completed task at a time, and architect plan review before each next task.
 - Do not expose mixed bSelective architect → ordinary coder combinations as normal user-facing modes; keep them only for controlled experiments.
 
 Internal normalization:
@@ -62,6 +65,10 @@ bSelective cascade:
   context_mode: bselective
   workflow: architect_taskflow
   coder_context_mode: bselective
+critcascade:
+  context_mode: bselective
+  workflow: critcascade
+  coder_context_mode: bselective
 ```
 
 Then show the normalized run summary:
@@ -70,8 +77,8 @@ Then show the normalized run summary:
 bswarm_run:
   goal: <one-line goal>
   scope: <path/reference or none>
-  workflow_keyword: ordinary | bSelective | architect | bSelective architect | cascade | bSelective cascade
-  workflow: direct | architect_handoff | architect_taskflow
+  workflow_keyword: ordinary | bSelective | architect | bSelective architect | cascade | bSelective cascade | critcascade
+  workflow: direct | architect_handoff | architect_taskflow | critcascade
   mode: unsupervised | supervised
   intent: review | design | compare | implement | other
   ab_testing: off | report | self_improving
@@ -111,6 +118,12 @@ bswarm_run:
       architect_context_mode: bselective
       coder_context_mode: bselective
       stages: [architect, coder, architect_evaluation]
+    critcascade:
+      pattern: critcascade
+      architect_context_mode: bselective
+      coder_context_mode: bselective
+      max_depth: 3
+      stages: [architect, architect_critic, coder, programmer_critic, architect_revision, coder_fix]
 ```
 
 Offer: start, edit keyword, edit A/B/C branches, edit statistics, edit budgets, edit safety, cancel.
@@ -119,7 +132,8 @@ Offer: start, edit keyword, edit A/B/C branches, edit statistics, edit budgets, 
 
 Before launching any run, do a short preflight QC and show blocking warnings
 instead of starting a run that is likely to fail. For `architect`,
-`bSelective architect`, `cascade`, and especially `bSelective cascade`, this is
+`bSelective architect`, `cascade`, `bSelective cascade`, and especially
+`critcascade`, this is
 mandatory if the run expects the architect subagent itself to dispatch coder
 subagents. Earlier staged handoff runs can work with lower spawn depth because
 the parent/supervisor runs architect first, then manually hands the plan to a
@@ -145,6 +159,8 @@ preflight_qc:
     delegation.child_timeout_seconds: ">= planned_timeout_seconds"
   recommended_for_bselective_cascade:
     delegation.child_timeout_seconds: 1200
+  required_for_critcascade:
+    delegation.max_spawn_depth: ">= 3"
 ```
 
 If a required check fails, stop and report a concise settings warning with the
@@ -386,7 +402,42 @@ cascade_defaults:
   re_evaluate_after_each_task: true
 ```
 
-## 7. bSelective
+## 7. critcascade
+
+`critcascade` is the high-assurance bSelective cascade. It uses one task at a time:
+complete and verify one task before proceeding. Before each next task, the architect must review and update the remaining plan.
+
+```text
+architect → architect_critic → programmer → programmer_critic
+          → architect_revision → programmer_fix
+```
+
+The architect critic is above-average critical but fair, focusing on material
+issues in the specification. The programmer critic reviews goal coverage, bugs,
+speed, memory efficiency, security, robustness, integration, code reuse, and
+test coverage. Critics do not edit implementation files.
+
+Critique contract:
+
+```yaml
+critique:
+  score: 1-10
+  critical_issues: []
+  important_issues: []
+  required_changes: []
+  verification_needed: []
+```
+
+Rules:
+
+- maximum delegation depth is 3;
+- maximum `max_critique_rounds` is 3;
+- stop at 8 or higher;
+- retries require diagnosed issues, not vague dissatisfaction;
+- extract only concise durable lessons/general knowledge into `bKnowledge`;
+- architects and programmers consult relevant `bKnowledge` before acting.
+
+## 8. bSelective
 
 Modes:
 

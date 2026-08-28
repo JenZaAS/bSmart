@@ -18,6 +18,7 @@ Compact user-facing workflow keywords:
 - `bSelective architect` — bSelective architect → bSelective coder, using one compact handoff.
 - `cascade` — ordinary architect-led stepwise workflow.
 - `bSelective cascade` — bSelective architect-led stepwise workflow with bSelective-enabled coders.
+- `critcascade` — bSelective cascade with architect and programmer critics, bounded score-based repair loops.
 
 Mixed architect/coder context modes are internal experimental overrides, not normal user-facing modes.
 
@@ -50,6 +51,7 @@ Explicit subagent stage modes:
 - `direct_worker` — one ordinary coder/worker plans and edits directly in its duplicate file.
 - `architect_coder` — architect discovers context and writes `architect-plan.md`; coder implements from that plan.
 - `architect_taskflow` — architect decomposes, dispatches one bounded coder task, evaluates, re-plans, then continues within cascade limits.
+- `critcascade` — depth-3 bSelective cascade: architect spec → architect critic → programmer → programmer critic → architect-directed fix programmer, one task at a time.
 
 Example A/B/C run shape:
 
