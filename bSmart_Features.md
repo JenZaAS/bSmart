@@ -71,6 +71,7 @@ commands:
 11. Setup — Initialize and maintain bSmart structure.
 12. Extensions — Enable optional add-on packs.
 13. Features — Show available bSmart capabilities.
+14. bPrivate — Optionally encode sensitive content before online-model use and decode local results.
 
 ## Feature index
 
@@ -87,6 +88,7 @@ commands:
 11. Setup
 12. Extensions
 13. Features
+14. bPrivate
 
 ## Features by group
 
@@ -108,6 +110,7 @@ commands:
 - Setup — Initialize and maintain bSmart structure.
 - Extensions — Enable optional add-on packs.
 - Features — Show available bSmart capabilities.
+- bPrivate — Optionally encode sensitive content before online-model use and decode local results.
 
 ## Feature details
 
@@ -476,4 +479,33 @@ included_capabilities:
 notes:
   - Keep the main feature list at user-product level, not implementation level.
   - Put subfeatures and internal mechanisms inside the relevant detail card.
+```
+
+### bPrivate
+
+```yaml
+name: bPrivate
+group: System
+status: prototype
+visibility: user-facing
+short_description: Optionally encode sensitive content before online-model use and decode local results.
+files:
+  - /workspace/bSmart-System/bSmart-Extensions/bPrivate/
+  - /workspace/bSmart-Extensions/bPrivate/
+description: Provides an opt-in local encode/decode gateway prototype. Mode off preserves normal behavior; mode on is intended to ensure provider-bound content is encoded locally and responses are decoded only on the local side. The current prototype supports non-streaming OpenAI-style chat-completions JSON and is not yet wired into Hermes.
+commands:
+  - bPrivate status
+  - bPrivate encode
+  - bPrivate decode
+  - bPrivate serve
+included_capabilities:
+  - Stable configured-value placeholders
+  - Local response decoding
+  - Protected-path checks
+  - Fail-closed outbound validation
+  - Local chat-completions gateway prototype
+notes:
+  - Folder names are conventions, not security boundaries.
+  - Mappings remain local and must never be sent to an online model.
+  - Image/PDF/DOCX/PPTX extraction and Hermes provider integration remain future implementation phases.
 ```

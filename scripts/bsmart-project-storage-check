@@ -108,7 +108,12 @@ def run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
 
 
 def infer_workspace_host_path() -> str | None:
-    proc = run(["findmnt", "-T", "/workspace", "-n", "-o", "SOURCE"])
+    # findmnt is Linux-specific. Local Windows/macOS checkouts do not need a
+    # host bind-mount inference; callers can provide an explicit path instead.
+    try:
+        proc = run(["findmnt", "-T", "/workspace", "-n", "-o", "SOURCE"])
+    except (FileNotFoundError, OSError):
+        return None
     if proc.returncode != 0:
         return None
     source = proc.stdout.strip()

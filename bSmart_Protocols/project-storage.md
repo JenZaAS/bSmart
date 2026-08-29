@@ -227,6 +227,8 @@ startup_check_behavior:
     internal_bsmart: python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check --configure-internal
     internal_bsmart_local: python3 ./bSmart-System/scripts/bsmart-project-storage-check --configure-internal
   executable_bit_pitfall: On CIFS/SMB-backed workspaces, file_mode mount options may ignore Git executable bits. Prefer python3 <script> for Python helpers.
+  local_platform_fallback: On Windows/macOS checkouts, findmnt may be unavailable; skip host-mount inference and use explicit local paths or BSMART_PROJECT_ROOT/BSMART_SANDBOX_ROOT.
+  state_cache_fallback: Startup and Git freshness state files are best-effort caches; a read-only checkout must continue with direct Git checks and report that throttling/cache persistence was skipped.
 ```
 
 ```yaml

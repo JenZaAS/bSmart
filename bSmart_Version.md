@@ -1,9 +1,26 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.11-draft
-updated: 2026-08-19 17:55 UTC
+current_version: 0.1.12-draft
+updated: 2026-08-24 10:37 UTC
 status: draft
+```
+
+## 0.1.12-draft
+
+```yaml
+release_type: portability_fix
+scope:
+  - make local startup checks usable from read-only Windows/non-Linux checkouts
+  - treat unavailable Linux findmnt probing as a skipped host-mount inference
+  - treat daily state files as best-effort caches rather than a prerequisite for Git checks
+  - document the direct-Git fallback behavior in the startup manifest
+safety:
+  - no deployment, mount, or host-side changes
+verification:
+  - Python helpers compile successfully
+  - storage check completes without findmnt-dependent failure
+  - Git update and startup checks continue when state paths are unwritable
 ```
 
 ## 0.1.11-draft

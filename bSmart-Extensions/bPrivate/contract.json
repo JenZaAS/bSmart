@@ -1,0 +1,22 @@
+{
+  "name": "bPrivate",
+  "version": "0.2-prototype",
+  "scope": "local-runtime-and-chat-completions-gateway",
+  "compatibility": "OpenAI chat-completions-compatible for non-streaming JSON POST requests",
+  "hermes_integration": "not yet Hermes-integrated",
+  "modes": ["off", "on"],
+  "invariants": [
+    "mode off forwards request and response bytes without privacy transformation",
+    "mode on recursively maps configured values to stable opaque placeholders",
+    "session mapping persists for the gateway process and is never sent outbound",
+    "response content and tool-call arguments are recursively decoded locally",
+    "decode and validation fail closed on unknown placeholders, raw values, or mapping content",
+    "protected source/result/mapping paths represented in tool arguments are rejected",
+    "streaming requests are explicitly rejected",
+    "gateway never logs raw request or response content",
+    "staging is UTF-8 text-only and does not process binary or images"
+  ],
+  "commands": ["on", "off", "status", "help", "info", "encode", "decode", "validate", "stage-text", "serve"],
+  "integration_boundary": "This prototype performs local gateway forwarding only; later Hermes integration must call path policy, encode, outbound validation, and local decode in that order.",
+  "runtime": "Python standard library; tests use unittest only"
+}

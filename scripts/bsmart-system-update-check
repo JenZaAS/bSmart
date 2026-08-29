@@ -40,12 +40,18 @@ def read_last_checked(state: Path) -> str | None:
     return None
 
 
-def write_state(state: Path, status: str, detail: str) -> None:
-    state.parent.mkdir(parents=True, exist_ok=True)
-    state.write_text(
-        f"last_checked_utc_date: {today()}\nlast_checked_at: {now()}\nstatus: {status}\ndetail: {detail!r}\n",
-        encoding="utf-8",
-    )
+def write_state(state: Path, status: str, detail: str) -> bool:
+    """Best-effort cache; a read-only checkout must not block Git checks."""
+    try:
+        state.parent.mkdir(parents=True, exist_ok=True)
+        state.write_text(
+            f"last_checked_utc_date: {today()}\nlast_checked_at: {now()}\nstatus: {status}\ndetail: {detail!r}\n",
+            encoding="utf-8",
+        )
+        return True
+    except (OSError, PermissionError) as exc:
+        print(f"bSmart system update check: state not writable — {state} ({exc})")
+        return False
 
 
 def run(cmd: list[str], cwd: Path, timeout: int = 30) -> subprocess.CompletedProcess[str]:

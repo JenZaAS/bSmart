@@ -49,15 +49,21 @@ def get_yamlish_value(path: Path, key: str) -> str | None:
     return None
 
 
-def write_state(path: Path, project_storage_checked: bool, system_update_checked: bool) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        f"last_checked_utc_date: {today()}\n"
-        f"last_checked_at: {now()}\n"
-        f"project_storage_checked: {str(project_storage_checked).lower()}\n"
-        f"system_update_checked: {str(system_update_checked).lower()}\n",
-        encoding="utf-8",
-    )
+def write_state(path: Path, project_storage_checked: bool, system_update_checked: bool) -> bool:
+    """Best-effort daily cache; read-only local checkouts remain usable."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            f"last_checked_utc_date: {today()}\n"
+            f"last_checked_at: {now()}\n"
+            f"project_storage_checked: {str(project_storage_checked).lower()}\n"
+            f"system_update_checked: {str(system_update_checked).lower()}\n",
+            encoding="utf-8",
+        )
+        return True
+    except (OSError, PermissionError) as exc:
+        print(f"bSmart startup checks: state not writable — {path} ({exc})")
+        return False
 
 
 def run_script(script: str, args: list[str]) -> subprocess.CompletedProcess[str]:
