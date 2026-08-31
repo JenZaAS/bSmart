@@ -289,6 +289,8 @@ commands:
   - dream inspect <action-id>
   - dream undo <action-id>
   - dream project <name>
+  - create recurring dream <description>
+  - show recurring dreams
   - nap
 included_capabilities:
   - Daily recent-session content cleanup
@@ -299,6 +301,7 @@ included_capabilities:
   - Token-saving compaction suggestions
   - On-request Dream Project review
   - End-of-session Nap handoff
+  - Tag-driven recurring Dream checks with change-only reporting
   - Per-instance opt-in/disable setup
 notes:
   - Dreaming improves instance-local bSmart content, not bSmart-System itself.
@@ -306,6 +309,7 @@ notes:
   - Ask before permanent deletion, unclear conflict resolution, project content changes, or bSmart-System/system/deploy/runtime changes.
   - If multiple Dreaming asks are pending, list all items first in one-line summaries, then present them one-by-one with interactive choices/buttons when the user is present; cron reports should include the same compact list plus options for later review.
   - Unhandled Dreaming asks persist in a small backlog until accepted/rejected/postponed/undone; no-op days should stay silent or update tiny state, not create bulky reports or repeat old asks.
+  - Recurring Dreams use concise `[dream:<slug>]` markers in instance-local TODO items and a linked workdoc/state record; routine checks are read-only and report only changes.
   - Dream reports and decisions should be terse by default: 3–8 chat lines for non-empty reports, one-line item summaries, one-sentence decision prompts, and details only on request.
   - Setup should record disabled/no-ask choices so /new does not repeatedly prompt.
 ```

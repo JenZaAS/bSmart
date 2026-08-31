@@ -267,6 +267,40 @@ Daily Dreaming should be cheap:
 7. Write a short dated report under `/workspace/bSmart/Workdocs/dreaming/`.
 8. Deliver a compact summary with review/undo commands.
 
+## Recurring Dreams
+
+Recurring Dreams are operator-defined, tag-driven checks performed by the existing daily or weekly Dreaming schedule. They extend Dreaming beyond content tidy work without creating a separate cron job for every small follow-up.
+
+### Representation
+
+Use a marker in an instance-local TODO item:
+
+```text
+[dream:<slug>]
+```
+
+The TODO item must point to a local workdoc or state file that defines the target, check method, and reporting rule. Keep the durable target details there rather than embedding a long instruction in the TODO line.
+
+### Execution rules
+
+1. The scheduled Dreaming run scans active TODO items for recognized `[dream:<slug>]` markers.
+2. It performs only the check defined by the linked workdoc, using the narrowest available read-only access.
+3. It compares the live result with the last recorded state and reports only new progress, feedback, status changes, closure, merge, or supersession.
+4. It updates the local tracking state/workdoc with factual URLs, authors, timestamps, and short summaries when a change is found.
+5. It stays silent when there is no change and does not create a normal Dreaming backlog item for a routine recurring check.
+6. It must not publish, edit, react, label, merge, deploy, or otherwise change an external system unless a separate explicit operator action authorizes that operation.
+7. A recurring Dream remains active until the TODO item is completed, the marker is removed, or the linked workdoc records it as superseded/disabled.
+
+### Creation pattern
+
+When the operator asks to create a recurring Dream, create or update:
+
+- one concise active TODO item with `[dream:<slug>]`;
+- one local workdoc/state record containing target, scope, cadence, last checked state, and reporting rules;
+- the existing Dreaming job instructions only when the marker type is new and cannot use an established generic check.
+
+Recurring Dreams are monitoring instructions, not a second research/review queue. They must not copy external recommendations into the Dreaming backlog or silently turn monitoring into publication.
+
 ## Weekly run guidelines
 
 Weekly Dreaming may look more broadly, but must still stay bounded:
