@@ -127,11 +127,20 @@ If you want the core install steps spelled out directly, the expected shape is:
 git clone https://github.com/JenZaAS/bSmart.git /workspace/bSmart-System
 mkdir -p /workspace/bSmart /workspace/bSmart-Extensions
 cat > /workspace/HERMES.md <<'EOF'
-At session start, before answering the user, read /workspace/bSmart-System/bSmart.md with the file-reading tool and follow it for the session. Do not just acknowledge this; actually load the file.
+# bSmart startup hook
+
+Read `bSmart-System/bSmart.md` first; follow it.
+
+Hierarchy:
+- `bSmart-System/bSmart.md`: shared system rules.
+- `bSmart/bSmart_Agent.md`: instance rules; project files are project-scoped.
+
+Do not duplicate system/project rules here. Do not delete or rewrite this hook for task-specific instructions.
 EOF
+cp /workspace/HERMES.md /workspace/AGENTS.md
 ```
 
-That HERMES hook is intentionally tiny. The streamlined installer also creates a default `AGENTS.md` for OpenCode and other local agents. For another harness system, create the equivalent startup file in the directory the harness actually reads at session start.
+The same tiny hook is used as `HERMES.md` and `AGENTS.md`. For another harness, create the same file under the name it reads at startup.
 
 ### Recommended streamlined installer
 
@@ -179,6 +188,39 @@ Hi
 ```
 
 The first agent-authored reply should report bSmart startup, a clean/public HTTPS bSmart-System update check, and no per-container GitHub SSH-key warning.
+
+### New local agent instance
+
+For a local OpenCode, Codex, or similar instance, use these defaults:
+
+```text
+instance folder: the folder containing the startup hooks
+system: ./bSmart-System
+content: ./bSmart
+extensions: ./bSmart-Extensions
+projects: ./projects
+sandbox: ./sandboxes, only when it already exists
+hooks: identical HERMES.md and AGENTS.md from bSmart_Templates/AGENTS.md
+Git: none unless explicitly selected
+secrets: local/deployer-managed; never in Git or Markdown
+```
+
+Copy/paste prompt for the local agent:
+
+```text
+Initialize this local workspace with bSmart using the standard defaults.
+
+Use the folder containing this prompt as the instance folder. Keep the startup
+hooks identical: create or update both HERMES.md and AGENTS.md from
+bSmart-System/bSmart_Templates/AGENTS.md. Do not put system rules, project
+rules, task notes, or persona details in either hook.
+
+Use ./bSmart-System for the shared bSmart system, ./bSmart for instance content,
+./bSmart-Extensions for optional extensions, ./projects for projects, and
+./sandboxes only if it already exists. Do not create or overwrite instance
+identity/state files without approval. Read ./bSmart-System/bSmart.md before
+acting and follow its startup sequence.
+```
 
 ### Legacy interactive installer
 
@@ -277,8 +319,17 @@ install -d -o "$HERMES_UID" -g "$HERMES_GID" \
   "$WS/bSmart-Extensions"
 
 cat > "$WS/HERMES.md" <<'EOF'
-At session start, before answering the user, read /workspace/bSmart-System/bSmart.md with the file-reading tool and follow it for the session. Do not just acknowledge this; actually load the file.
+# bSmart startup hook
+
+Read `bSmart-System/bSmart.md` first; follow it.
+
+Hierarchy:
+- `bSmart-System/bSmart.md`: shared system rules.
+- `bSmart/bSmart_Agent.md`: instance rules; project files are project-scoped.
+
+Do not duplicate system/project rules here. Do not delete or rewrite this hook for task-specific instructions.
 EOF
+cp "$WS/HERMES.md" "$WS/AGENTS.md"
 
 cat > "$WS/bSmart/bSmart_Agent.md" <<EOF
 # bSmart agent profile

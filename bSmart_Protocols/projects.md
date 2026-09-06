@@ -1,5 +1,7 @@
 # bSmart Protocol: projects
 
+Shared executable commands: [project-commands.md](project-commands.md) defines `/project`, confirmation and the new verified full-project retirement policy.
+
 ```yaml
 protocol:
   id: projects
@@ -30,6 +32,15 @@ path_resolution:
     - resolve ./projects relative to the folder containing the startup hook, e.g. AGENTS.md
     - if /workspace/bSmart paths do not exist, use ./bSmart equivalents
     - do not fail project listing just because /workspace/bSmart/Projects is absent
+```
+
+```yaml
+default_search_scope:
+  rule: In Project mode, read, search, and list files under the active project only.
+  canonical_path: /projects/<active-project>
+  cross_project_access: Only when the operator explicitly requests it or the task clearly requires comparison across projects.
+  project_listing_exception: Listing immediate project names is allowed; do not recursively scan sibling projects.
+  shared_files_exception: Load bSmart-System, instance state, and relevant shared protocols when required by the startup or task.
 ```
 
 ```yaml
@@ -82,4 +93,11 @@ project_md_required_fields:
   - owner
   - objective
   - agent_focus
+```
+
+```yaml
+create_project:
+  default_after_creation: switch active project to the newly created project
+  rule: The current `/project add NAME` command always updates bSmart_State.md and opens the new project. A future API may explicitly support opt-out, but this runtime does not.
+  state_protocol: /workspace/bSmart-System/bSmart_Protocols/state.md
 ```

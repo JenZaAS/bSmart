@@ -1,0 +1,5 @@
+name: bsmart-project
+version: 1.0.0
+description: "Shared bSmart project commands: /project and /projcet."
+author: "bSmart-System"
+hooks: []

@@ -69,24 +69,11 @@ local_paths:
     - /sandboxes
     - ./sandboxes
     - ./bSmart/Sandboxes
-  mail_root_selection:
-    - BSMART_MAIL_ROOT
-    - /mail
-    - ./mail
-    - /workspace/bSmart/Mail
+
   workdocs: /workspace/bSmart/Workdocs
   library: /workspace/bSmart/Library
   log: /workspace/bSmart/bSmart_Log.md
 
-mail_handling:
-  status: paused_experiment
-  natural_language_trigger: disabled by default while bMail/mailman is paused; when the user says "check your mail" or similar, clarify whether they mean bSmart bMail or external email unless this instance has explicitly re-enabled bMail.
-  quick_check_command: python3 /workspace/bSmart-System/scripts/bMail check --mailbox /mail
-  read_command_template: python3 /workspace/bSmart-System/scripts/bMail read --mailbox /mail --id <message-id>
-  fallback_mailbox_paths:
-    - /mail
-    - ./mail
-    - /workspace/bSmart/Mail
 
 dreaming:
   status: ask_later

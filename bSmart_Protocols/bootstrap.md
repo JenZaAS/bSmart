@@ -49,7 +49,8 @@ new_agent_bootstrap_standard:
 governance:
   system_changes: treat_as_versioned_changes
   content_changes: local_instance_state
-  HERMES.md: minimal_hook_only
+  HERMES.md: shared_startup_hook
+  AGENTS.md: same_shared_startup_hook
   SOUL.md: no_bSmart_footprint_preferred
 ```
 

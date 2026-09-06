@@ -69,10 +69,7 @@ content_folders:
   sandboxes_preferred: /sandboxes
   sandboxes_local_relative: ./sandboxes
   sandboxes_local_bsmart_fallback: ./bSmart/Sandboxes
-  mail_override_env: BSMART_MAIL_ROOT
-  mail_preferred: /mail
-  mail_local_relative: ./mail
-  mail_fallback: /workspace/bSmart/Mail
+
   workdocs: /workspace/bSmart/Workdocs
   library: /workspace/bSmart/Library
 
@@ -82,6 +79,12 @@ system_folders:
   docs: /workspace/bSmart-System/Docs
   examples: /workspace/bSmart-System/bSmart_Examples
   scripts: /workspace/bSmart-System/scripts
+
+startup_hooks:
+  protocol: /workspace/bSmart-System/bSmart_Protocols/startup-hooks.md
+  helper: /workspace/bSmart-System/scripts/bsmart-hooks
+  helper_local: ./bSmart-System/scripts/bsmart-hooks
+  rule: HERMES.md, AGENTS.md, and any other supported hook files use the same shared template.
 
 instance_git:
   status: optional_but_recommended
@@ -122,6 +125,12 @@ project_storage:
   setup_protocol: /workspace/bSmart-System/bSmart_Protocols/project-storage.md
   compose_change_required_for_projects: true
 
+project_context_scope:
+  default: active_project_only
+  rule: In Project mode, read, search, and list project files only under /projects/<active-project>.
+  cross_project: Require an explicit operator request or a task that clearly needs comparison across projects.
+  exception: Listing immediate project names is allowed; do not recursively scan sibling projects.
+
 state_management:
   protocol: /workspace/bSmart-System/bSmart_Protocols/state.md
   rule: Active/current project state is governed by the state protocol; feature-specific protocols should reference it rather than restating ownership rules.
@@ -136,6 +145,7 @@ startup_sequence:
   - read this manifest
   - run python3 /workspace/bSmart-System/scripts/bsmart-startup-check --auto-pull when the helper exists; use the local ./bSmart-System path on non-container agents; if the checkout is read-only or a platform lacks Linux-only helpers such as findmnt, continue with direct Git checks and report the skipped cache/mount inference
   - check content root exists
+  - initialize missing startup hooks without overwriting existing hooks
   - if bSmart_Agent.md missing, run bSmart_Setup.md
   - read bSmart_Agent.md
   - if startup check reports project storage setup_required, immediately prompt the operator with Telegram buttons using clarify choices from bSmart_Protocols/project-storage.md before the normal TODO prompt

@@ -40,7 +40,7 @@ This file tracks the current/active project selection for bSmart.
 
 - Mode: `Project` | `Free Mode`
 - Active project (short name): `<project-slug>` | `none`
-- Updated at (UTC): `<YYYY-MM-DD HH:MM UTC>`
+- Updated at (UTC): `<ISO-8601 UTC timestamp, e.g. 2026-09-05T17:39:26.217Z>`
 
 Notes:
 - <optional short current-focus note>
@@ -55,12 +55,16 @@ Notes:
 
 ## Changing state
 
-Only change the global active/current project when the operator explicitly selects a project, creates a project and chooses to open it, or asks to enter Free Mode.
+Only change the global active/current project when the operator explicitly selects a project, creates a project, or asks to enter Free Mode. `/project add NAME` always opens the new project and updates active state; a future API may add an explicit opt-out, but the current shared runtime has none.
 
 When changing state:
 1. Update `Mode`, `Active project (short name)`, and `Updated at (UTC)` in `bSmart_State.md`.
 2. Keep project-specific TODOs/project files project-local; do not mirror the global active/current project there.
 3. Log meaningful state changes in the local bSmart log when appropriate.
+
+## Workstream selection and command runtime
+
+The shared [project command runtime](project-commands.md) owns project/workstream selection updates. Optional `- Active workstream: \`<name>\`` (or YAML `active_workstream`) stores the current workstream; `none` means no workstream. Workstreams are immediate `workstreams/<name>/` directories within the selected project, not separate projects. Selecting a project without WS clears the workstream; retirement/deletion clears both and enters Free Mode. The runtime preserves unrelated state fields and supports both preferred top metadata bullets (before `Notes:`) and a fenced `yaml` state block. Matching bullet/YAML representations are synchronized; duplicates or conflicts fail closed before mutation. Unfenced YAML-like lines and later documentation are ignored.
 
 ## Free Mode
 

@@ -58,7 +58,7 @@ commands:
 
 ## Feature list
 
-1. Projects — Manage project context and project folders.
+1. Projects — Manage project context and project folders. Shared [`/project` commands](bSmart_Protocols/project-commands.md) include workstreams and confirmed lifecycle actions.
 2. Tasks — Track next actions and handoffs.
 3. Workdocs — Keep detailed notes for larger work.
 4. Library — Store and reuse durable knowledge.
@@ -123,12 +123,21 @@ status: active
 visibility: user-facing
 short_description: Manage project context and project folders.
 files:
-  - /workspace/bSmart/Projects/
+  - /projects/ (canonical default when available; environment/local/legacy fallbacks are documented in the Projects protocol)
   - /workspace/bSmart/bSmart_State.md
   - /workspace/bSmart-System/bSmart_Protocols/projects.md
   - /workspace/bSmart-System/bSmart_Templates/project.template.md
 description: Creates, lists, opens, and manages bSmart projects. Includes active project selection, project folders, project metadata, project status, and project-specific agent focus.
 commands:
+  - /project
+  - /project list
+  - /project <name> [workstream]
+  - /project ws <workstream>
+  - /project add <name>
+  - /project add ws <workstream>
+  - /project rename <new-name>
+  - /project retire
+  - /project delete
   - list projects
   - show active project
   - open project <name>
@@ -141,7 +150,7 @@ included_capabilities:
   - Project archive status
 notes:
   - Keep project-related subfeatures under Projects instead of listing them as separate top-level features.
-  - Projects live under /workspace/bSmart/Projects unless explicitly archived or moved.
+  - Projects use the selected root: `BSMART_PROJECT_ROOT`, then `/projects`, then local `./projects`, with `/workspace/bSmart/Projects` only as the legacy fallback.
 ```
 
 ### Tasks

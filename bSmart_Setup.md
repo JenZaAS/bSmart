@@ -19,7 +19,7 @@ steps:
   - configure_optional_shared_group
   - configure_approval_mode_and_guardrails
   - configure_project_storage
-  - configure_mail_storage
+
   - configure_dreaming
   - create_content_root_if_missing
   - create_content_readme_if_missing
@@ -29,8 +29,8 @@ steps:
   - create_bHistory_from_template
   - create_bSmart_Log_from_template
   - create_content_folders
-  - create_default_AGENTS_hook
-  - verify_minimal_HERMES_hook
+  - initialize_missing_shared_startup_hooks
+  - verify_shared_startup_hooks
   - offer_optional_extensions
   - offer_show_available_features
 ```
@@ -57,8 +57,8 @@ workspace_bootstrap:
   defaults:
     bsmart_system_remote: https://github.com/JenZaAS/bSmart.git
     bsmart_system_updates: safe HTTPS fast-forward auto-pull
-    HERMES.md: minimal hook only
-    AGENTS.md: default OpenCode/local-agent bootstrap contract
+    HERMES.md: same shared startup hook as AGENTS.md
+    AGENTS.md: same shared startup hook as HERMES.md
     HERMES_WRITE_SAFE_ROOT: /opt/data:/workspace:/projects:/sandboxes
     TERMINAL_CWD: /workspace
   rule: all new AI agents should be bSmart-enabled unless the operator explicitly says otherwise
@@ -159,39 +159,6 @@ project_storage:
     host_prep_command_template: "sudo install -d -o 10000 -g 10000 -m 0775 <host-sandbox-folder>"
     safety_note: "Create and permission the host sandbox folder before adding the /sandboxes bind mount; otherwise Docker/Dokploy may auto-create the missing source as root:root and the container will see /sandboxes mounted but unwritable."
 
-mail_storage:
-  status: paused_experiment
-  purpose: historical/optional mailbox folder location for bMail/mailman state; do not configure by default while bMail is paused
-  spec_file: /workspace/bSmart/State/container-storage.yaml
-  canonical_root: /mail
-  override_env: BSMART_MAIL_ROOT
-  local_relative_path: ./mail
-  fallback_root: /workspace/bSmart/Mail
-  prompt_style: Telegram buttons when supported
-  prompt_text: |
-    bSmart - Mail configuration
-
-    Choose location for mailbox folders:
-
-    1) Mounted mail volume (recommended for persistent agents)
-
-    2) Local sibling mail folder (for local/share-backed agent homes)
-
-    3) Temporary/fallback under bSmart content
-  choices:
-    - Mounted mail volume
-    - Local sibling mail
-    - Temporary fallback
-  mounted_volume:
-    compose_line_template: "- <host-mail-folder>:/mail:rw"
-    examples:
-      - /opt/docker-workspace/ai/hugo/mail
-      - /mnt/share/Hugo/mail
-      - E:/VPS/share/Hugo/mail
-    host_prep_required_before_compose: true
-    vps_local_host_prep_command_template: "sudo install -d -o 10000 -g 10000 -m 0775 <host-mail-folder>"
-    shared_folder_host_prep_command_template: "mkdir -p <host-mail-folder>"
-  layout_rule: mail is a top-level sibling root named `mail`, not a normal project folder and not stored in project Git by default
 
 dreaming:
   purpose: scheduled bSmart content maintenance for this instance; improves local bSmart content, not bSmart-System itself
@@ -314,7 +281,8 @@ tool_approval_model:
 
 ```yaml
 path: /workspace/HERMES.md
-required_line: At session start, read /workspace/bSmart-System/bSmart.md and follow it.
+template: /workspace/bSmart-System/bSmart_Templates/AGENTS.md
+rule: Use the same content as AGENTS.md.
 action:
   - inspect existing HERMES.md
   - show proposed change
@@ -326,7 +294,8 @@ action:
 ```yaml
 path: /workspace/AGENTS.md
 template: /workspace/bSmart-System/bSmart_Templates/AGENTS.md
-purpose: default startup contract for OpenCode and other local agents
+purpose: shared startup contract for local agents
+rule: Use the same content as HERMES.md.
 action:
   - create during onboarding when missing
   - inspect an existing file before changing it

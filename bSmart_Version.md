@@ -95,11 +95,9 @@ scope:
   - allow images/start wrappers to include only a tiny first-run bootstrap hook that fetches the live workspace helper
   - standardize new-agent Compose defaults: working_dir=/workspace, TERMINAL_CWD=/workspace, HERMES_WRITE_SAFE_ROOT=/opt/data:/workspace:/projects:/sandboxes
   - separate bSmart-System Git from optional instance/content Git to avoid setup ambiguity
-  - upgrade mailman/bMail prototype to v1 design: phone-book registry, send_policy modes, deny/allow precedence, file wake tickles, subagent trace fields, agent-communication project fallback, and pending integration workflow
-  - add first-class `mail` storage root guidance: `/mail` in containers, sibling `mail/` folder in share/local layouts, and `mail_storage` in container-storage specs
+
   - make same-day bSmart-System update throttling explicit: if --auto-pull is skipped because startup already ran today, print the exact --force --auto-pull command and document when to use it
-  - add `bMail check --mailbox /mail` and agent-template guidance so natural requests like “check your mail” inspect bSmart mail before external email tools
-  - add real tickle v1: stable `bMail tickle`, `bMail ack-wake`, a Hermes cron monitor script template, and protocol guidance for recipient-side monitor-mode bMail wake jobs
+
 safety:
   - helper creates only missing local content files and uses public HTTPS for bSmart-System updates
   - bSmart content Git is opt-in/local-only by default; no remote is configured unless the operator chooses it
