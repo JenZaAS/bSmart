@@ -19,6 +19,7 @@ steps:
   - configure_optional_shared_group
   - configure_approval_mode_and_guardrails
   - configure_project_storage
+  - install_or_verify_hermes_project_integration
 
   - configure_dreaming
   - create_content_root_if_missing
@@ -158,6 +159,37 @@ project_storage:
     host_prep_required_before_compose: true
     host_prep_command_template: "sudo install -d -o 10000 -g 10000 -m 0775 <host-sandbox-folder>"
     safety_note: "Create and permission the host sandbox folder before adding the /sandboxes bind mount; otherwise Docker/Dokploy may auto-create the missing source as root:root and the container will see /sandboxes mounted but unwritable."
+
+hermes_project_integration:
+  purpose: make the shared `/project` commands available in every Hermes instance
+  check_helper: /workspace/bSmart-System/scripts/bsmart-project-integration-check
+  check_helper_local: python3 ./bSmart-System/scripts/bsmart-project-integration-check
+  applies_to:
+    - VPS/container Hermes instances
+    - local Desktop Hermes instances
+  required_files:
+    - integrations/hermes/bsmart-project-plugin/plugin.yaml
+    - integrations/hermes/bsmart-project-plugin/__init__.py
+    - scripts/bsmart-project.mjs
+  setup:
+    - resolve the active Hermes home/profile instead of assuming `/opt/data`
+    - copy the plugin files into the active profile's `plugins/bsmart-project/` directory
+    - verify Node.js is available
+    - enable `bsmart-project` with `hermes plugins enable bsmart-project`
+    - configure local `BSMART_SYSTEM_ROOT`, `BSMART_PROJECT_ROOT`, and `BSMART_STATE_FILE` when container defaults do not exist
+    - start a new Hermes session or restart the gateway
+  verification:
+    - run `hermes plugins list` and confirm `bsmart-project` is enabled
+    - send `/project list`
+  existing_instances:
+    - run the integration check during every `/new` startup, even when daily checks are throttled
+    - if setup is required, present an onboarding/migration action; do not silently install or restart
+  container_defaults:
+    hermes_home: /opt/data
+    system_root: /workspace/bSmart-System
+    project_root: /projects
+    state_file: /workspace/bSmart/bSmart_State.md
+  desktop_rule: Use the active local Hermes home and local bSmart paths; do not copy the container-specific `/opt/data` path literally.
 
 
 dreaming:

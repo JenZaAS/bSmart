@@ -8,9 +8,10 @@ Checks:
 - bSmart-System Git freshness: once per UTC day.
 - Project/sandbox storage configuration: once per UTC day, but if the storage
   spec is missing it is still reported as setup_required.
+- Hermes `/project` adapter presence: read-only integration check.
 
-The wrapper does not deploy, restart, edit Compose/Dokploy, or create the
-storage spec by default.
+The wrapper does not install plugins, deploy, restart, edit Compose/Dokploy, or
+create the storage spec by default.
 """
 
 from __future__ import annotations
@@ -81,6 +82,7 @@ def main() -> int:
     parser.add_argument("--auto-pull", action="store_true", help="allow bsmart-system-update-check to fast-forward when safe")
     parser.add_argument("--skip-system-update", action="store_true")
     parser.add_argument("--skip-project-storage", action="store_true")
+    parser.add_argument("--skip-project-integration", action="store_true")
     args = parser.parse_args()
 
     state = Path(args.state)
@@ -95,6 +97,9 @@ def main() -> int:
             print_result("bSmart project storage check", proc)
             return proc.returncode
         print("bSmart startup checks: skipped daily checks — already checked today")
+        if not args.skip_project_integration:
+            proc = run_script("bsmart-project-integration-check", [])
+            print_result("bSmart project integration check", proc)
         if args.auto_pull and not args.skip_system_update:
             print(
                 "bSmart system update: auto-pull was requested but skipped by the once-per-UTC-day throttle; "
@@ -106,6 +111,12 @@ def main() -> int:
     exit_code = 0
     system_checked = False
     storage_checked = False
+
+    if not args.skip_project_integration:
+        proc = run_script("bsmart-project-integration-check", [])
+        print_result("bSmart project integration check", proc)
+        # Missing integration is actionable setup guidance, but must not hide
+        # other startup checks or prevent a usable bSmart session.
 
     if not args.skip_system_update:
         sys_args = [] if not args.force else ["--force"]

@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+"""Check whether the Hermes /project adapter is installed and enabled.
+
+Read-only diagnostic. It never copies files, edits Hermes configuration, or
+restarts Hermes. Installation belongs to the interactive bSmart setup flow.
+"""
+from __future__ import annotations
+
+import argparse
+import os
+import shutil
+import subprocess
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+SYSTEM_ROOT = SCRIPT_DIR.parent
+PLUGIN_SOURCE = SYSTEM_ROOT / "integrations" / "hermes" / "bsmart-project-plugin"
+
+
+def hermes_home() -> Path:
+    explicit = os.environ.get("HERMES_HOME")
+    if explicit:
+        return Path(explicit).expanduser()
+    return Path.home() / ".hermes"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Check bSmart Hermes /project integration.")
+    parser.add_argument("--hermes-home", default=str(hermes_home()))
+    args = parser.parse_args()
+
+    home = Path(args.hermes_home).expanduser()
+    plugin_dir = home / "plugins" / "bsmart-project"
+    source_ok = (PLUGIN_SOURCE / "plugin.yaml").is_file() and (PLUGIN_SOURCE / "__init__.py").is_file()
+    installed_ok = (plugin_dir / "plugin.yaml").is_file() and (plugin_dir / "__init__.py").is_file()
+    node_ok = shutil.which("node") is not None
+
+    print("bSmart project integration check:")
+    print(f"  system adapter source: {PLUGIN_SOURCE} ({'present' if source_ok else 'missing'})")
+    print(f"  Hermes home: {home}")
+    print(f"  installed adapter: {plugin_dir} ({'present' if installed_ok else 'missing'})")
+    print(f"  Node.js: {'available' if node_ok else 'missing'}")
+
+    if not source_ok:
+        print("  result: setup_blocked — bSmart project adapter source is missing")
+        return 2
+    if not installed_ok or not node_ok:
+        print("  result: setup_required — run the interactive bSmart project integration setup")
+        print("  note: after enabling the plugin, start a new Hermes session or restart the gateway")
+        return 2
+
+    print("  result: adapter files and Node.js are present")
+    print("  next: verify enablement with `hermes plugins list`")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

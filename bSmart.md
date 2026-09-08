@@ -144,6 +144,7 @@ github_ai_access:
 startup_sequence:
   - read this manifest
   - run python3 /workspace/bSmart-System/scripts/bsmart-startup-check --auto-pull when the helper exists; use the local ./bSmart-System path on non-container agents; if the checkout is read-only or a platform lacks Linux-only helpers such as findmnt, continue with direct Git checks and report the skipped cache/mount inference
+  - check Hermes `/project` integration with `scripts/bsmart-project-integration-check` when available; report setup_required without installing or restarting
   - check content root exists
   - initialize missing startup hooks without overwriting existing hooks
   - if bSmart_Agent.md missing, run bSmart_Setup.md
