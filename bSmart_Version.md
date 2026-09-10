@@ -1,9 +1,22 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.14-draft
-updated: 2026-09-10 08:10 UTC
+current_version: 0.1.15-draft
+updated: 2026-09-10 23:12 UTC
 status: draft
+```
+
+## 0.1.15-draft
+
+```yaml
+release_type: wording_refinement
+scope:
+  - make concise, direct responses the default for all bSmart agents
+  - instruct agents not to overexplain and to expand only when asked, required, or needed for safety/correctness
+safety:
+  - preserve exact commands, paths, diffs, warnings, approvals, uncertainty, and blockers
+verification:
+  - read back the updated response_style block in bSmart.md
 ```
 
 ## 0.1.14-draft
