@@ -206,6 +206,12 @@ dreaming:
 
     Enable scheduled bSmart content cleanup/compaction for this AI instance?
 
+    Dreaming is optional scheduled maintenance for this instance's bSmart content.
+    It reviews recent or stale content for duplication, conflicts, verbose notes,
+    and safe cleanup or compaction opportunities. It uses backups and safety
+    boundaries, does not modify the reusable bSmart-System, and does not deploy
+    services.
+
     Daily Dreaming is low-token and focuses on today's/recent session content.
     Weekly Dreaming is broader and focuses on stale/conflicting/verbose bSmart content.
   choices:

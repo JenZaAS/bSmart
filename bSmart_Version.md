@@ -1,10 +1,52 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.12-draft
-updated: 2026-08-24 10:37 UTC
+current_version: 0.1.14-draft
+updated: 2026-09-10 08:10 UTC
 status: draft
 ```
+
+## 0.1.14-draft
+
+```yaml
+release_type: feature_update
+scope:
+  - add a separate operator-triggered local-agent onboarding protocol for host and Docker agents
+  - derive local agent paths from the current session and confirm the agent root once
+  - use fixed sibling bSmart, projects, and sandboxes folders
+  - support configurable Admin and Digtech names with derived identifiers
+  - add optional Codex, OpenCode client/CLI, and Claude client/CLI installation with working-directory verification
+  - define isolated Hermes homes, Docker identities, mounts, and staged shortcut launch
+  - hand off bSmart feature onboarding to the launched agent instead of duplicating it
+  - defer optional per-agent instance Git setup until the final workflow stage
+  - clarify Dreaming's purpose in the bSmart setup prompt
+safety:
+  - local-only scope excludes VPS, Dokploy, EPS, and cloud deployment
+  - no secrets are placed in system files, shortcuts, repositories, or chat
+  - existing profiles, homes, containers, shortcuts, and nested sandboxes are inspected before changes
+  - container recreation, broad mounts, credential changes, publication, and migrations remain approval-gated
+verification:
+  - edited sections read back after correction
+  - documentation references and path boundaries checked
+```
+
+## 0.1.13-draft
+
+```yaml
+release_type: feature_update
+scope:
+  - create `knowledge/task-context-routing.md` for new projects
+  - add a compact context-routing pointer to generated `project.md`
+  - document task-bundle selection, on-demand loading, and legacy-flow verification
+  - provide a reusable generic routing template without imposing domain-specific bundles
+safety:
+  - keeps routing project-local rather than adding project details to global startup files
+  - limits default context loading to the smallest relevant knowledge bundle
+verification:
+  - project runtime regression tests pass
+  - generated project structure and routing pointer verified
+```
+
 
 ## 0.1.12-draft
 

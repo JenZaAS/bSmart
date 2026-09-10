@@ -115,6 +115,8 @@ Bundled optional extensions may also ship inside the system repo under:
 5. Restart/redeploy the agent and verify with `/new`, then a short follow-up such as `Hi`.
 6. Complete instance setup by reviewing the generated/local `bSmart_Agent.md`, storage choices, projects, TODOs, and optional extensions.
 
+For a separate, operator-triggered local workstation process that provisions named host/Docker agents, see [`bSmart_Protocols/local-agent-onboarding.md`](bSmart_Protocols/local-agent-onboarding.md). It is intentionally separate from this instance's bSmart onboarding and is local-only; it does not cover VPS, Dokploy, EPS, or cloud deployment.
+
 ## Install into a Hermes container workspace
 
 Use this when a Hermes container already has a persistent `/workspace` mount and should start loading bSmart on new sessions.
@@ -449,7 +451,7 @@ The installer should only bootstrap files and ask for the minimum local values n
 ## Feature details
 
 ### Projects
-Projects keep the assistant oriented around the right work area. A project can have its own folder, metadata, current state, TODOs, data notes, sandbox, and project-specific agent focus.
+Projects keep the assistant oriented around the right work area. A project can have its own folder, metadata, current state, TODOs, data notes, sandbox, project-specific agent focus, and task-context routing. New projects include `knowledge/task-context-routing.md`, which maps task types to the smallest useful knowledge bundles instead of loading the complete knowledge tree by default.
 
 ### Tasks
 Tasks keep short, actionable next steps and handoff notes visible across sessions. bSmart favors concise progress reports and safe resume points over long transcript duplication.

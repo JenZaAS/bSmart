@@ -157,6 +157,7 @@ startup_sequence:
   - if Dreaming status is enabled, continue without repeating setup; if disabled, do not ask again unless the operator requests Dreaming setup
   - use bHistory.md on request or when a recent completion summary needs historical context; do not load the full diary by default
   - scan bSmart_Protocols summaries and load relevant protocols
+  - when the operator explicitly asks to start local-agent onboarding, load /workspace/bSmart-System/bSmart_Protocols/local-agent-onboarding.md
   - first visible assistant reply starts with: "bSmart — Loading bSmart."
   - then say: "Hi! Welcome back."
   - show compact TODO-oriented startup summary
