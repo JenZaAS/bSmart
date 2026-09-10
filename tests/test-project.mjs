@@ -17,6 +17,14 @@ function fixture(t) {
 test('creates project and workstream, selects workstream and rejects unsafe or ambiguous names',t=>{
  const {context,run}=fixture(t);
  assert.equal(run('/project add Alpha').selection?.project,'Alpha');
+ const projectRoot=path.join(context.projectsRoot,'Alpha');
+ const projectMd=fs.readFileSync(path.join(projectRoot,'project.md'),'utf8');
+ const routing=fs.readFileSync(path.join(projectRoot,'knowledge','task-context-routing.md'),'utf8');
+ assert.match(projectMd,/## Context routing/);
+ assert.match(projectMd,/knowledge\/task-context-routing\.md/);
+ assert.match(routing,/Always load:/);
+ assert.match(routing,/Load only the task-specific knowledge bundle/);
+ assert.match(routing,/legacy|non-authoritative/i);
  assert.ok(fs.existsSync(path.join(context.projectsRoot,'Alpha','workdocs','README.md')));
  assert.equal(run('/project add ws Build').selection?.workstream,'Build');
  assert.equal(run('/project Alpha build').selection?.workstream,'Build');

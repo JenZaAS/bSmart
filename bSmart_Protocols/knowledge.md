@@ -19,8 +19,9 @@ Project-local knowledge is stored under the active project:
 
 ```text
 /projects/<active-project>/knowledge/
-├── general/   # project/domain concepts, decisions, relationships, and reusable facts
-└── code/      # source-specific or codebase-navigation knowledge
+├── task-context-routing.md  # task-to-knowledge bundles and routing rules
+├── general/                 # project/domain concepts, decisions, relationships, and reusable facts
+└── code/                    # source-specific or codebase-navigation knowledge
 ```
 
 `workdocs/` remains for active working notes, investigations, handoffs, and detailed reasoning. Do not use a workdoc as the final home for a concise reusable knowledge item. Use the global bSmart Library only when the knowledge is reusable across projects or across the bSmart instance.

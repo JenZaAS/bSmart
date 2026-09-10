@@ -64,13 +64,14 @@ project_structure:
     - data/README.md
     - sandbox/README.md
     - knowledge/README.md
+    - knowledge/task-context-routing.md
     - knowledge/general/
     - knowledge/code/
     - decisions.md
     - workdocs/README.md
   meaning:
     data: Raw/supporting project material such as inputs, exports, screenshots, source artifacts, and temporary research notes.
-    knowledge: Curated reusable knowledge specific to this project. `knowledge/general/` holds file-independent project/domain knowledge; `knowledge/code/` holds source-specific or codebase-navigation knowledge. Use the global Library only when the material is broadly reusable across projects or the bSmart instance. `knowledge/` is preferred over `library/` inside projects to avoid confusion with software libraries.
+    knowledge: Curated reusable knowledge specific to this project. `knowledge/task-context-routing.md` maps task types to the smallest useful knowledge bundles and should be consulted before substantial work. Load only the relevant bundle rather than the complete knowledge tree. `knowledge/general/` holds file-independent project/domain knowledge; `knowledge/code/` holds source-specific or codebase-navigation knowledge. Use the global Library only when the material is broadly reusable across projects or the bSmart instance. `knowledge/` is preferred over `library/` inside projects to avoid confusion with software libraries.
     decisions: A single project decision file for choices, approvals, rejected options, and migration/design decisions specific to this project.
     workdocs: Project-local working documents for larger or multi-session work within this project.
     sandbox: Disposable or derived execution/build/test workspace notes; not the source of truth.
@@ -81,6 +82,7 @@ project_structure:
 ```yaml
 templates:
   project: /workspace/bSmart-System/bSmart_Templates/project.template.md
+  project_task_context_routing: /workspace/bSmart-System/bSmart_Templates/project-task-context-routing.template.md
   project_knowledge_readme: /workspace/bSmart-System/bSmart_Templates/project-knowledge.README.template.md
   project_decisions: /workspace/bSmart-System/bSmart_Templates/project-decisions.template.md
   project_workdocs_readme: /workspace/bSmart-System/bSmart_Templates/project-workdocs.README.template.md
