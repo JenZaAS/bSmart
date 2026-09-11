@@ -218,6 +218,12 @@ extensions:
       packaging: bundled_optional
       source_path: /workspace/bSmart-System/bSmart-Extensions/bSwarm
       purpose: Chat-driven multi-agent orchestration protocol with unsupervised/supervised modes, A/B comparison, statistics, and bSelective integration.
+    bQAbuild:
+      path: /workspace/bSmart-Extensions/bQAbuild
+      optional: false
+      packaging: bundled_feature
+      source_path: /workspace/bSmart-System/bSmart-Extensions/bQAbuild
+      purpose: Question-driven scoping, decision capture, and implementation-brief generation before building.
 ```
 
 ## Agent instruction

@@ -1,8 +1,8 @@
 # bQAbuild
 
-`bQAbuild` is the bSmart question-and-answer scoping extension.
+`bQAbuild` is a standard bSmart question-and-answer scoping feature.
 
-It turns an unclear feature, change, or refactor into a recorded set of decisions and a concise implementation brief. It is the bSmart adaptation of the reviewed `ask-then-build` idea from `davidondrej/skills`.
+It turns an unclear feature, change, or refactor into a recorded set of decisions and a concise implementation brief. It is the bSmart adaptation of the reviewed `ask-then-build` idea from `davidondrej/skills`. The upstream skill remains a reference; bQAbuild is the bSmart-native implementation.
 
 ## Boundary
 
@@ -75,4 +75,4 @@ Each question must have 2–4 options and a recommendation. Questions are presen
 
 ## Status
 
-Initial v1 runtime implemented and tested. The chat/UI adapter remains responsible for presenting the returned question and collecting the operator's answer.
+Initial v1 runtime implemented and tested. bQAbuild is part of the normal bSmart feature set; the chat/UI adapter remains responsible for presenting the returned question and collecting the operator's answer.

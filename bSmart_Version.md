@@ -1,9 +1,23 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.16-draft
+current_version: 0.1.17-draft
 updated: 2026-09-10 23:12 UTC
 status: draft
+```
+
+## 0.1.17-draft
+
+```yaml
+release_type: feature_classification
+scope:
+  - promote bQAbuild from optional bundled extension to standard active bSmart feature
+  - register bQAbuild in the bSmart manifest, feature registry, and extension documentation
+safety:
+  - keep the packaged handler separate from instance-local Q&A session state
+  - preserve the boundary that generated briefs do not authorize edits, publication, deployment, or deletion
+verification:
+  - feature and extension registries read back with matching active/bundled_feature status
 ```
 
 ## 0.1.16-draft

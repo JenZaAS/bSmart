@@ -114,3 +114,21 @@ setup_default: yes
 ```
 
 bSwarm v1 is a chat protocol, not a command handler. It uses concise run specs, grouped editing, Hermes delegation where useful, and Markdown run records.
+
+## bQAbuild
+
+```yaml
+name: bQAbuild
+path: /workspace/bSmart-Extensions/bQAbuild
+source_path: /workspace/bSmart-System/bSmart-Extensions/bQAbuild
+status: bundled_feature
+purpose:
+  - question-driven feature and change scoping
+  - one-question-at-a-time decision capture
+  - superseding decision history
+  - implementation-brief generation after scope is ready
+install_model: available_as_part_of_bsmart
+setup_default: yes
+```
+
+bQAbuild is a normal bSmart feature. Its packaged handler is an implementation detail; session state remains instance-local under `/workspace/bSmart/QABuild`.

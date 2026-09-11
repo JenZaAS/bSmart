@@ -353,6 +353,36 @@ notes:
   - Current SschwAdmin cron job is `bSmart improvement scout` (`eb2f57b305a5`), scheduled Sunday 01:30 UTC.
 ```
 
+### bQAbuild
+
+```yaml
+name: bQAbuild
+group: System
+status: active
+visibility: user-facing
+short_description: Clarify the work before building it.
+files:
+  - /workspace/bSmart-System/bSmart-Extensions/bQAbuild/
+  - /workspace/bSmart/QABuild/
+  - /workspace/bSmart-System/bSmart_Docs/extensions.md
+description: Guides feature, change, and refactor work through focused questions, one answer at a time. It records decisions, preserves revisions, and produces a concise implementation brief only when the scope is ready. It does not edit source code or authorize commit, publication, deployment, or destructive changes.
+commands:
+  - bQAbuild start <title>
+  - bQAbuild answer <session> <answer>
+  - bQAbuild revise <session> <question-id> <answer>
+  - bQAbuild build <session>
+included_capabilities:
+  - Focused question-driven scoping
+  - One-question-at-a-time interaction
+  - Durable decision capture
+  - Superseding answer history
+  - Implementation-brief generation
+notes:
+  - bQAbuild is a standard bSmart feature, not an optional add-on.
+  - Session state is instance-local; the packaged handler belongs to bSmart-System.
+  - The generated brief is a handoff, not authorization to edit, commit, publish, deploy, or delete.
+```
+
 ### Safety
 
 ```yaml
