@@ -1,9 +1,25 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.15-draft
+current_version: 0.1.16-draft
 updated: 2026-09-10 23:12 UTC
 status: draft
+```
+
+## 0.1.16-draft
+
+```yaml
+release_type: feature_update
+scope:
+  - add optional bQAbuild question-and-answer scoping extension
+  - record one-question-at-a-time decisions in instance-local state
+  - generate a concise implementation brief only after all configured questions are answered
+safety:
+  - keep session state outside the public bSmart-System repository
+  - do not edit source code, commit, publish, deploy, or store secrets
+verification:
+  - bQAbuild unit tests pass
+  - real CLI lifecycle creates state and a generated brief
 ```
 
 ## 0.1.15-draft
