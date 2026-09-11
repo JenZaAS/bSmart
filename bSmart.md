@@ -224,6 +224,11 @@ extensions:
       packaging: bundled_feature
       source_path: /workspace/bSmart-System/bSmart-Extensions/bQAbuild
       purpose: Question-driven scoping, decision capture, and implementation-brief generation before building.
+    bProtective:
+      path: /workspace/bSmart-System/integrations/hermes/bprotective-plugin
+      optional: true
+      packaging: bundled_integration
+      purpose: Approval-gated deterministic command protection for Hermes terminal actions.
 ```
 
 ## Agent instruction

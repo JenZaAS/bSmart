@@ -191,6 +191,23 @@ hermes_project_integration:
     state_file: /workspace/bSmart/bSmart_State.md
   desktop_rule: Use the active local Hermes home and local bSmart paths; do not copy the container-specific `/opt/data` path literally.
 
+bprotective_integration:
+  purpose: install the optional Hermes command-protection plugin without enabling it implicitly
+  source: /workspace/bSmart-System/integrations/hermes/bprotective-plugin/
+  target: <active Hermes home>/plugins/bprotective/
+  setup:
+    - inspect the plugin files and show the operator what will be enabled
+    - copy `plugin.yaml` and `__init__.py` into the active Hermes profile plugin directory
+    - run `hermes plugins doctor <active Hermes home>/plugins/bprotective --ci`
+    - enable with `hermes plugins enable bprotective`
+    - start a new Hermes session or restart the gateway
+    - request activation with `/bprotective on`; do not activate during installation
+  controls:
+    - `/bprotective status`
+    - `/bprotective on` followed by `/bprotective yes <ID>`
+    - `/bprotective off` followed by `/bprotective yes <ID>`
+  safety: Both activation and deactivation are confirmation-gated; invalid policy state blocks terminal commands.
+
 
 dreaming:
   purpose: scheduled bSmart content maintenance for this instance; improves local bSmart content, not bSmart-System itself

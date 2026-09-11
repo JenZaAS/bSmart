@@ -1,9 +1,24 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.18-draft
-updated: 2026-09-10 23:12 UTC
+current_version: 0.1.19-draft
+updated: 2026-09-11 21:34 UTC
 status: draft
+```
+
+## 0.1.19-draft
+
+```yaml
+release_type: safety_feature
+scope:
+  - add disabled-by-default bProtective Hermes pre-tool guard
+  - block catastrophic terminal commands deterministically
+  - escalate risky terminal commands to Hermes operator approval
+  - require confirmation to enable or disable bProtective
+  - document bProtective in setup, help, feature registry, and operations protocol
+verification:
+  - focused bProtective tests pass
+  - Hermes plugin manifest and registration are validated
 ```
 
 ## 0.1.18-draft

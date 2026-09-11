@@ -72,6 +72,7 @@ commands:
 12. Extensions — Enable optional add-on packs.
 13. Features — Show available bSmart capabilities.
 14. bPrivate — Optionally encode sensitive content before online-model use and decode local results.
+15. bProtective — Add approval-gated command protection for Hermes terminal actions.
 
 ## Feature index
 
@@ -89,6 +90,7 @@ commands:
 12. Extensions
 13. Features
 14. bPrivate
+15. bProtective
 
 ## Features by group
 
@@ -111,6 +113,7 @@ commands:
 - Extensions — Enable optional add-on packs.
 - Features — Show available bSmart capabilities.
 - bPrivate — Optionally encode sensitive content before online-model use and decode local results.
+- bProtective — Add approval-gated command protection for Hermes terminal actions.
 
 ## Feature details
 
@@ -551,4 +554,34 @@ notes:
   - Folder names are conventions, not security boundaries.
   - Mappings remain local and must never be sent to an online model.
   - Image/PDF/DOCX/PPTX extraction and Hermes provider integration remain future implementation phases.
+```
+
+### bProtective
+
+```yaml
+name: bProtective
+group: System
+status: prototype
+visibility: user-facing
+short_description: Add approval-gated command protection for Hermes terminal actions.
+files:
+  - /workspace/bSmart-System/integrations/hermes/bprotective-plugin/
+  - /workspace/bSmart-System/bSmart_Protocols/operations.md
+description: Provides a disabled-by-default Hermes pre-tool guard that deterministically blocks catastrophic shell commands and escalates risky commands to Hermes's existing operator approval gate. Turning the guard on or off also requires an explicit confirmation.
+commands:
+  - /bprotective status
+  - /bprotective on
+  - /bprotective off
+  - /bprotective yes <ID>
+  - /bprotective no <ID>
+included_capabilities:
+  - Hermes CLI and gateway pre-tool interception
+  - Catastrophic command blocking
+  - Risky command approval escalation
+  - Approval-gated enable/disable state
+  - Fail-closed handling for invalid policy state
+notes:
+  - Install and enable the Hermes plugin explicitly; it does not activate merely because the files are present.
+  - The initial implementation protects Hermes terminal tools; adapters for other clients are a later compatibility layer over the same policy model.
+  - This is defense in depth, not a replacement for OS, container, or host access boundaries.
 ```

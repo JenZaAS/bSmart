@@ -113,6 +113,27 @@ tool_approval_model:
       - destructive or hard-to-reverse actions
   invariant: Framework approval mode is not the safety boundary; bSmart guardrails are.
   setup_note: During init, ask the operator whether to keep manual framework approvals, use smart/low-friction approvals, or disable framework approvals only in explicitly trusted environments.
+
+bprotective:
+  purpose: Add a deterministic Hermes terminal-command guard as defense in depth.
+  default: disabled
+  hermes_integration: integrations/hermes/bprotective-plugin/
+  commands:
+    status: /bprotective status
+    enable_request: /bprotective on
+    disable_request: /bprotective off
+    approve: /bprotective yes <ID>
+    reject: /bprotective no <ID>
+  approval_rules:
+    - turning bProtective on requires explicit confirmation
+    - turning bProtective off requires explicit confirmation
+    - risky commands escalate to Hermes's existing human approval gate
+    - catastrophic commands are blocked deterministically
+  state:
+    default: off
+    local_file: ~/.hermes/bprotective.json
+    confirmation_expiry_seconds: 300
+  boundary: This guard does not replace OS, container, Docker, or host-level security controls.
 ```
 
 ```yaml

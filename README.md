@@ -17,6 +17,7 @@ bSmart is a lightweight **AI harness**: an operating layer around an AI assistan
 - [Setup](#setup) — bootstrap and maintain the system/content/extension folder structure.
 - [Extensions](#extensions) — add optional packs such as Fabric, bSearch, or Graphify.
 - [Features](#features) — show the feature list and drill into details from chat.
+- [bProtective](#bprotective) — optionally protect Hermes terminal actions with deterministic blocks and approval escalation.
 
 ```yaml
 name: bSmart-System
@@ -488,6 +489,22 @@ Extensions provide optional add-on capability packs without mixing installed ins
 
 ### Features
 Features is the user-facing registry. In chat, the agent can show a short feature menu, a numbered list, or a detail card for one feature.
+
+### bProtective
+
+bProtective is an optional, disabled-by-default Hermes plugin for terminal-command defense in depth. It blocks catastrophic command patterns, sends risky commands through Hermes's existing approval gate, and requires explicit confirmation both to turn protection on and to turn it off.
+
+Commands:
+
+```text
+/bprotective status
+/bprotective on
+/bprotective off
+/bprotective yes <ID>
+/bprotective no <ID>
+```
+
+Install the plugin from `integrations/hermes/bprotective-plugin/`, validate it with `hermes plugins doctor`, enable the plugin, and start a new Hermes session. Installation does not activate protection; `/bprotective on` must be confirmed separately.
 
 ## Update rule
 
