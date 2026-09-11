@@ -1,9 +1,22 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.17-draft
+current_version: 0.1.18-draft
 updated: 2026-09-10 23:12 UTC
 status: draft
+```
+
+## 0.1.18-draft
+
+```yaml
+release_type: usability_refinement
+scope:
+  - keep bQAbuild one-question-at-a-time interaction
+  - expose current position, total question count, and remaining questions
+safety:
+  - no change to decision capture or build-brief approval boundaries
+verification:
+  - bQAbuild tests verify progress metadata
 ```
 
 ## 0.1.17-draft

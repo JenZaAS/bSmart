@@ -71,7 +71,7 @@ Use `--root PATH` for tests or a different instance-local state root.
 }
 ```
 
-Each question must have 2–4 options and a recommendation. Questions are presented in order, one at a time.
+Each question must have 2–4 options and a recommendation. Questions are presented in order, one at a time. Each returned question includes its position, total question count, and remaining count so the operator can see the progress, for example: `Question 2 of 5 — 4 remaining`.
 
 ## Status
 

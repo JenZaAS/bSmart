@@ -12,6 +12,7 @@ instance_root: /workspace/bSmart/QABuild
 
 - Question design belongs to the agent using the extension; the runtime stores and presents the explicit question contract.
 - Ask one question at a time.
+- Show progress with each question: current position, total questions, and remaining questions.
 - Record every answer immediately.
 - Preserve the original answer text.
 - Never silently replace a prior answer. A later answer is recorded as a superseding decision.

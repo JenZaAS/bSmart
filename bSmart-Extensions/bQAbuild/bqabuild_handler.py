@@ -121,7 +121,11 @@ def next_question(session_id: str, root: str | Path | None = None) -> dict[str, 
     index = session["current_question"]
     if index >= len(session["questions"]):
         return None
-    return session["questions"][index]
+    question = dict(session["questions"][index])
+    question["position"] = index + 1
+    question["total_questions"] = len(session["questions"])
+    question["remaining_questions"] = len(session["questions"]) - index
+    return question
 
 
 def answer_question(session_id: str, answer: str, root: str | Path | None = None) -> dict[str, Any]:
@@ -276,7 +280,13 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"id": result["id"], "status": result["status"], "answers": len(result["answers"])}))
         elif args.command == "status":
             result = load_session(args.root, args.session)
-            print(json.dumps({key: result[key] for key in ["id", "title", "status", "current_question", "questions", "answers", "brief_path"]}, ensure_ascii=False))
+            print(json.dumps({
+                key: result[key]
+                for key in ["id", "title", "status", "current_question", "questions", "answers", "brief_path"]
+            } | {
+                "total_questions": len(result["questions"]),
+                "remaining_questions": max(0, len(result["questions"]) - result["current_question"]),
+            }, ensure_ascii=False))
         elif args.command == "build":
             print(str(build_brief(args.session, args.read_first, args.steps, args.validations, args.rules, args.root)))
         return 0

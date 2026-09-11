@@ -44,11 +44,16 @@ class BQABuildTests(unittest.TestCase):
             if first_question is None:
                 self.fail("Expected first question")
             self.assertEqual(first_question["id"], "storage")
+            self.assertEqual(first_question["position"], 1)
+            self.assertEqual(first_question["total_questions"], 2)
+            self.assertEqual(first_question["remaining_questions"], 2)
             answer_question("export", "Instance-local", root=root)
             second_question = next_question("export", root=root)
             if second_question is None:
                 self.fail("Expected second question")
             self.assertEqual(second_question["id"], "scope")
+            self.assertEqual(second_question["position"], 2)
+            self.assertEqual(second_question["remaining_questions"], 1)
             answer_question("export", "Prototype", root=root)
 
             brief = build_brief(
