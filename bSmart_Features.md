@@ -73,6 +73,7 @@ commands:
 13. Features — Show available bSmart capabilities.
 14. bPrivate — Optionally encode sensitive content before online-model use and decode local results.
 15. bProtective — Add approval-gated command protection for Hermes terminal actions.
+16. bAccountant — Optionally turn an agent into a cautious accountant assistant.
 
 ## Feature index
 
@@ -91,6 +92,7 @@ commands:
 13. Features
 14. bPrivate
 15. bProtective
+16. bAccountant
 
 ## Features by group
 
@@ -106,6 +108,9 @@ commands:
 - Dreaming — Improve local bSmart content while you sleep.
 - Improvement Scout — Find external ideas to improve bSmart itself.
 
+### Finance
+- bAccountant — Optionally turn an agent into a cautious accountant assistant.
+
 ### System
 - Safety — Keep actions transparent and low-risk.
 - Security Watch — Check visible VPS/container security drift.
@@ -114,6 +119,7 @@ commands:
 - Features — Show available bSmart capabilities.
 - bPrivate — Optionally encode sensitive content before online-model use and decode local results.
 - bProtective — Add approval-gated command protection for Hermes terminal actions.
+- bAccountant — Optionally turn an agent into a cautious accountant assistant.
 
 ## Feature details
 
@@ -584,4 +590,36 @@ notes:
   - Install and enable the Hermes plugin explicitly; it does not activate merely because the files are present.
   - The initial implementation protects Hermes terminal tools; adapters for other clients are a later compatibility layer over the same policy model.
   - This is defense in depth, not a replacement for OS, container, or host access boundaries.
+```
+
+### bAccountant
+
+```yaml
+name: bAccountant
+group: Finance
+status: planned
+visibility: user-facing
+optional: true
+short_description: Optionally turn an agent into a cautious accountant assistant.
+files:
+  - /workspace/bSmart-System/bSmart-Extensions/bAccountant/
+  - /workspace/bSmart-System/bSmart_Protocols/bAccountant-onboarding.md
+description: Provides a conservative accountant-oriented mode with sequential business-context onboarding, Tripletex MCP as the initial integration, explicit operating modes, human approval for accounting changes, fail-closed behavior, complete interaction logging, learning comparisons against human account coding, and daily reporting.
+commands:
+  - enable bAccountant
+  - configure bAccountant
+  - bAccountant status
+included_capabilities:
+  - One-question-at-a-time onboarding with options and recommendations
+  - Business, accounting bureau, and division-of-labour context
+  - Country-specific law and VAT research workflow
+  - Exception queue
+  - Rules and policy engine
+  - Daily accountant report
+  - Emergency stop and MCP connection health
+notes:
+  - Disabled by default.
+  - Read-only mode is the default and overrides other modes.
+  - Bookkeeping and salary modes never bypass approval or safety controls.
+  - Tripletex capabilities must be checked before duplicating functionality.
 ```
