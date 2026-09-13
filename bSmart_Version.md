@@ -1,7 +1,7 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.19-draft
+current_version: 0.1.20-draft
 updated: 2026-09-11 21:34 UTC
 status: draft
 ```
@@ -19,6 +19,24 @@ scope:
 verification:
   - focused bProtective tests pass
   - Hermes plugin manifest and registration are validated
+```
+
+## 0.1.20-draft
+
+```yaml
+release_type: maintenance_and_onboarding
+scope:
+  - add automatic create-only bHistory repair for existing instances
+  - add quiet standard-content checks on every /new
+  - add automatic installation and enablement of the managed Hermes /project adapter
+  - add one-time per-instance release notices for new bSmart-System versions
+  - keep heavier Git and storage checks once-per-UTC-day throttled
+safety:
+  - existing instance content is never overwritten by standard-content repair
+  - managed plugin changes report when a Hermes restart or relaunch is required
+verification:
+  - quiet healthy checks produce no output
+  - missing adapter installation and enablement tested in an isolated temporary Hermes home
 ```
 
 ## 0.1.18-draft
@@ -199,9 +217,9 @@ scope:
   - document CIFS/SMB executable-bit pitfall and prefer python3 <script> invocations for bSmart Python helpers
   - replace Hermes-specific startup wording with framework-neutral "bSmart — Loading bSmart."
   - add local path-resolution guidance so local AGENTS.md agents map /workspace/bSmart-System to ./bSmart-System and /workspace/bSmart to ./bSmart
-  - make project listing explicitly use the selected project root and not fail when legacy /workspace/bSmart/Projects is absent
+  - make project listing explicitly use the selected project root and report setup_required when no supported root is usable
   - add portable sandbox-root selection for local/non-container agents: BSMART_SANDBOX_ROOT, then /sandboxes, then ./sandboxes, then ./bSmart/Sandboxes
-  - add portable project-root selection for local/non-container agents: BSMART_PROJECT_ROOT, then /projects, then ./projects, then /workspace/bSmart/Projects
+  - add portable project-root selection for local/non-container agents: BSMART_PROJECT_ROOT, then /projects, then ./projects
   - add scripts/bsmart-bootstrap-workspace as the streamlined host-side initializer for new bSmart-enabled AI workspaces
   - document that all newly initialized AI agents should run bSmart by default
   - clarify that bSmart-System must live as a workspace Git checkout, not as stale image-baked content
@@ -242,7 +260,7 @@ migration_notes:
 release_type: draft_update
 scope:
   - add first-class project storage configuration for containerized bSmart instances
-  - prefer /projects as canonical project root when mounted, with /workspace/bSmart/Projects as fallback
+  - use /projects as the canonical container project root, with local ./projects for local agents
   - add /sandboxes/<project-slug> as the preferred VPS-local per-project sandbox root
   - add instance Git setup as an explicit optional/recommended bSmart setup choice
   - add nested Git hygiene helper for ignoring external code repos inside projects

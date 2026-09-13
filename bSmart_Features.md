@@ -132,7 +132,7 @@ status: active
 visibility: user-facing
 short_description: Manage project context and project folders.
 files:
-  - /projects/ (canonical default when available; environment/local/legacy fallbacks are documented in the Projects protocol)
+  - /projects/ (canonical container root; BSMART_PROJECT_ROOT and local ./projects are supported overrides)
   - /workspace/bSmart/bSmart_State.md
   - /workspace/bSmart-System/bSmart_Protocols/projects.md
   - /workspace/bSmart-System/bSmart_Templates/project.template.md
@@ -159,7 +159,7 @@ included_capabilities:
   - Project archive status
 notes:
   - Keep project-related subfeatures under Projects instead of listing them as separate top-level features.
-  - Projects use the selected root: `BSMART_PROJECT_ROOT`, then `/projects`, then local `./projects`, with `/workspace/bSmart/Projects` only as the legacy fallback.
+  - Projects use the selected root: `BSMART_PROJECT_ROOT`, then `/projects`, then local `./projects`.
 ```
 
 ### Tasks
@@ -295,7 +295,7 @@ visibility: user-facing
 short_description: Improve local bSmart content while you sleep.
 files:
   - /workspace/bSmart-System/bSmart_Protocols/dreaming.md
-  - /workspace/bSmart/Projects/bSmart/data/bsmart-dreaming.yaml
+  - /workspace/bSmart/data/bsmart-dreaming.yaml
   - /workspace/bSmart/Workdocs/dreaming/
 description: Runs scheduled content-quality checks for a bSmart instance. Daily Dreaming is low-token and focuses on recent session/content changes. Weekly Dreaming is broader and focuses on stale content, conflicts, duplication, and safe compaction opportunities. Clear low-risk instance-content changes may be applied automatically with hidden backups; unclear, project, or destructive changes require operator review.
 commands:
@@ -341,8 +341,8 @@ status: active
 visibility: user-facing
 short_description: Find external ideas to improve bSmart itself.
 files:
-  - /workspace/bSmart/Projects/bSmart/data/bsmart-improvement-scout.yaml
-  - /workspace/bSmart/Projects/bSmart/data/bsmart-improvement-scout-*.md
+  - /workspace/bSmart/data/bsmart-improvement-scout.yaml
+  - /workspace/bSmart/data/bsmart-improvement-scout-*.md
   - Hermes cron job: bSmart improvement scout
 description: Runs a scheduled bSmart-focused research pass over selected sources such as Hermes, agent CLI ecosystems, MCP tooling, GitHub trends, Fabric, and operator-added URLs. It looks for practical ideas, releases, tools, and patterns that could improve bSmart without bloating it. It prepares accept/reject/postpone recommendations only; it does not edit bSmart-System or deploy changes without later operator acceptance.
 commands:

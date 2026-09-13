@@ -27,6 +27,8 @@ def hermes_home() -> Path:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Check bSmart Hermes /project integration.")
     parser.add_argument("--hermes-home", default=str(hermes_home()))
+    parser.add_argument("--install", action="store_true", help="install and enable the adapter when missing")
+    parser.add_argument("--quiet", action="store_true", help="suppress successful checks")
     args = parser.parse_args()
 
     home = Path(args.hermes_home).expanduser()
@@ -34,23 +36,60 @@ def main() -> int:
     source_ok = (PLUGIN_SOURCE / "plugin.yaml").is_file() and (PLUGIN_SOURCE / "__init__.py").is_file()
     installed_ok = (plugin_dir / "plugin.yaml").is_file() and (plugin_dir / "__init__.py").is_file()
     node_ok = shutil.which("node") is not None
+    changed = False
 
-    print("bSmart project integration check:")
-    print(f"  system adapter source: {PLUGIN_SOURCE} ({'present' if source_ok else 'missing'})")
-    print(f"  Hermes home: {home}")
-    print(f"  installed adapter: {plugin_dir} ({'present' if installed_ok else 'missing'})")
-    print(f"  Node.js: {'available' if node_ok else 'missing'}")
+    if not args.quiet:
+        print("bSmart project integration check:")
+        print(f"  system adapter source: {PLUGIN_SOURCE} ({'present' if source_ok else 'missing'})")
+        print(f"  Hermes home: {home}")
+        print(f"  installed adapter: {plugin_dir} ({'present' if installed_ok else 'missing'})")
+        print(f"  Node.js: {'available' if node_ok else 'missing'}")
 
     if not source_ok:
-        print("  result: setup_blocked — bSmart project adapter source is missing")
+        print("bSmart project integration: setup_blocked — adapter source is missing")
         return 2
     if not installed_ok or not node_ok:
-        print("  result: setup_required — run the interactive bSmart project integration setup")
-        print("  note: after enabling the plugin, start a new Hermes session or restart the gateway")
+        if args.install and source_ok and node_ok:
+            plugin_dir.mkdir(parents=True, exist_ok=True)
+            for filename in ("plugin.yaml", "__init__.py"):
+                shutil.copy2(PLUGIN_SOURCE / filename, plugin_dir / filename)
+            installed_ok = True
+            changed = True
+        else:
+            print("bSmart project integration: setup_required — install/enable the adapter, then restart Hermes")
+            return 2
+
+    if args.install and installed_ok and node_ok:
+        config = home / "config.yaml"
+        config_text = config.read_text(encoding="utf-8", errors="replace") if config.is_file() else ""
+        enabled = any(line.strip() == "- bsmart-project" for line in config_text.splitlines())
+        if not enabled:
+            env = os.environ.copy()
+            env["HERMES_HOME"] = str(home)
+            enable = subprocess.run(
+                ["hermes", "plugins", "enable", "bsmart-project"],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env,
+                check=False,
+            )
+            if enable.returncode != 0:
+                print("bSmart project integration: setup_blocked — could not enable bsmart-project")
+                return 2
+            changed = True
+
+    if changed:
+        print("bSmart project integration: installed/enabled — restart or relaunch Hermes to activate /project")
+        return 0
+
+    if not installed_ok or not node_ok:
+        print("bSmart project integration: setup_required — install/enable the adapter, then restart Hermes")
         return 2
 
-    print("  result: adapter files and Node.js are present")
-    print("  next: verify enablement with `hermes plugins list`")
+    if not args.quiet:
+        print("  result: adapter files and Node.js are present")
+        print("  next: verify enablement with `hermes plugins list`")
     return 0
 
 

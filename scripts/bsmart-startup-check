@@ -83,12 +83,21 @@ def main() -> int:
     parser.add_argument("--skip-system-update", action="store_true")
     parser.add_argument("--skip-project-storage", action="store_true")
     parser.add_argument("--skip-project-integration", action="store_true")
+    parser.add_argument("--repair-content", action="store_true", help="create missing standard bSmart content files")
     args = parser.parse_args()
 
     state = Path(args.state)
     already_today = get_yamlish_value(state, "last_checked_utc_date") == today()
 
     if already_today and not args.force:
+        content_proc = run_script("bsmart-content-upgrade", ["--create-missing", "--quiet"])
+        print_result("bSmart content upgrade", content_proc)
+        if content_proc.returncode not in (0,):
+            return content_proc.returncode
+        notice_proc = run_script("bsmart-release-notice", ["--quiet"])
+        print_result("bSmart release notice", notice_proc)
+        if notice_proc.returncode not in (0,):
+            return notice_proc.returncode
         if not args.skip_project_storage and not DEFAULT_STORAGE_SPEC.exists():
             # Do not let the once-per-day throttle hide first-run setup work.
             # Missing project storage is an actionable setup prompt, not a
@@ -98,7 +107,7 @@ def main() -> int:
             return proc.returncode
         print("bSmart startup checks: skipped daily checks — already checked today")
         if not args.skip_project_integration:
-            proc = run_script("bsmart-project-integration-check", [])
+            proc = run_script("bsmart-project-integration-check", ["--install", "--quiet"])
             print_result("bSmart project integration check", proc)
         if args.auto_pull and not args.skip_system_update:
             print(
@@ -112,8 +121,18 @@ def main() -> int:
     system_checked = False
     storage_checked = False
 
+    proc = run_script("bsmart-content-upgrade", ["--create-missing", "--quiet"])
+    print_result("bSmart content upgrade", proc)
+    if proc.returncode not in (0,):
+        exit_code = max(exit_code, proc.returncode)
+
+    proc = run_script("bsmart-release-notice", ["--quiet"])
+    print_result("bSmart release notice", proc)
+    if proc.returncode not in (0,):
+        exit_code = max(exit_code, proc.returncode)
+
     if not args.skip_project_integration:
-        proc = run_script("bsmart-project-integration-check", [])
+        proc = run_script("bsmart-project-integration-check", ["--install", "--quiet"])
         print_result("bSmart project integration check", proc)
         # Missing integration is actionable setup guidance, but must not hide
         # other startup checks or prevent a usable bSmart session.

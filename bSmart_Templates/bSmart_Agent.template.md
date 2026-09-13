@@ -63,7 +63,6 @@ local_paths:
     - BSMART_PROJECT_ROOT
     - /projects
     - ./projects
-    - /workspace/bSmart/Projects
   sandbox_root_selection:
     - BSMART_SANDBOX_ROOT
     - /sandboxes

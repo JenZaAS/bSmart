@@ -38,6 +38,10 @@ new_agent_bootstrap_standard:
     TERMINAL_CWD: /workspace
     HERMES_WRITE_SAFE_ROOT: /opt/data:/workspace:/projects:/sandboxes
   first_run_helper: /workspace/bSmart-System/scripts/bsmart-bootstrap-workspace
+  existing_instance_repair: /workspace/bSmart-System/scripts/bsmart-content-upgrade --create-missing
+  repair_rule: create missing standard content files only; never overwrite existing instance content
+  startup_behavior: run the quiet content-upgrade check on every /new; keep heavier Git and storage checks once-per-UTC-day throttled
+  integration_behavior: run the quiet /project adapter check on every /new; install/enable the managed adapter when missing and report only changes or setup problems
   verification:
     - restart_or_redeploy_after workspace/bootstrap/compose changes
     - send /new to the target bot

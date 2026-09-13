@@ -12,13 +12,11 @@ project_root_selection:
   override_env: BSMART_PROJECT_ROOT
   canonical_container_path: /projects
   local_relative_path: ./projects
-  fallback_container_path: /workspace/bSmart/Projects
   rule:
     - if BSMART_PROJECT_ROOT is set and points to a readable/writable directory: use BSMART_PROJECT_ROOT
     - else if /projects exists and is readable/writable: use /projects
     - else if ./projects exists and is readable/writable from the current workspace: use ./projects
-    - else use /workspace/bSmart/Projects
-    - else run project-storage setup
+    - else run project-storage setup_required
   rationale:
     - containerized Hermes instances can keep using /projects as the canonical mounted project root
     - local/non-container agents launched from a bSmart instance folder can use the colocated projects/ subfolder without relying on AGENTS.md
@@ -60,16 +58,7 @@ mounted_volume_flow:
     Enter host-project-folder, e.g.
 
     /mnt/share/MyAI
-  existing_project_migration:
-    source: /workspace/bSmart/Projects
-    destination: /projects
-    rule:
-      - never delete or overwrite the existing project folder during project-storage setup
-      - after /projects is mounted and usable, inspect both source and destination before suggesting migration
-      - prompt the operator whether to transfer old project files into the new project root
-      - use a safe copy/sync workflow first; do not remove source files as part of migration
-      - prefer dry-run listing, then copy only after explicit approval
-      - preserve metadata where possible and avoid crossing into nested .git repos unless the operator explicitly asks
+
   save:
     mode: mounted
     project_root: /projects
@@ -97,24 +86,6 @@ mounted_volume_flow:
 ```
 
 ```yaml
-internal_bsmart_flow:
-  after_choice: Internal bSmart
-  infer_host_workspace:
-    preferred: findmnt -T /workspace -n -o SOURCE
-    parse: extract bracketed source path, e.g. /dev/sda1[/opt/docker-workspace/<instance>/workspace]
-    fallback: ask operator for host path backing /workspace
-  save:
-    mode: internal_bsmart
-    project_root: /projects
-    host_project_folder: <host_workspace>/bSmart/Projects
-  feedback_template: |
-    bSmart - Project storage configured.
-
-    Add following volume to Docker Compose file:
-
-    - {host_workspace}/bSmart/Projects:/projects:rw
-
-    After redeploy, this AI instance will use /projects for project folders.
 ```
 
 ```yaml
@@ -148,7 +119,7 @@ sandbox_storage:
       - only fall back to <host-sandbox-folder> when the host path cannot be inferred
     host_command_template: sudo install -d -o 10000 -g 10000 -m 0775 /opt/docker-workspace/<instance>/sandboxes
     docker_bind_mount_pitfall: if a host bind-mount source does not exist when Compose/Dokploy starts the service, Docker can create it as root:root; the container then sees /sandboxes mounted but cannot write to it
-  fallback: legacy per-project sandbox under /workspace/bSmart/Projects/<project>/sandbox when /sandboxes is unavailable
+
 ```
 
 
@@ -159,7 +130,7 @@ container_storage_spec:
   not_in_project_volume: true
   minimum_fields:
     project_storage:
-      mode: mounted | internal_bsmart
+      mode: mounted
       project_root: /projects
       host_project_folder: host path used in Compose
     sandbox_storage:
@@ -190,8 +161,7 @@ startup_check_behavior:
   local_spec_creation:
     mounted_volume: python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check --configure-mounted --host-project-folder <host-path>
     mounted_volume_local: python3 ./bSmart-System/scripts/bsmart-project-storage-check --configure-mounted --host-project-folder <host-path>
-    internal_bsmart: python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check --configure-internal
-    internal_bsmart_local: python3 ./bSmart-System/scripts/bsmart-project-storage-check --configure-internal
+
   executable_bit_pitfall: On CIFS/SMB-backed workspaces, file_mode mount options may ignore Git executable bits. Prefer python3 <script> for Python helpers.
   local_platform_fallback: On Windows/macOS checkouts, findmnt may be unavailable; skip host-mount inference and use explicit local paths or BSMART_PROJECT_ROOT/BSMART_SANDBOX_ROOT.
   state_cache_fallback: Startup and Git freshness state files are best-effort caches; a read-only checkout must continue with direct Git checks and report that throttling/cache persistence was skipped.

@@ -17,6 +17,7 @@ import sys
 from pathlib import Path
 
 DEFAULT_REPO_URL = "https://github.com/JenZaAS/bSmart.git"
+SYSTEM_ROOT = Path(__file__).resolve().parent.parent
 BOOTSTRAP_HOOK = """# bSmart startup hook
 
 Read `bSmart-System/bSmart.md` first; follow it.
@@ -182,7 +183,6 @@ local_paths:
     - BSMART_PROJECT_ROOT
     - {args.projects_root}
     - ./projects
-    - /workspace/bSmart/Projects
   sandbox_root_selection:
     - BSMART_SANDBOX_ROOT
     - {args.sandboxes_root}
@@ -208,6 +208,10 @@ local_paths:
 
     if write_if_missing(content_root / "bSmart_Log.md", f"# bSmart log\n\n- Initial bSmart setup for {args.agent_name}.\n"):
         files_created.append("bSmart/bSmart_Log.md")
+
+    history_template = SYSTEM_ROOT / "bSmart_Templates" / "bHistory.template.md"
+    if write_if_missing(content_root / "bHistory.md", history_template.read_text(encoding="utf-8")):
+        files_created.append("bSmart/bHistory.md")
 
     storage = f"""# bSmart container storage
 

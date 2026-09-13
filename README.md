@@ -316,7 +316,6 @@ fi
 
 install -d -o "$HERMES_UID" -g "$HERMES_GID" \
   "$WS/bSmart" \
-  "$WS/bSmart/Projects" \
   "$WS/bSmart/Workdocs" \
   "$WS/bSmart/Library" \
   "$WS/bSmart-Extensions"
@@ -387,7 +386,7 @@ cat > "$WS/bSmart/bSmart_State.md" <<'EOF'
 - Active project (short name): `none`
 
 Notes:
-- Project root selection is `BSMART_PROJECT_ROOT`, then `/projects`, then `./projects`, then `/workspace/bSmart/Projects`.
+- Project root selection is `BSMART_PROJECT_ROOT`, then `/projects`, then `./projects`; no legacy project-root fallback is used.
 - Sandbox root selection is `BSMART_SANDBOX_ROOT`, then `/sandboxes`, then `./sandboxes`, then `./bSmart/Sandboxes`.
 EOF
 

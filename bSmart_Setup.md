@@ -36,6 +36,15 @@ steps:
   - offer_show_available_features
 ```
 
+## Existing-instance repair
+
+```text
+python3 /workspace/bSmart-System/scripts/bsmart-content-upgrade --create-missing
+python3 ./bSmart-System/scripts/bsmart-content-upgrade --create-missing
+```
+
+The repair helper creates only missing standard content files and never overwrites existing instance content. Use it for an existing or externally managed agent after reviewing the target workspace. Add `--quiet` for routine startup checks; healthy runs then produce no agent-facing output.
+
 ## Required operator inputs
 
 ```yaml
@@ -146,12 +155,7 @@ project_storage:
     compose_line_template: "- <host-project-folder>:/projects:rw"
     helper_command: "python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check --configure-mounted --host-project-folder <host-project-folder>"
     helper_command_local: "python3 ./bSmart-System/scripts/bsmart-project-storage-check --configure-mounted --host-project-folder <host-project-folder>"
-  internal_bsmart:
-    infer_workspace_host_path: findmnt -T /workspace -n -o SOURCE
-    compose_line_template: "- <host-workspace>/bSmart/Projects:/projects:rw"
-    helper_command: "python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check --configure-internal"
-    helper_command_local: "python3 ./bSmart-System/scripts/bsmart-project-storage-check --configure-internal"
-    fallback_if_inference_fails: ask operator for the host path backing /workspace
+
   sandbox:
     canonical_root: /sandboxes
     per_project_template: /sandboxes/<project-slug>
@@ -213,7 +217,7 @@ dreaming:
   purpose: scheduled bSmart content maintenance for this instance; improves local bSmart content, not bSmart-System itself
   protocol: /workspace/bSmart-System/bSmart_Protocols/dreaming.md
   config_paths:
-    - /workspace/bSmart/Projects/bSmart/data/bsmart-dreaming.yaml
+    - /workspace/bSmart/data/bsmart-dreaming.yaml
     - local bSmart_Agent.md dreaming section
   trigger: on setup and on `/new` when status is missing or `ask_later`; skip only when status is `disabled`; continue silently when status is `enabled`
   opt_out: `No — do not ask again` records `status: disabled` in instance-local content

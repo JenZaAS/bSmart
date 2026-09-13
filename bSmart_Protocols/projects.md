@@ -15,7 +15,6 @@ paths:
     - BSMART_PROJECT_ROOT when set to a readable/writable directory
     - /projects when readable/writable
     - ./projects when readable/writable from the current bSmart/workspace folder
-    - /workspace/bSmart/Projects as legacy fallback
   state_file: /workspace/bSmart/bSmart_State.md
   state_file_local: ./bSmart/bSmart_State.md
 ```
@@ -31,7 +30,7 @@ path_resolution:
   rule:
     - resolve ./projects relative to the folder containing the startup hook, e.g. AGENTS.md
     - if /workspace/bSmart paths do not exist, use ./bSmart equivalents
-    - do not fail project listing just because /workspace/bSmart/Projects is absent
+    - report project storage setup_required when no supported project root is usable
 ```
 
 ```yaml

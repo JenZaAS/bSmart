@@ -86,9 +86,8 @@ Avoid `StrictHostKeyChecking=no` and avoid writing `known_hosts` only into ephem
 - Prefer `/projects` as canonical project root once configured.
 - Prefer `/sandboxes` for VPS-local sandboxes outside Git.
 - Before suggesting a project volume, create or ask the operator to create the host folder first.
-- If migrating from legacy `/workspace/bSmart/Projects`, never delete or overwrite it during setup.
-- Inspect old and new roots, prompt the operator, perform a dry-run/listing first, then copy only after explicit approval.
-- Leave old source cleanup/archive as a separate explicit decision.
+- Project storage uses only the configured `/projects` or local `./projects` root.
+- If the configured project root is unavailable, stop and report the storage problem; never substitute an unconfigured directory.
 
 ## Verification checks
 

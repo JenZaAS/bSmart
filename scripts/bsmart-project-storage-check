@@ -67,8 +67,6 @@ def project_root_candidates() -> list[tuple[str, Path]]:
         [
             ("/projects", Path("/projects")),
             ("./projects", workspace_root() / "projects"),
-            ("fallback", Path("/workspace/bSmart/Projects")),
-            ("./bSmart/Projects", workspace_root() / "bSmart" / "Projects"),
         ]
     )
     return candidates
@@ -248,7 +246,6 @@ def print_status(spec_path: Path) -> int:
     print("")
     print("To record the choice with this helper:")
     print("  Mounted volume:  bsmart-project-storage-check --configure-mounted --host-project-folder <host-path>")
-    print("  Internal bSmart:  bsmart-project-storage-check --configure-internal")
     return 2
 
 
@@ -256,7 +253,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Check or create bSmart container storage spec.")
     parser.add_argument("--spec", default=str(DEFAULT_SPEC), help="storage spec path")
     parser.add_argument("--configure-mounted", action="store_true", help="create spec for a mounted /projects volume")
-    parser.add_argument("--configure-internal", action="store_true", help="create spec using /workspace/bSmart/Projects as the host-backed source")
+
     parser.add_argument("--host-project-folder", help="host path to mount at /projects")
     parser.add_argument("--host-sandbox-folder", help="host path to mount at /sandboxes; defaults to sibling 'sandboxes' next to the host /workspace path when inferable")
     args = parser.parse_args()
@@ -265,9 +262,6 @@ def main() -> int:
         args.host_sandbox_folder = infer_sandbox_host_path(args.host_project_folder)
 
     spec_path = Path(args.spec)
-    if args.configure_mounted and args.configure_internal:
-        raise SystemExit("Choose only one of --configure-mounted or --configure-internal")
-
     if args.configure_mounted:
         if not args.host_project_folder:
             raise SystemExit("--configure-mounted requires --host-project-folder")
@@ -286,33 +280,6 @@ def main() -> int:
         print_predeploy_commands(args.host_project_folder, args.host_sandbox_folder)
         print("After the required host prep succeeds, add these Compose/Dokploy volume lines:")
         print(f"Project volume line: - {args.host_project_folder}:/projects:rw")
-        if args.host_sandbox_folder:
-            print(f"Sandbox volume line: - {args.host_sandbox_folder}:/sandboxes:rw")
-        else:
-            print("Sandbox volume line: - <host-sandbox-folder>:/sandboxes:rw")
-        return 0
-
-    if args.configure_internal:
-        workspace_host = infer_workspace_host_path()
-        if workspace_host:
-            host_project_folder = f"{workspace_host.rstrip('/')}/bSmart/Projects"
-        else:
-            host_project_folder = "TODO: host path backing /workspace/bSmart/Projects"
-        write_spec(
-            spec_path,
-            spec_text(
-                mode="internal_bsmart",
-                project_root="/projects",
-                host_project_folder=host_project_folder,
-                sandbox_root="/sandboxes",
-                host_sandbox_folder=args.host_sandbox_folder,
-                backing="vps-local",
-            ),
-        )
-        print(f"bSmart project storage: wrote {spec_path}")
-        print_predeploy_commands(host_project_folder, args.host_sandbox_folder)
-        print("After the required host prep succeeds, add these Compose/Dokploy volume lines:")
-        print(f"Project volume line: - {host_project_folder}:/projects:rw")
         if args.host_sandbox_folder:
             print(f"Sandbox volume line: - {args.host_sandbox_folder}:/sandboxes:rw")
         else:

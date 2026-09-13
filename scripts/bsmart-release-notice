@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+"""Announce each bSmart-System version once per instance.
+
+The notice is intentionally small and stateful: healthy repeat runs are silent,
+and the notice state lives in instance content rather than the system repo.
+"""
+
+from __future__ import annotations
+
+import argparse
+import re
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+SYSTEM_ROOT = SCRIPT_DIR.parent
+WORKSPACE_ROOT = SYSTEM_ROOT.parent
+DEFAULT_CONTENT_ROOT = Path("/workspace/bSmart") if Path("/workspace/bSmart").exists() else WORKSPACE_ROOT / "bSmart"
+
+
+def version(system_root: Path) -> str:
+    text = (system_root / "bSmart_Version.md").read_text(encoding="utf-8", errors="replace")
+    match = re.search(r"^current_version:\s*(\S+)", text, re.MULTILINE)
+    return match.group(1) if match else "unknown"
+
+
+def release_summary(system_root: Path, current: str) -> list[str]:
+    text = (system_root / "bSmart_Version.md").read_text(encoding="utf-8", errors="replace")
+    section = re.search(rf"^## {re.escape(current)}\s*$([\s\S]*?)(?=^## |\Z)", text, re.MULTILINE)
+    if not section:
+        return []
+    scope = re.search(r"^scope:\s*$([\s\S]*?)(?=^safety:|^verification:|\Z)", section.group(1), re.MULTILINE)
+    if not scope:
+        return []
+    return [m.group(1).strip() for m in re.finditer(r"^\s*-\s+(.+)$", scope.group(1), re.MULTILINE)][:5]
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Announce a bSmart-System version once per instance.")
+    parser.add_argument("--content-root", default=str(DEFAULT_CONTENT_ROOT))
+    parser.add_argument("--system-root", default=str(SYSTEM_ROOT))
+    parser.add_argument("--quiet", action="store_true", help="suppress healthy/already-announced output")
+    args = parser.parse_args()
+
+    content = Path(args.content_root).expanduser()
+    system = Path(args.system_root).expanduser()
+    current = version(system)
+    state = content / "State" / "bsmart-release-notice.yaml"
+    previous = ""
+    if state.is_file():
+        for line in state.read_text(encoding="utf-8", errors="replace").splitlines():
+            if line.startswith("last_announced_version:"):
+                previous = line.split(":", 1)[1].strip()
+                break
+    if previous == current:
+        if not args.quiet:
+            print(f"bSmart release notice: {current} already announced")
+        return 0
+
+    print(f"bSmart update available: {current}")
+    for item in release_summary(system, current):
+        print(f"- {item}")
+    print("Review: /workspace/bSmart-System/bSmart_Version.md")
+    try:
+        state.parent.mkdir(parents=True, exist_ok=True)
+        state.write_text(f"last_announced_version: {current}\n", encoding="utf-8")
+    except OSError as exc:
+        print(f"bSmart release notice: could not record notice state — {exc}")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

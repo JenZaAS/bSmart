@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inspect legacy bSmart project root versus canonical /projects.
+"""Inspect one project root versus canonical /projects.
 
 This helper is intentionally read-only by default. It prints a concise migration
 summary and optional rsync dry-run command. It never deletes, moves, or copies
@@ -12,7 +12,6 @@ import argparse
 import os
 from pathlib import Path
 
-DEFAULT_SOURCE = Path("/workspace/bSmart/Projects")
 DEFAULT_DEST = Path("/projects")
 
 
@@ -43,7 +42,7 @@ def shell_quote(value: str) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Read-only bSmart project migration inspection.")
-    parser.add_argument("--source", default=str(DEFAULT_SOURCE), help="legacy project root")
+    parser.add_argument("--source", required=True, help="project root to inspect")
     parser.add_argument("--dest", default=str(DEFAULT_DEST), help="new canonical project root")
     args = parser.parse_args()
 
@@ -69,10 +68,10 @@ def main() -> int:
         print(f"    ... {len(dest_children) - 20} more")
 
     if not source_children:
-        print("  result: no legacy project entries found; no migration needed")
+        print("  result: no source project entries found; no migration needed")
         return 0
 
-    print("  result: legacy project entries exist; ask operator before copying")
+    print("  result: source project entries exist; ask operator before copying")
     if overlaps:
         print("  warning: some names already exist in destination; do not overwrite without review")
     print("")

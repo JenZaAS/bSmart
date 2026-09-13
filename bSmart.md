@@ -56,7 +56,6 @@ content_folders:
   projects_override_env: BSMART_PROJECT_ROOT
   projects_preferred: /projects
   projects_local_relative: ./projects
-  projects_fallback: /workspace/bSmart/Projects
   sandboxes_override_env: BSMART_SANDBOX_ROOT
   sandboxes_preferred: /sandboxes
   sandboxes_local_relative: ./sandboxes
@@ -109,7 +108,6 @@ project_storage:
   override_env: BSMART_PROJECT_ROOT
   preferred_project_root: /projects
   local_project_root: ./projects
-  fallback_project_root: /workspace/bSmart/Projects
   sandbox_override_env: BSMART_SANDBOX_ROOT
   preferred_sandbox_root: /sandboxes
   local_sandbox_root: ./sandboxes

@@ -184,6 +184,8 @@ bsmart_startup_checks:
   checks:
     - bSmart-System Git freshness via bsmart-system-update-check
     - project/sandbox storage spec via bsmart-project-storage-check
+    - standard instance content via bsmart-content-upgrade (quiet; every /new)
+    - Hermes /project adapter presence via bsmart-project-integration-check (quiet; every /new)
   important_behavior:
     - missing container-storage.yaml is reported as setup_required
     - on CIFS/SMB-backed workspaces executable bits may not be honored; run Python helpers with python3 <script> instead of executing the script path directly

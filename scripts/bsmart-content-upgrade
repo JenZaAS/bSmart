@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+"""Create missing standard bSmart content files without overwriting content.
+
+This helper is safe for existing instances: it only creates files that are
+absent, using templates from the active bSmart-System checkout. It never edits,
+deletes, or migrates existing instance content.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import sys
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+SYSTEM_ROOT = SCRIPT_DIR.parent
+WORKSPACE_ROOT = SYSTEM_ROOT.parent
+DEFAULT_CONTENT_ROOT = Path("/workspace/bSmart") if Path("/workspace/bSmart").exists() else WORKSPACE_ROOT / "bSmart"
+
+STANDARD_FILES = {
+    "bHistory.md": "bSmart_Templates/bHistory.template.md",
+}
+
+
+def create_if_missing(content_root: Path, name: str, template: Path) -> str:
+    target = content_root / name
+    if target.exists():
+        return f"present: {target}"
+    if not template.is_file():
+        return f"blocked: template missing: {template}"
+    content_root.mkdir(parents=True, exist_ok=True)
+    data = template.read_text(encoding="utf-8")
+    if name == "bHistory.md" and ("# bHistory" not in data or "## Entries" not in data):
+        return f"blocked: invalid bHistory template: {template}"
+    try:
+        with target.open("x", encoding="utf-8") as handle:
+            handle.write(data)
+    except FileExistsError:
+        return f"present: {target}"
+    except OSError as exc:
+        return f"blocked: cannot create {target}: {exc}"
+    return f"created: {target}"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Create missing standard bSmart content files without overwriting existing files."
+    )
+    parser.add_argument("--content-root", default=str(DEFAULT_CONTENT_ROOT))
+    parser.add_argument("--system-root", default=str(SYSTEM_ROOT))
+    parser.add_argument("--create-missing", action="store_true", help="create absent standard files")
+    parser.add_argument("--quiet", action="store_true", help="suppress successful checks and repairs")
+    args = parser.parse_args()
+
+    content_root = Path(args.content_root).expanduser()
+    system_root = Path(args.system_root).expanduser()
+    if not args.quiet:
+        print("bSmart content upgrade:")
+        print(f"  content_root: {content_root}")
+        print(f"  mode: {'create-missing' if args.create_missing else 'check-only'}")
+
+    results = []
+    for name, relative_template in STANDARD_FILES.items():
+        template = system_root / relative_template
+        if args.create_missing:
+            result = create_if_missing(content_root, name, template)
+        else:
+            result = f"present: {content_root / name}" if (content_root / name).is_file() else f"missing: {content_root / name}"
+        results.append(result)
+        if not args.quiet or result.startswith("blocked:") or result.startswith("missing:"):
+            print(f"  {result}")
+
+    if any(result.startswith("blocked:") for result in results):
+        return 1
+    if not args.create_missing and any(result.startswith("missing:") for result in results):
+        if not args.quiet:
+            print("  result: repair_available — rerun with --create-missing")
+        return 2
+    if not args.quiet:
+        print("  result: ok")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
