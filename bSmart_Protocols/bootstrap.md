@@ -42,6 +42,7 @@ new_agent_bootstrap_standard:
   repair_rule: create missing standard content files only; never overwrite existing instance content
   startup_behavior: run the quiet content-upgrade check on every /new; keep heavier Git and storage checks once-per-UTC-day throttled
   integration_behavior: run the quiet /project adapter check on every /new; install/enable the managed adapter when missing and report only changes or setup problems
+  action_note_behavior: explain the purpose before startup maintenance; name the concrete operation (update, create missing bHistory, or install/enable /project) rather than exposing only a generic tool-execution description
   verification:
     - restart_or_redeploy_after workspace/bootstrap/compose changes
     - send /new to the target bot

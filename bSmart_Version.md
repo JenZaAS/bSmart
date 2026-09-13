@@ -1,7 +1,7 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.20-draft
+current_version: 0.1.21-draft
 updated: 2026-09-11 21:34 UTC
 status: draft
 ```
@@ -19,6 +19,19 @@ scope:
 verification:
   - focused bProtective tests pass
   - Hermes plugin manifest and registration are validated
+```
+
+## 0.1.21-draft
+
+```yaml
+release_type: usability_refinement
+scope:
+  - explain the concrete purpose of startup maintenance before tool approval
+  - name bSmart-System updates, bHistory repair, and /project installation explicitly
+safety:
+  - keep healthy maintenance checks silent after the explanatory pre-action note
+verification:
+  - startup protocol and action-note wording read back after update
 ```
 
 ## 0.1.20-draft

@@ -133,8 +133,9 @@ github_ai_access:
 
 startup_sequence:
   - read this manifest
+  - before running startup maintenance, show a concise action note: "bSmart — Checking for bSmart-System updates and required integrations." If an update is being pulled, say so explicitly; if the `/project` adapter is missing, explain that it will be installed/enabled and may require a restart; if standard content is missing, explain that it will be created from a template.
   - run python3 /workspace/bSmart-System/scripts/bsmart-startup-check --auto-pull when the helper exists; use the local ./bSmart-System path on non-container agents; if the checkout is read-only or a platform lacks Linux-only helpers such as findmnt, continue with direct Git checks and report the skipped cache/mount inference
-  - check Hermes `/project` integration with `scripts/bsmart-project-integration-check` when available; report setup_required without installing or restarting
+  - check Hermes `/project` integration with `scripts/bsmart-project-integration-check` when available; install/enable the managed adapter when missing and report only changes or setup problems; request a restart or relaunch when discovery requires it
   - check content root exists
   - initialize missing startup hooks without overwriting existing hooks
   - if bSmart_Agent.md missing, run bSmart_Setup.md

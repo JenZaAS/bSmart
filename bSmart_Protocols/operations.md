@@ -188,6 +188,7 @@ bsmart_startup_checks:
     - Hermes /project adapter presence via bsmart-project-integration-check (quiet; every /new)
   important_behavior:
     - missing container-storage.yaml is reported as setup_required
+    - before any startup helper call that may update or repair local state, use a plain-language action note naming the intended bSmart operation; do not rely on the framework's generic execute_code approval reason
     - on CIFS/SMB-backed workspaces executable bits may not be honored; run Python helpers with python3 <script> instead of executing the script path directly
     - the helper does not create the spec or change Compose/Dokploy unless an explicit configure subcommand is run
 ```
