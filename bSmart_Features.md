@@ -74,6 +74,7 @@ commands:
 14. bPrivate — Optionally encode sensitive content before online-model use and decode local results.
 15. bProtective — Add approval-gated command protection for Hermes terminal actions.
 16. bAccountant — Optionally turn an agent into a cautious accountant assistant.
+17. bADR — Add and maintain standardized Architecture Decision Records in projects.
 
 ## Feature index
 
@@ -93,6 +94,7 @@ commands:
 14. bPrivate
 15. bProtective
 16. bAccountant
+17. bADR
 
 ## Features by group
 
@@ -120,8 +122,31 @@ commands:
 - bPrivate — Optionally encode sensitive content before online-model use and decode local results.
 - bProtective — Add approval-gated command protection for Hermes terminal actions.
 - bAccountant — Optionally turn an agent into a cautious accountant assistant.
+- bADR — Add and maintain standardized Architecture Decision Records in projects.
 
 ## Feature details
+
+### bADR
+
+```yaml
+name: bADR
+group: System
+status: active
+visibility: user-facing
+short_description: Add and maintain standardized Architecture Decision Records in projects.
+files:
+  - /workspace/bSmart-System/bSmart-Extensions/bADR/
+description: Provides a reusable project docs/adr structure, index, template, and create-only installer so projects can record durable architectural decisions consistently.
+commands:
+  - python ./bSmart-System/bSmart-Extensions/bADR/scripts/install-badr.py <project-root>
+included_capabilities:
+  - ADR index and template
+  - Sequential project ADR creation
+  - Status and supersession workflow
+notes:
+  - Generated ADRs belong to the consuming project, not bSmart-System.
+  - Do not put secrets in ADRs.
+```
 
 ### Projects
 
