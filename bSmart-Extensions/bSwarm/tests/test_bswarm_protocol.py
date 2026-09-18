@@ -214,5 +214,57 @@ class BSwarmProtocolTests(unittest.TestCase):
         ]:
             self.assertIn(term, combined)
 
+    def test_cascade_shorthand_always_enables_bselective_and_supports_explicit_opt_out(self):
+        combined = '\n'.join([
+            self.read('bswarm-protocol.md'),
+            self.read('templates/run-spec.yaml'),
+            self.read('README.md'),
+        ])
+        for term in [
+            'cascade critic',
+            'cascade critic audit',
+            'bSelective is on for every cascade phrase',
+            'ordinary (non-bSelective)',
+            'design audit',
+            'code audit',
+            'audit_after_task',
+            'automatic',
+            'decision',
+            'optional',
+        ]:
+            self.assertIn(term, combined)
+
+    def test_jobs_package_templates_define_reopenable_report_contract(self):
+        for rel in [
+            'templates/jobs/SPEC.md',
+            'templates/jobs/README.template.md',
+            'templates/jobs/report.template.md',
+            'templates/jobs/plan.template.md',
+        ]:
+            self.assertTrue((ROOT / rel).exists(), rel)
+        combined = '\n'.join(
+            self.read(rel) for rel in [
+                'templates/jobs/SPEC.md',
+                'templates/jobs/README.template.md',
+                'templates/jobs/report.template.md',
+                'templates/jobs/plan.template.md',
+                'bswarm-protocol.md',
+                'README.md',
+                'templates/run-spec.yaml',
+                'templates/run-record.md',
+            ]
+        )
+        for term in [
+            'jobs/README.md',
+            'report.md',
+            'plan.md',
+            'Update in place',
+            'External-audit bullets only',
+            'Do not vendor source trees or diffs',
+            'trust / not verified',
+            'optional findings: count only',
+        ]:
+            self.assertIn(term, combined)
+
 if __name__ == '__main__':
     unittest.main()

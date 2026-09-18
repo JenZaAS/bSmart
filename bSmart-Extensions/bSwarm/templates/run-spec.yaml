@@ -3,7 +3,7 @@ bswarm_run:
   scope: "<path/reference or none>"
   # User-facing compact workflow keyword. Do not expose mixed stage combinations
   # unless this is a controlled experiment.
-  workflow_keyword: ordinary
+  workflow_keyword: ordinary # cascade | cascade critic | cascade critic audit
   workflow: direct
   mode: unsupervised
   intent: review
@@ -19,6 +19,19 @@ bswarm_run:
   max_worker_attempts_per_supervisor: 5
   planned_timeout_seconds: 1200
   safety: read_only
+  job:
+    enabled: false
+    package_root: "<project>/jobs"
+    report: "<project>/jobs/<YYYY-MM-DD>-<slug>/report.md"
+    plan: "<project>/jobs/<YYYY-MM-DD>-<slug>/plan.md"
+  audit:
+    enabled: false
+    design: after_architect_plan
+    code: after_task_list_empty
+    audit_after_task: false
+    auditor_continue_on: [automatic, decision]
+    optional_only: stop
+    external_model_required: true
 
   preflight_qc:
     adapter: hermes # hermes | opencode | codex | claude | unknown
@@ -53,12 +66,20 @@ bswarm_run:
       workflow: architect_handoff
       coder_context_mode: bselective
     cascade:
-      context_mode: ordinary
+      context_mode: bselective
       workflow: architect_taskflow
-      coder_context_mode: ordinary
+      coder_context_mode: bselective
     bSelective cascade:
       context_mode: bselective
       workflow: architect_taskflow
+      coder_context_mode: bselective
+    cascade critic:
+      context_mode: bselective
+      workflow: critcascade
+      coder_context_mode: bselective
+    cascade critic audit:
+      context_mode: bselective
+      workflow: critcascade_audit
       coder_context_mode: bselective
 
   cascade_defaults:
@@ -104,8 +125,8 @@ bswarm_run:
         - coder
     cascade:
       pattern: architect_taskflow
-      architect_context_mode: ordinary
-      coder_context_mode: ordinary
+      architect_context_mode: bselective
+      coder_context_mode: bselective
       duplicate_file: "<run-folder>/cascade/<target-copy>.m"
       artifacts:
         architect_plan: "<run-folder>/cascade/architect-plan.md"
@@ -137,6 +158,22 @@ bswarm_run:
         - programmer_critic
         - architect_revision
         - coder_fix
+    critcascade_audit:
+      pattern: critcascade_audit
+      architect_context_mode: bselective
+      coder_context_mode: bselective
+      max_depth: 3
+      max_critique_rounds: 3
+      external_model_required: true
+      stages:
+        - architect
+        - design_audit
+        - architect_critic
+        - coder
+        - programmer_critic
+        - architect_revision
+        - coder_fix
+        - code_audit
 
   contamination_rules:
     duplicate_source_before_edits: true

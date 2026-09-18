@@ -13,8 +13,8 @@ bSelective
 architect
 bSelective architect
 cascade
-bSelective cascade
-critcascade
+cascade critic
+cascade critic audit
 ```
 
 Keyword meanings:
@@ -25,19 +25,22 @@ Keyword meanings:
 | `bSelective` | Direct bSelective-enabled coder. |
 | `architect` | Ordinary architect → ordinary coder, using one compact handoff. |
 | `bSelective architect` | bSelective architect → bSelective coder, using one compact handoff. |
-| `cascade` | Ordinary architect-led stepwise workflow: decompose, dispatch one coder task, evaluate, re-plan, continue. |
-| `bSelective cascade` | bSelective architect-led stepwise workflow with bSelective-enabled coders. |
-| `critcascade` | Depth-3 bSelective cascade with architect/programmer critics and score-based repair loops. |
+| `cascade` | bSelective architect-led stepwise workflow: decompose, dispatch one coder task, evaluate, re-plan, continue. |
+| `cascade critic` | bSelective cascade with same-model architect/programmer critics and bounded score-based repair loops. |
+| `cascade critic audit` | `cascade critic` plus external design/code audits by another model or model list. |
 
 Normalization rules:
 
 - `ordinary` is the default direct mode and may be omitted internally.
 - `architect` implies an architect followed by a coder.
-- `cascade` implies architect-led stepwise execution; it is not a direct-coder mode.
+- `cascade` implies a bSelective architect-led stepwise execution; it is not a direct-coder mode.
 - `bSelective` applies to all relevant stages by default.
 - `bSelective architect` means bSelective architect and bSelective coder.
-- `bSelective cascade` means bSelective architect, bSelective coders, and architect evaluation/replanning between tasks.
-- `critcascade` means bSelective cascade with maximum depth 3, one completed task at a time, and architect plan review before each next task.
+- `cascade` means bSelective architect, bSelective coders, and architect evaluation/replanning between tasks.
+- `cascade critic` means `cascade` with maximum depth 3, one completed task at a time, and architect/programmer critics.
+- `cascade critic audit` means `cascade critic` plus external design and code audits.
+- `bSelective cascade` remains a synonym for `cascade`.
+- bSelective is on for every cascade phrase. Opt out only when the operator explicitly requests ordinary (non-bSelective) context tools.
 - Do not expose mixed bSelective architect → ordinary coder combinations as normal user-facing modes; keep them only for controlled experiments.
 
 Internal normalization:
@@ -58,16 +61,16 @@ bSelective architect:
   workflow: architect_handoff
   coder_context_mode: bselective
 cascade:
-  context_mode: ordinary
-  workflow: architect_taskflow
-  coder_context_mode: ordinary
-bSelective cascade:
   context_mode: bselective
   workflow: architect_taskflow
   coder_context_mode: bselective
-critcascade:
+cascade critic:
   context_mode: bselective
   workflow: critcascade
+  coder_context_mode: bselective
+cascade critic audit:
+  context_mode: bselective
+  workflow: critcascade_audit
   coder_context_mode: bselective
 ```
 
@@ -77,8 +80,8 @@ Then show the normalized run summary:
 bswarm_run:
   goal: <one-line goal>
   scope: <path/reference or none>
-  workflow_keyword: ordinary | bSelective | architect | bSelective architect | cascade | bSelective cascade | critcascade
-  workflow: direct | architect_handoff | architect_taskflow | critcascade
+  workflow_keyword: ordinary | bSelective | architect | bSelective architect | cascade | cascade critic | cascade critic audit
+  workflow: direct | architect_handoff | architect_taskflow | critcascade | critcascade_audit
   mode: unsupervised | supervised
   intent: review | design | compare | implement | other
   ab_testing: off | report | self_improving
@@ -178,7 +181,41 @@ explicitly switch the run spec to `supervisor_mediated_architect_handoff` or
 `supervisor_mediated_cascade` and record that it is not true nested
 architect-dispatch.
 
-## 3. Defaults
+## 3. Cascade audit rules
+
+These rules apply only to `cascade critic audit`. Internal critics remain
+same-model; an external audit uses another model or an explicitly configured
+model list.
+
+- Run a **design audit** after the first architect plan, before substantial code.
+- Run a **code audit** after the architect task list is empty by default.
+- The architect may set `audit_after_task` on a high-risk task to request an
+  earlier code audit for that slice.
+- The next auditor runs only when the current auditor produced an `automatic`
+  or `decision` item. An `optional`-only result stops the auditor list.
+- Auditors propose classes; the parent agent re-sorts them. Unsure means
+  `decision`. A finding that the behavior is a feature is locked and commented
+  (or recorded in an ADR), not silently changed.
+- For a design audit, `automatic` makes the architect revise the plan;
+  `decision` pauses for the operator and then updates the plan.
+
+The per-project job package is the durable record. Use `templates/jobs/` to
+create `jobs/README.md`, one dated job folder, and its `report.md` and
+`plan.md`. The report records each external auditor as design or code with its
+class, status, and stop reason; it records optional findings as a count only.
+
+```yaml
+audit:
+  enabled: true
+  design: after_architect_plan
+  code: after_task_list_empty
+  audit_after_task: false
+  auditor_continue_on: [automatic, decision]
+  optional_only: stop
+  external_model_required: true
+```
+
+## 4. Defaults
 
 Use these unless Erling changes them:
 

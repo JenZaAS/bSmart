@@ -16,9 +16,13 @@ Compact user-facing workflow keywords:
 - `bSelective` — direct bSelective-enabled coder.
 - `architect` — ordinary architect → ordinary coder, using one compact handoff.
 - `bSelective architect` — bSelective architect → bSelective coder, using one compact handoff.
-- `cascade` — ordinary architect-led stepwise workflow.
-- `bSelective cascade` — bSelective architect-led stepwise workflow with bSelective-enabled coders.
-- `critcascade` — bSelective cascade with architect and programmer critics, bounded score-based repair loops.
+- `cascade` — bSelective architect-led stepwise workflow.
+- `cascade critic` — bSelective cascade with architect and programmer critics, bounded score-based repair loops.
+- `cascade critic audit` — `cascade critic` plus external design and code audits.
+
+`bSelective cascade` remains a compatibility synonym for `cascade`. bSelective
+is on for every cascade phrase; opt out only by explicitly requesting ordinary
+(non-bSelective) context tools.
 
 Mixed architect/coder context modes are internal experimental overrides, not normal user-facing modes.
 
@@ -52,6 +56,7 @@ Explicit subagent stage modes:
 - `architect_coder` — architect discovers context and writes `architect-plan.md`; coder implements from that plan.
 - `architect_taskflow` — architect decomposes, dispatches one bounded coder task, evaluates, re-plans, then continues within cascade limits.
 - `critcascade` — depth-3 bSelective cascade: architect spec → architect critic → programmer → programmer critic → architect-directed fix programmer, one task at a time.
+- `critcascade_audit` — `critcascade` with a design audit after the first plan and a code audit after the task list is empty (or at an explicit `audit_after_task` point).
 
 Example A/B/C run shape:
 
@@ -83,8 +88,8 @@ branches:
       - coder
   cascade:
     pattern: architect_taskflow
-    architect_context_mode: ordinary
-    coder_context_mode: ordinary
+    architect_context_mode: bselective
+    coder_context_mode: bselective
     stages:
       - architect
       - coder
@@ -109,7 +114,8 @@ branches:
 6. Keep prior generated-run archive paths out of worker prompts unless explicitly comparing against old generated code.
 7. Run the selected bSwarm through chat/delegation.
 8. Save architect plans as `*/architect-plan.md` where applicable.
-9. Save a run record using `templates/run-record.md`, including preflight QC, per-stage statistics, and branch-total statistics.
+9. For a bounded cascade, create a project `jobs/` package from `templates/jobs/`; update its `report.md` and `plan.md` in place.
+10. Save a run record using `templates/run-record.md`, including preflight QC, per-stage statistics, and branch-total statistics.
 
 Adapter note: bSwarm is intended to be CLI-agnostic, but nested cascade checks
 are runtime-specific. If running under OpenCode, Codex, Claude, or an unknown
