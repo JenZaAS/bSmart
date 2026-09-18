@@ -26,6 +26,8 @@ bswarm_run:
     plan: "<project>/jobs/<YYYY-MM-DD>-<slug>/plan.md"
   audit:
     enabled: false
+    models_file: "./bSmart/State/bswarm-audit-models.yaml"
+    model_list: []
     design: after_architect_plan
     code: after_task_list_empty
     audit_after_task: false
@@ -46,7 +48,7 @@ bswarm_run:
       delegation.child_timeout_seconds:
         required: ">= planned_timeout_seconds"
         observed: unknown
-    recommended_for_bselective_cascade:
+    recommended_for_cascade:
       delegation.child_timeout_seconds: 1200
     adapter_note: "If not running under Hermes, verify adapter-specific nested workers or downgrade to supervisor_mediated_architect_handoff/supervisor_mediated_cascade."
 

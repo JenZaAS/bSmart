@@ -18,6 +18,7 @@ Use Markdown. Keep the slug short and stable. `report.md` is the first file an o
 ## Rules
 
 - **Update in place**; do not append a new report for every round.
+- Write/update the job package after the design audit, after each architect task, and after the final code audit.
 - Keep reports short; the one-page shape is a guide, not a hard limit.
 - `report.md` contains **External-audit bullets only** (class + status), never an internal-critic dump.
 - **optional findings: count only** unless the operator asks for detail.
@@ -26,7 +27,7 @@ Use Markdown. Keep the slug short and stable. `report.md` is the first file an o
 
 ## Required report sections
 
-Job (goal, workflow keyword, outcome) · scope in/out · architect tasks · operator decisions · automatic (count + one line) · open decisions · optional count · each external auditor (design or code; automatic/decision/optional + status; stop reason) · evidence · trust / not verified · next.
+Job (date, slug, goal, workflow keyword, outcome, commit, report link) · scope in/out · architect tasks · operator decisions · automatic (count + one line) · open decisions · optional count · each external auditor and each finding (actual model ID, design or code, automatic/decision/optional + status; stop reason) · evidence · trust / not verified · next.
 
 ## Classification
 

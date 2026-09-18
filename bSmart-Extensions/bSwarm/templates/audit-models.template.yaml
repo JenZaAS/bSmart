@@ -1,0 +1,6 @@
+# bSwarm audit model list template
+
+# Instance-local configuration only. Do not add secrets here.
+# Keep models in operator-selected order. An empty list blocks
+# `cascade critic audit` until configured.
+audit_models: []
