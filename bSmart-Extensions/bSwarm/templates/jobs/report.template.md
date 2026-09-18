@@ -3,8 +3,11 @@
 ## Job
 
 - Goal: `<one line>`
+- Date: `<YYYY-MM-DD>`
+- Slug: `<slug>`
 - Workflow keyword: `cascade` | `cascade critic` | `cascade critic audit`
 - Outcome: `reached` | `partial` | `blocked` | `inconclusive`
+- Commit: `<commit or none>`
 
 ## Scope
 
@@ -34,8 +37,19 @@
 
 ## External audits
 
-- Design auditor — `automatic` | `decision` | `optional` — `<status>` — `<stop reason or none>`
-- Code auditor — `automatic` | `decision` | `optional` — `<status>` — `<stop reason or none>`
+### Auditor: `<actual model id or not launched>` — design
+
+- Model ID: `<actual model id or not launched>`
+- Finding: `<finding>` — Class: `automatic` | `decision` | `optional` — Status: `<status>`
+- Stop reason: `<reason or none>`
+
+### Auditor: `<actual model id or not launched>` — code
+
+- Model ID: `<actual model id or not launched>`
+- Finding: `<finding>` — Class: `automatic` | `decision` | `optional` — Status: `<status>`
+- Stop reason: `<reason or none>`
+
+Optional findings: count only — `<number>`.
 
 ## Evidence
 

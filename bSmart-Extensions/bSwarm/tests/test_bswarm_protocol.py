@@ -73,7 +73,7 @@ class BSwarmProtocolTests(unittest.TestCase):
             'delegation.child_timeout_seconds',
             'planned_timeout_seconds: 1200',
             'required_for_nested_architect_dispatch',
-            'recommended_for_bselective_cascade',
+            'recommended_for_cascade',
             'supervisor_mediated_architect_handoff',
             'supervisor_mediated_cascade',
             'stop_for_settings',
@@ -262,6 +262,62 @@ class BSwarmProtocolTests(unittest.TestCase):
             'External-audit bullets only',
             'Do not vendor source trees or diffs',
             'trust / not verified',
+            'optional findings: count only',
+        ]:
+            self.assertIn(term, combined)
+
+    def test_named_cascade_examples_never_default_to_ordinary_context(self):
+        sources = [
+            self.read('bswarm-protocol.md'),
+            self.read('templates/run-spec.yaml'),
+            self.read('README.md'),
+        ]
+        for text in sources:
+            blocks = re.findall(
+                r'(?ms)^(\s+)cascade:\n(.*?)(?=^\1\S|\Z)',
+                text,
+            )
+            self.assertTrue(blocks, 'missing named cascade example')
+            for _, block in blocks:
+                self.assertNotIn('architect_context_mode: ordinary', block)
+                self.assertNotIn('coder_context_mode: ordinary', block)
+
+    def test_audit_model_list_is_instance_local_and_fail_closed(self):
+        combined = '\n'.join([
+            self.read('bswarm-protocol.md'),
+            self.read('templates/run-spec.yaml'),
+            self.read('templates/run-record.md'),
+            self.read('templates/audit-models.template.yaml'),
+        ])
+        for term in [
+            'audit_models',
+            'instance-local',
+            'list audit models',
+            'change audit models',
+            'empty list',
+            'blocked until configured',
+            'same model',
+            'actual model id',
+            'could not be launched',
+        ]:
+            self.assertIn(term, combined)
+
+    def test_jobs_templates_capture_audit_findings_and_write_timing(self):
+        combined = '\n'.join([
+            self.read('templates/jobs/SPEC.md'),
+            self.read('templates/jobs/README.template.md'),
+            self.read('templates/jobs/report.template.md'),
+        ])
+        for term in [
+            'Date',
+            'Slug',
+            'Commit',
+            'report.md',
+            'after the design audit',
+            'after each architect task',
+            'after the final code audit',
+            'Finding:',
+            'Model ID:',
             'optional findings: count only',
         ]:
             self.assertIn(term, combined)

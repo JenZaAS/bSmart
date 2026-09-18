@@ -25,6 +25,7 @@ Use for a bounded cascade that should be reopenable from project content.
 - Index: `<project>/jobs/README.md`
 - Report contract: external-audit bullets only; optional findings are count only.
 - Trust / not verified: `<short note>`
+- Audit model list: `./bSmart/State/bswarm-audit-models.yaml` — `<configured / empty / unavailable>`
 
 ## Run specification
 
@@ -97,21 +98,28 @@ preflight_qc:
       result: passed | failed | not_applicable
   warning_to_user: <exact warning shown, or none>
   action_taken: start | stop_for_settings | downgrade_to_supervisor_mediated_architect_handoff | downgrade_to_supervisor_mediated_cascade
+  audit_models:
+    file: ./bSmart/State/bswarm-audit-models.yaml
+    configured_order: []
+    implementing_or_critic_model: <model id or unknown>
+    result: passed | blocked_empty | blocked_same_model | unavailable
+    warning_to_user: <exact warning shown, or none>
 ```
 
 ## External audits
 
 Only include for `cascade critic audit`. Internal critics remain same-model;
-external auditors use another model or an explicit model list.
+external auditors use other models from the ordered instance-local list.
 
-| Auditor | Kind | Class | Status | Stop reason |
-|---|---|---|---|---|
-| `<name>` | design | automatic / decision / optional | `<status>` | `<reason>` |
-| `<name>` | code | automatic / decision / optional | `<status>` | `<reason>` |
+| Model ID | Kind | Finding | Class | Status | Stop reason |
+|---|---|---|---|---|---|
+| `<actual model id or not launched>` | design | `<finding>` | automatic / decision / optional | `<status>` | `<reason>` |
+| `<actual model id or not launched>` | code | `<finding>` | automatic / decision / optional | `<status>` | `<reason>` |
 
 - Auditor proposals are re-sorted by the parent agent; unsure means `decision`.
 - Continue to the next auditor only for `automatic` or `decision`.
 - Optional-only findings stop the auditor list.
+- If an adapter cannot name/select a configured model, record `not launched` and why.
 
 ## Statistics
 

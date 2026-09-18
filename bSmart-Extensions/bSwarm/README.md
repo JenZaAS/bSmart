@@ -108,7 +108,7 @@ branches:
 
 1. Read `bswarm-protocol.md`.
 2. Create a short run spec from `templates/run-spec.yaml`.
-3. Run preflight QC before launch. For `architect`, `bSelective architect`, `cascade`, and `bSelective cascade`, verify the active adapter can do true nested dispatch when the architect is expected to spawn coders; under Hermes this means `delegation.orchestrator_enabled=true`, `delegation.max_spawn_depth >= 2`, and `delegation.child_timeout_seconds` large enough for the planned run, commonly `1200` seconds.
+3. Run preflight QC before launch. For `architect`, `bSelective architect`, `cascade`, `cascade critic`, and `cascade critic audit`, verify the active adapter can do true nested dispatch when the architect is expected to spawn coders; under Hermes this means `delegation.orchestrator_enabled=true`, `delegation.max_spawn_depth >= 2`, and `delegation.child_timeout_seconds` large enough for the planned run, commonly `1200` seconds.
 4. Show the concise summary and any blocking settings warning to Erling before launch.
 5. For editable evaluation runs, duplicate the original target into per-branch files under the run folder.
 6. Keep prior generated-run archive paths out of worker prompts unless explicitly comparing against old generated code.

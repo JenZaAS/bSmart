@@ -27,7 +27,7 @@ Keyword meanings:
 | `bSelective architect` | bSelective architect → bSelective coder, using one compact handoff. |
 | `cascade` | bSelective architect-led stepwise workflow: decompose, dispatch one coder task, evaluate, re-plan, continue. |
 | `cascade critic` | bSelective cascade with same-model architect/programmer critics and bounded score-based repair loops. |
-| `cascade critic audit` | `cascade critic` plus external design/code audits by another model or model list. |
+| `cascade critic audit` | `cascade critic` plus external design/code audits using the ordered instance-local audit model list. |
 
 Normalization rules:
 
@@ -113,8 +113,8 @@ bswarm_run:
       stages: [architect, coder]
     cascade:
       pattern: architect_taskflow
-      architect_context_mode: ordinary
-      coder_context_mode: ordinary
+      architect_context_mode: bselective
+      coder_context_mode: bselective
       stages: [architect, coder, architect_evaluation]
     bselective_cascade:
       pattern: architect_taskflow
@@ -135,8 +135,8 @@ Offer: start, edit keyword, edit A/B/C branches, edit statistics, edit budgets, 
 
 Before launching any run, do a short preflight QC and show blocking warnings
 instead of starting a run that is likely to fail. For `architect`,
-`bSelective architect`, `cascade`, `bSelective cascade`, and especially
-`critcascade`, this is
+`bSelective architect`, `cascade`, `cascade critic`, and especially
+`cascade critic audit`, this is
 mandatory if the run expects the architect subagent itself to dispatch coder
 subagents. Earlier staged handoff runs can work with lower spawn depth because
 the parent/supervisor runs architect first, then manually hands the plan to a
@@ -160,9 +160,9 @@ preflight_qc:
     delegation.orchestrator_enabled: true
     delegation.max_spawn_depth: ">= 2"
     delegation.child_timeout_seconds: ">= planned_timeout_seconds"
-  recommended_for_bselective_cascade:
+  recommended_for_cascade:
     delegation.child_timeout_seconds: 1200
-  required_for_critcascade:
+  required_for_cascade_critic:
     delegation.max_spawn_depth: ">= 3"
 ```
 
@@ -184,8 +184,42 @@ architect-dispatch.
 ## 3. Cascade audit rules
 
 These rules apply only to `cascade critic audit`. Internal critics remain
-same-model; an external audit uses another model or an explicitly configured
-model list.
+same-model; external auditors use other models from the ordered instance-local
+list.
+
+### Instance audit model list
+
+Each instance owns one ordered list for both design and code audits. The system
+ships only the placeholder template
+`templates/audit-models.template.yaml`; the real file belongs in instance
+content at `./bSmart/State/bswarm-audit-models.yaml`. Keep it free of secrets.
+The list is intentionally empty by default: an empty list means the audit is
+**blocked until configured**.
+
+Preflight must fail closed when the list is empty or every entry is the same
+model as the implementing/critic model. Show the configured list in order and
+ask the operator to change it; never silently audit with the same model. If the
+adapter cannot name or select models, retain the intended order and record that
+the auditor could not be launched.
+
+Walk the list in order for both design and code audits. Continue only when the
+current auditor produced an `automatic` or `decision` finding; optional-only
+stops the list. Record the actual model id used per auditor, or explicitly
+record that it could not be launched.
+
+Operator commands (aliases may be supported):
+
+```text
+list audit models
+change audit models
+```
+
+`list audit models` prints the ordered instance list and its file path, or says
+that it is unset and `cascade critic audit` is blocked until set. `change audit
+models` replaces the ordered list, or applies an explicit add/remove/move
+request when supported, then confirms the resulting order. Do not put secrets
+in the file. Different instances may have different lists without forking the
+system repository.
 
 - Run a **design audit** after the first architect plan, before substantial code.
 - Run a **code audit** after the architect task list is empty by default.
@@ -207,6 +241,8 @@ class, status, and stop reason; it records optional findings as a count only.
 ```yaml
 audit:
   enabled: true
+  models_file: ./bSmart/State/bswarm-audit-models.yaml
+  model_list: []
   design: after_architect_plan
   code: after_task_list_empty
   audit_after_task: false
@@ -414,8 +450,8 @@ branches:
     stages: [architect, coder]
   cascade:
     pattern: architect_taskflow
-    architect_context_mode: ordinary
-    coder_context_mode: ordinary
+    architect_context_mode: bselective
+    coder_context_mode: bselective
     stages: [architect, coder, architect_evaluation]
   bselective_cascade:
     pattern: architect_taskflow
