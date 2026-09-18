@@ -4,8 +4,8 @@
 
 - Goal: <one line>
 - Outcome: reached | not_reached | partial | inconclusive | blocked | unsafe
-- Workflow keyword: ordinary | bSelective | architect | bSelective architect | cascade | bSelective cascade | critcascade
-- Workflow: direct | architect_handoff | architect_taskflow | critcascade
+- Workflow keyword: ordinary | bSelective | architect | bSelective architect | cascade | cascade critic | cascade critic audit
+- Workflow: direct | architect_handoff | architect_taskflow | critcascade | critcascade_audit
 - Runtime adapter: hermes | opencode | codex | claude | unknown
 - Preflight QC: passed | blocked | downgraded | not_run
 - Mode: unsupervised | supervised
@@ -14,6 +14,17 @@
 - Branch shape: direct_worker | architect_coder | mixed
 - Recommendation: <one line>
 - Next step: <one line>
+
+## Project job
+
+Use for a bounded cascade that should be reopenable from project content.
+
+- Package: `<project>/jobs/<YYYY-MM-DD>-<slug>/`
+- Report: `report.md` — first-open quick-glance report, updated in place
+- Plan: `plan.md`
+- Index: `<project>/jobs/README.md`
+- Report contract: external-audit bullets only; optional findings are count only.
+- Trust / not verified: `<short note>`
 
 ## Run specification
 
@@ -87,6 +98,20 @@ preflight_qc:
   warning_to_user: <exact warning shown, or none>
   action_taken: start | stop_for_settings | downgrade_to_supervisor_mediated_architect_handoff | downgrade_to_supervisor_mediated_cascade
 ```
+
+## External audits
+
+Only include for `cascade critic audit`. Internal critics remain same-model;
+external auditors use another model or an explicit model list.
+
+| Auditor | Kind | Class | Status | Stop reason |
+|---|---|---|---|---|
+| `<name>` | design | automatic / decision / optional | `<status>` | `<reason>` |
+| `<name>` | code | automatic / decision / optional | `<status>` | `<reason>` |
+
+- Auditor proposals are re-sorted by the parent agent; unsure means `decision`.
+- Continue to the next auditor only for `automatic` or `decision`.
+- Optional-only findings stop the auditor list.
 
 ## Statistics
 
