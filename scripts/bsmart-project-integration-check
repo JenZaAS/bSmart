@@ -7,6 +7,7 @@ restarts Hermes. Installation belongs to the interactive bSmart setup flow.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import os
 import shutil
 import subprocess
@@ -37,6 +38,10 @@ def main() -> int:
     installed_ok = (plugin_dir / "plugin.yaml").is_file() and (plugin_dir / "__init__.py").is_file()
     node_ok = shutil.which("node") is not None
     changed = False
+    stale = installed_ok and any(
+        (plugin_dir / filename).read_bytes() != (PLUGIN_SOURCE / filename).read_bytes()
+        for filename in ("plugin.yaml", "__init__.py")
+    ) if installed_ok else False
 
     if not args.quiet:
         print("bSmart project integration check:")
@@ -48,9 +53,14 @@ def main() -> int:
     if not source_ok:
         print("bSmart project integration: setup_blocked — adapter source is missing")
         return 2
-    if not installed_ok or not node_ok:
+    if not installed_ok or stale:
         if args.install and source_ok and node_ok:
             plugin_dir.mkdir(parents=True, exist_ok=True)
+            if stale:
+                backup = plugin_dir / ".bsmart-plugin-backups" / dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
+                backup.mkdir(parents=True, exist_ok=True)
+                for filename in ("plugin.yaml", "__init__.py"):
+                    shutil.copy2(plugin_dir / filename, backup / filename)
             for filename in ("plugin.yaml", "__init__.py"):
                 shutil.copy2(PLUGIN_SOURCE / filename, plugin_dir / filename)
             installed_ok = True
@@ -80,7 +90,7 @@ def main() -> int:
             changed = True
 
     if changed:
-        print("bSmart project integration: installed/enabled — restart or relaunch Hermes to activate /project")
+        print("bSmart project integration: installed/updated/enabled — restart or relaunch Hermes to activate /project")
         return 0
 
     if not installed_ok or not node_ok:

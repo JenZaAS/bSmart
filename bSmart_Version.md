@@ -1,9 +1,22 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.37-draft
+current_version: 0.1.38-draft
 updated: 2026-09-20 08:03 UTC
 status: draft
+```
+
+## 0.1.38-draft
+
+```yaml
+release_type: refresh_stale_managed_project_plugin
+scope:
+  - detect stale installed bsmart-project plugin files
+  - back up and refresh the managed plugin during bsmart-update
+  - ensure role-owned project context reaches /project commands
+verification:
+  - project plugin tests pass
+  - prior system, project, bSwarm, and bStart tests remain green
 ```
 
 ## 0.1.37-draft
