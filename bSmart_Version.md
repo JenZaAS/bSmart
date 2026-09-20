@@ -1,9 +1,35 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.38-draft
+current_version: 0.1.40-draft
 updated: 2026-09-20 08:03 UTC
 status: draft
+```
+
+## 0.1.40-draft
+
+```yaml
+release_type: mounted_git_ownership_compatibility
+scope:
+  - handle Git safe-directory checks for mounted repositories
+  - accept the selected branch and upstream during freshness checks
+  - make bStart Git status work under differing container filesystem ownership
+verification:
+  - Git ownership/branch smoke check passes
+  - prior system, project, bSwarm, and bStart tests remain green
+```
+
+## 0.1.39-draft
+
+```yaml
+release_type: container_git_and_branch_compatibility
+scope:
+  - handle mounted bSmart-System repositories with differing filesystem ownership
+  - accept the selected branch and its upstream during freshness checks unless a branch is explicitly required
+  - support Hugo testing on redesign/deterministic-startup without a false main-branch warning
+verification:
+  - system update helper compiles and runs
+  - prior system, project, bSwarm, and bStart tests remain green
 ```
 
 ## 0.1.38-draft

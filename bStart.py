@@ -31,6 +31,10 @@ def run(command: list[str], cwd: Path, timeout: int = 60) -> subprocess.Complete
         return subprocess.CompletedProcess(command, 1, "", str(exc))
 
 
+def git_run(repo: Path, args: list[str], timeout: int = 20) -> subprocess.CompletedProcess[str]:
+    return run(["git", "-c", f"safe.directory={repo}", *args], repo, timeout)
+
+
 def first_value(text: str, keys: tuple[str, ...]) -> str | None:
     for line in text.splitlines():
         stripped = line.strip()
@@ -57,17 +61,17 @@ def resolve_paths(workspace: Path) -> tuple[Path, Path]:
 def git_status(repo: Path, label: str) -> str:
     if not (repo / ".git").exists():
         return f"{label}: no Git repository"
-    status = run(["git", "status", "--porcelain"], repo, 20)
-    branch = run(["git", "branch", "--show-current"], repo, 20)
+    status = git_run(repo, ["status", "--porcelain"])
+    branch = git_run(repo, ["branch", "--show-current"])
     if status.returncode != 0 or branch.returncode != 0:
         return f"{label}: Git status unavailable"
     dirty = bool(status.stdout.strip())
     branch_name = branch.stdout.strip() or "detached"
-    upstream = run(["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], repo, 20)
+    upstream = git_run(repo, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"])
     if upstream.returncode != 0:
         suffix = "uncommitted changes" if dirty else "clean; no remote tracking branch"
         return f"{label}: {suffix} ({branch_name})"
-    counts = run(["git", "rev-list", "--left-right", "--count", "HEAD...@{u}"], repo, 20)
+    counts = git_run(repo, ["rev-list", "--left-right", "--count", "HEAD...@{u}"])
     ahead = behind = 0
     if counts.returncode == 0:
         values = counts.stdout.split()

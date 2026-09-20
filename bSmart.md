@@ -109,7 +109,7 @@ startup_hooks:
   rule: HERMES.md, AGENTS.md, and any other supported hook files use the same shared template.
 
 update_workflow:
-  pull: Run `python3 /workspace/bSmart-System/scripts/bsmart-system-update-check --auto-pull` only when the operator asks to pull/update the system checkout.
+  pull: Run `python3 /workspace/bSmart-System/scripts/bsmart-system-update-check --auto-pull` only when the operator asks to pull/update the system checkout; the currently checked-out branch and its upstream are authoritative unless a specific expected branch is requested.
   update: Run `python3 /workspace/bSmart-System/scripts/bsmart-update` after the desired system revision is present; this never pulls Git.
   setup: Run the same `bsmart-update` finalization for an existing instance, then ask only about missing or ambiguous instance-specific configuration.
   required_sequence: pull_or_confirm_revision, update, restart_or_relaunch, /new, Hi
