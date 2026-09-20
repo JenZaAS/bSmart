@@ -69,7 +69,9 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | `./bSmart-System/bSmart_Templates/CLAUDE.md` | Claude launcher hook; identical redirect content to AGENTS.md | low | launcher only |
 | `./bSmart-System/bSmart-Extensions/` | Optional and bundled feature implementations | low | feature use only |
 | `./bSmart-System/integrations/` | Runtime-specific adapters | low | active runtime only |
-| `./bSmart-System/scripts/` | Deterministic helper programs and lookup tools | low | execution only |
+| `./bSmart-System/scripts` | Deterministic helper programs and lookup tools | low | execution only |
+| `./bSmart-System/scripts/bsmart-role-core.mjs` | Shared role command and explicit legacy migration engine | low | role commands/migration |
+| `./bSmart-System/scripts/bsmart-role.mjs` | JSON CLI transport for role commands | low | execution only |
 | `./bSmart-System/tests/` | System validation | low | explicit testing only |
 | `./bSmart-System/bSmart_Docs/` | Human-facing system documentation | low | explicit request only |
 
@@ -136,7 +138,7 @@ It should describe only that project’s:
 | `./bSmart/Roles/current_role.md` | Selector for the one role loaded at startup; defaults to General | high | startup |
 | `./bSmart/Roles/<role-id>_role.md` | One role's complete active state and operational focus | high | selected role |
 | `./bSmart/<file>.bLock` | Temporary file-level write lock used by concurrent roles | transient | never automatic |
-| `./bSmart/bSmart_State.md` | Deprecated compatibility state during role migration; not an active source | high | migration only |
+| `./bSmart/bSmart_State.md` | Preserved legacy compatibility state; never an active source | high | explicit migration only |
 | `./bSmart/bSmart_TODO.md` | Instance-level current/open tasks | high | general role only or request |
 | `./bSmart/bSmart_Log.md` | Instance decision/action log | high | explicit request only |
 | `./bSmart/bHistory.md` | Concise completed-work history | medium | explicit request or handoff |

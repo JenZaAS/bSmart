@@ -43,4 +43,4 @@ Multiple roles may work with the same project. bSmart does not lock an entire pr
 
 ## Legacy state
 
-`bSmart_State.md` is not active role state. During migration, read it only to extract the last known project/workstream/focus into the selected role file, verify the migration, and then retire the legacy file.
+`bSmart_State.md` is not active role state. During explicit migration, copy the last known project/workstream/focus into the selected role file and append unknown legacy material under a clearly marked review section. Verify the migration, but do not delete or retire the legacy file without explicit approval.

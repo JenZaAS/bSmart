@@ -17,58 +17,34 @@ function name(s) {
  return s;
 }
 function contextOf(input,ops=nativeOps) {
- if(!input?.projectsRoot||!input.stateFile||!input.archiveRoot)fail('Explicit projectsRoot, stateFile and archiveRoot required');
- const c=Object.fromEntries(Object.entries(input).map(([k,v])=>[k,['projectsRoot','stateFile','archiveRoot','home'].includes(k)?safePath(v):v]));
+ if(!input?.projectsRoot||!input.rolesRoot||!input.selectorFile||!input.archiveRoot)fail('Explicit projectsRoot, rolesRoot, selectorFile and archiveRoot required');
+ const c=Object.fromEntries(Object.entries(input).map(([k,v])=>[k,['projectsRoot','rolesRoot','selectorFile','roleFile','legacyStateFile','archiveRoot','home'].includes(k)?safePath(v):v]));
  c.ops={...nativeOps,...ops};
  if(c.projectsRoot===path.parse(c.projectsRoot).root)fail('Filesystem root is not a projects root');
- if(path.basename(c.stateFile)!=='bSmart_State.md')fail('State file must be bSmart_State.md');
  if(!fs.statSync(c.projectsRoot).isDirectory())fail('Projects root must exist');
+ if(!fs.existsSync(c.selectorFile))fail('Role selector does not exist');
+ const selected=selectedRole(c); c.roleFile=c.roleFile??path.join(c.rolesRoot,`${selected}_role.md`);
+ if(!fs.existsSync(c.roleFile))fail(`Selected role file does not exist: ${c.roleFile}`);
  return c;
 }
-function stateText(c){return fs.existsSync(c.stateFile)?fs.readFileSync(c.stateFile,'utf8'):'# bSmart state\n';}
-function yamlScalar(raw){
- const value=raw.trim();
- if(value.startsWith('"')){try{const parsed=JSON.parse(value);if(typeof parsed!=='string')fail('Invalid state scalar');return parsed;}catch{fail('Invalid quoted state scalar');}}
- if(value.startsWith("'")){if(!value.endsWith("'"))fail('Invalid quoted state scalar');return value.slice(1,-1).replace(/''/g,"'");}
- return value.replace(/\s+#.*$/,'').trim();
-}
+function stateText(c){return fs.readFileSync(c.roleFile,'utf8');}
+function yamlScalar(raw){const value=raw.trim();if(value.startsWith('"')){try{return JSON.parse(value);}catch{fail('Invalid quoted role scalar');}}if(value.startsWith("'")){if(!value.endsWith("'"))fail('Invalid quoted role scalar');return value.slice(1,-1).replace(/''/g,"'");}return value.replace(/\s+#.*$/,'').trim();}
+function selectedRole(c){const text=fs.readFileSync(c.selectorFile,'utf8');const m=text.match(/^\s*current_role:\s*([^\s#]+)\s*$/mi);const role=m?.[1]??'general';name(role);return role;}
 function parseState(c){
- const text=stateText(c),notes=text.search(/^Notes:\s*$/mi),top=notes<0?text:text.slice(0,notes);
- const fenced=[];const fenceRe=/^```(?:yaml|yml)\s*\n([\s\S]*?)^```\s*$/gmi;let m;
- while((m=fenceRe.exec(top)))fenced.push(m[1]);
- const bulletText=top.replace(fenceRe,block=>'\n'.repeat((block.match(/\n/g)||[]).length));
- const values={};
- for(const [label,key] of Object.entries(yamlKeys)){
-  const escaped=label.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  const bullets=[...bulletText.matchAll(new RegExp(`^- ${escaped}: \\x60([^\\x60]*)\\x60\\s*$`,'gmi'))].map(x=>x[1]);
-  const yaml=[];for(const block of fenced)for(const hit of block.matchAll(new RegExp(`^${key}:\\s*([^\\n]*)$`,'gmi')))yaml.push(yamlScalar(hit[1]));
-  if(bullets.length>1||yaml.length>1)fail(`Duplicate state field: ${key}`);
-  if(bullets.length&&yaml.length&&bullets[0]!==yaml[0])fail(`Conflicting state field: ${key}`);
-  values[key]=bullets[0]??yaml[0]??null;
+ const text=stateText(c), values={};
+ for(const [key,fieldName] of [['active_project','active_project'],['active_workstream','active_workstream'],['updated_at_utc','updated_at_utc'],['current_focus','current_focus'],['task_handoff','task_handoff']]){
+  const hits=[...text.matchAll(new RegExp(`^\\s*${key}:\\s*(.+?)\\s*$`,'gmi'))];
+  if(hits.length>1)fail(`Duplicate role field: ${key}`); values[fieldName]=hits[0]?yamlScalar(hits[0][1]):null;
  }
- const any=Object.values(values).some(v=>v!==null);
- if(any&&(!values.mode||!values.active_project))fail('Incomplete state metadata');
- if(values.mode&&!['Project','Free Mode'].includes(values.mode))fail('Invalid state mode');
- if(values.mode==='Project'&&values.active_project==='none')fail('Project mode requires an active project');
- if(values.mode==='Free Mode'&&values.active_project!=='none')fail('Free Mode requires no active project');
- if(values.mode==='Free Mode'&&values.active_workstream&&values.active_workstream!=='none')fail('Free Mode cannot have an active workstream');
- return {text,values,topEnd:notes<0?text.length:notes};
+ return {text,values};
 }
-function field(c,label,snapshot=parseState(c)){return snapshot.values[yamlKeys[label]];}
+function field(c,label,snapshot=parseState(c)){const key=yamlKeys[label];if(key==='mode')return snapshot.values.active_project&&snapshot.values.active_project!=='none'?'Project':'Free Mode';return snapshot.values[key];}
 function atomic(c,file,text){safePath(file);const tmp=file+'.'+crypto.randomUUID()+'.tmp';try{c.ops.writeFileSync(tmp,text,{flag:'wx',mode:0o600});c.ops.renameSync(tmp,file);}finally{try{c.ops.rmSync(tmp,{force:true});}catch{}}}
 function updateState(c,project,workstream=null){
  const snapshot=parseState(c);let text=snapshot.text;
- for(const [label,value] of Object.entries({'Mode':project?'Project':'Free Mode','Active project (short name)':project??'none','Active workstream':workstream??'none','Updated at (UTC)':new Date().toISOString()})){
-  const key=yamlKeys[label],bullet=`- ${label}: \`${value}\``,escaped=label.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),bulletRe=new RegExp(`^- ${escaped}:.*$`,'m');
-  let notes=text.search(/^Notes:\s*$/mi),topEnd=notes<0?text.length:notes,top=text.slice(0,topEnd),rest=text.slice(topEnd),bulletChanged=false;
-  if(bulletRe.test(top)){text=top.replace(bulletRe,bullet)+rest;bulletChanged=true;}
-  notes=text.search(/^Notes:\s*$/mi);topEnd=notes<0?text.length:notes;top=text.slice(0,topEnd);
-  const fences=[...top.matchAll(/^```(?:yaml|yml)\s*\n([\s\S]*?)^```\s*$/gmi)];let yamlChanged=false;
-  for(const fence of fences){const keyRe=new RegExp(`^${key}:.*$`,'m');if(keyRe.test(fence[1])){const replaced=fence[0].replace(keyRe,`${key}: ${JSON.stringify(value)}`);text=text.slice(0,fence.index)+replaced+text.slice(fence.index+fence[0].length);yamlChanged=true;break;}}
-  if(!yamlChanged&&fences.length){const fence=fences[0],replaced=fence[0].replace(/^```\s*$/m,`${key}: ${JSON.stringify(value)}\n\`\`\``);text=text.slice(0,fence.index)+replaced+text.slice(fence.index+fence[0].length);yamlChanged=true;}
-  if(!bulletChanged&&!yamlChanged){const insert=text.search(/^Notes:\s*$/mi);text=(insert<0?text.trimEnd()+'\n'+bullet+'\n':text.slice(0,insert)+bullet+'\n\n'+text.slice(insert));}
- }
- atomic(c,c.stateFile,text);return {project,workstream};
+ const updates={active_project:project??'none',active_workstream:workstream??'none',updated_at_utc:new Date().toISOString()};
+ for(const [key,value] of Object.entries(updates)){const re=new RegExp(`^(\\s*${key}:\\s*).*$`,'mi');if(re.test(text))text=text.replace(re,`$1${JSON.stringify(value)}`);else text=text.trimEnd()+`\\n  ${key}: ${JSON.stringify(value)}\\n`;}
+ atomic(c,c.roleFile,text);return {project,workstream};
 }
 function folders(root){if(!fs.existsSync(root))return [];safePath(root);return fs.readdirSync(root,{withFileTypes:true}).filter(e=>e.isDirectory()&&!e.name.startsWith('.')).map(e=>({name:e.name,path:path.join(root,e.name),kind:fs.existsSync(path.join(root,e.name,'project.md'))||fs.existsSync(path.join(root,e.name,'README.md'))?'bsmart':'plain'})).sort((a,b)=>a.name.localeCompare(b.name));}
 function distance(a,b){let row=Array.from({length:b.length+1},(_,i)=>i);for(let i=0;i<a.length;i++){const next=[i+1];for(let j=0;j<b.length;j++)next.push(Math.min(next[j]+1,row[j+1]+1,row[j]+(a[i]===b[j]?0:1)));row=next;}return row[b.length];}
@@ -82,7 +58,7 @@ function perform(command,c){
  const args=tokens(command.trim());if(!['/project','/projcet'].includes(args.shift()))fail('Expected /project');
  if(!args.length||(args[0]==='list'&&args.length===1)){const projects=folders(c.projectsRoot);try{return {status:'ok',projectsRoot:c.projectsRoot,projects,selection:readSelectionInner(c),diagnostic:'Projects listed'};}catch(error){return {status:'ok',projectsRoot:c.projectsRoot,projects,selection:{project:null,workstream:null,cwd:null},diagnostic:`Projects listed; stale or ambiguous active selection: ${error.message}`};}}
  if(args[0]==='add'){
-  if(args[1]==='ws'&&args.length===3){const p=current(c),root=safePath(path.join(c.projectsRoot,p,'workstreams'));absent(root,args[2]);fs.mkdirSync(root,{recursive:true});fs.mkdirSync(path.join(root,args[2]));c.ops.writeFileSync(path.join(root,args[2],'README.md'),`# ${args[2]}\n\nProject workstream. Selection is owned by bSmart_State.md; see bSmart_Protocols/state.md.\n`);return {status:'ok',selection:updateState(c,p,args[2]),diagnostic:'Workstream created'};}
+  if(args[1]==='ws'&&args.length===3){const p=current(c),root=safePath(path.join(c.projectsRoot,p,'workstreams'));absent(root,args[2]);fs.mkdirSync(root,{recursive:true});fs.mkdirSync(path.join(root,args[2]));c.ops.writeFileSync(path.join(root,args[2],'README.md'),`# ${args[2]}\n\nProject workstream. Selection is owned by the selected role file; see bSmart_Protocols/roles-and-concurrency.md.\n`);return {status:'ok',selection:updateState(c,p,args[2]),diagnostic:'Workstream created'};}
   if(args.length!==2)fail('Use /project add NAME or /project add ws WS');const p=args[1];absent(c.projectsRoot,p);const root=path.join(c.projectsRoot,p);fs.mkdirSync(root);
   const projectMd=`# ${p}\n\nproject_name: ${JSON.stringify(p)}\nstatus: active\nowner: unspecified\nobjective: unspecified\nagent_focus: unspecified\n\n## Context routing\n\nBefore coding, debugging, testing, designing, or documenting this project, consult \`knowledge/task-context-routing.md\`. Load only the task-specific knowledge bundle it identifies; do not load the complete knowledge tree by default.\n`;
   const routingMd=`# ${p} task context routing\n\nPurpose: keep agent context small by mapping work to the smallest useful set of project knowledge files.\n\n## Default\n\nAlways load:\n\n- \`project.md\`\n- \`knowledge/README.md\`\n- this file\n\nThen select one or more task bundles below. Load only the task-specific knowledge bundle(s) required for the current task; do not load unrelated bundles by default.\n\n## Task bundles\n\nAdd project-specific task bundles here. Each bundle should list only the knowledge, workstream, source-navigation, or decision files needed for that kind of task. Examples include coding/debugging/testing, UI/UX, architecture/design, documentation, and domain-specific workflows.\n\n### General project orientation\n\n- \`knowledge/general/\` only when the task needs broad project or domain orientation\n- the relevant code-knowledge file only when source navigation is required\n\n## Routing rules\n\n- Add a bundle only when the task requires it or the first investigation shows that the initial bundle is insufficient.\n- Prefer current application callers and active implementation paths over inherited helpers or stale flows.\n- Register non-authoritative or legacy flows explicitly and consult their warning note before relying on them. Verify the active caller chain before using inherited or stale code paths.\n- Promote stable, reusable routing conclusions into this file; keep temporary task details in the relevant workstream or workdoc.\n`;
@@ -96,8 +72,8 @@ const hash=s=>crypto.createHash('sha256').update(s).digest('hex');
 function hashFile(file){const digest=crypto.createHash('sha256'),buffer=Buffer.allocUnsafe(1024*1024),fd=fs.openSync(file,'r');try{let bytes;do{bytes=fs.readSync(fd,buffer,0,buffer.length,null);if(bytes)digest.update(buffer.subarray(0,bytes));}while(bytes);}finally{fs.closeSync(fd);}return digest.digest('hex');}
 function manifest(root){const rows=[];function walk(p,rel){const st=fs.lstatSync(p);if(st.isSymbolicLink()||(!st.isDirectory()&&!st.isFile()))fail('Project contains a symlink or special file');if(st.isDirectory()){rows.push([rel,'dir']);for(const child of fs.readdirSync(p).sort())walk(path.join(p,child),rel+'/'+child);}else rows.push([rel,'file',st.size,hashFile(p)]);}walk(root,'');return JSON.stringify(rows);}
 function identity(target){const s=fs.statSync(target);return `${s.dev}:${s.ino}:${s.birthtimeMs}`;}
-function binding(c){return {projectsRoot:c.projectsRoot,stateFile:c.stateFile,archiveRoot:c.archiveRoot};}
-function pendingFile(c){return safePath(path.join(c.home??path.dirname(c.stateFile),'.bsmart-project-pending.json'));}
+function binding(c){return {projectsRoot:c.projectsRoot,roleFile:c.roleFile,archiveRoot:c.archiveRoot};}
+function pendingFile(c){return safePath(path.join(c.home??path.dirname(c.roleFile),'.bsmart-project-pending.json'));}
 function outside(root,p){const rel=path.relative(root,p);return rel==='..'||rel.startsWith('..'+path.sep)||path.isAbsolute(rel);}
 function appendWarning(result,message){return {...result,cleanupWarning:result.cleanupWarning?`${result.cleanupWarning}; ${message}`:message};}
 function destructive(command,c,confirmation){
@@ -111,7 +87,7 @@ function destructive(command,c,confirmation){
   if(p.operation==='rename'){
    absent(c.projectsRoot,p.newName);const dest=path.join(c.projectsRoot,p.newName),metadata=path.join(target,'project.md'),before=fs.existsSync(metadata)?fs.readFileSync(metadata,'utf8'):null,stateBefore=stateText(c),ws=field(c,'Active workstream',snapshot)==='none'?null:field(c,'Active workstream',snapshot);c.ops.renameSync(target,dest);
    try{if(before!==null){let text=before.replace(/^project_name:.*$/m,`project_name: ${JSON.stringify(p.newName)}`).replace(/^# .*$/m,`# Project: ${p.newName}`).replace(/(^project:\s*\n)((?:[ \t]+[^\n]*\n)*)/m,(_a,h,b)=>h+b.replace(/^(  (?:name|short_name):).*$/gm,`$1 ${JSON.stringify(p.newName)}`));atomic(c,path.join(dest,'project.md'),text);}const selection=updateState(c,p.newName,ws);return {status:'ok',selection,diagnostic:'Project renamed'};}
-   catch(error){const failures=[];try{if(before!==null)atomic(c,path.join(dest,'project.md'),before);}catch(e){failures.push(`metadata rollback failed: ${e.message}`);}try{c.ops.renameSync(dest,target);}catch(e){failures.push(`directory rollback failed: ${e.message}`);}try{if(stateText(c)!==stateBefore)atomic(c,c.stateFile,stateBefore);}catch(e){failures.push(`state rollback failed: ${e.message}`);}const wrapped=Error(failures.length?`${error.message}; rollback incomplete: ${failures.join('; ')}`:error.message);if(failures.length)wrapped.quarantinePath=fs.existsSync(dest)?dest:null;throw wrapped;}
+   catch(error){const failures=[];try{if(before!==null)atomic(c,path.join(dest,'project.md'),before);}catch(e){failures.push(`metadata rollback failed: ${e.message}`);}try{c.ops.renameSync(dest,target);}catch(e){failures.push(`directory rollback failed: ${e.message}`);}try{if(stateText(c)!==stateBefore)atomic(c,c.roleFile,stateBefore);}catch(e){failures.push(`state rollback failed: ${e.message}`);}const wrapped=Error(failures.length?`${error.message}; rollback incomplete: ${failures.join('; ')}`:error.message);if(failures.length)wrapped.quarantinePath=fs.existsSync(dest)?dest:null;throw wrapped;}
   }
   if(!['retire','delete'].includes(p.operation))fail('Unknown pending operation');let archivePath;
   if(p.operation==='retire'){if(!outside(c.projectsRoot,c.archiveRoot))fail('Archive root must be outside projects root');safePath(c.archiveRoot);fs.mkdirSync(c.archiveRoot,{recursive:true});archivePath=generatedAbsent(c.archiveRoot,p.project+'-'+p.id);fs.cpSync(target,archivePath,{recursive:true,errorOnExist:true,force:false,verbatimSymlinks:true});if(hash(manifest(archivePath))!==p.manifestHash||hash(manifest(target))!==p.manifestHash)fail('Archive verification failed; source retained');}
@@ -120,15 +96,15 @@ function destructive(command,c,confirmation){
   let result={status:'ok',selection,...(archivePath?{archivePath}:{}),diagnostic:p.operation==='retire'?'Project archive byte/inventory verified; project retired':'Project deleted'};
   try{c.ops.rmSync(quarantine,{recursive:true,force:false});}catch(error){result={...result,quarantinePath:quarantine};result=appendWarning(result,`cleanup removal failed: ${error.message}`);}return result;
  }
- if(!['rename','retire','delete'].includes(op))return null;if(args.length!==(op==='rename'?2:1))fail('Destructive commands act only on the exact current project');const snapshot=parseState(c),project=current(c,snapshot),target=safePath(path.join(c.projectsRoot,project));if(!outside(target,c.stateFile)||!outside(target,file)||!outside(target,c.archiveRoot))fail('State, pending storage and archive must be outside target');if(op==='rename')absent(c.projectsRoot,args[1]);if(op==='retire'&&!outside(c.projectsRoot,c.archiveRoot))fail('Archive root must be outside projects root');const pending={id:crypto.randomUUID(),operation:op,project,target,newName:op==='rename'?args[1]:null,context:binding(c),stateHash:hash(stateText(c)),identity:identity(target),manifestHash:hash(manifest(target)),expiresAt:Date.now()+300000};atomic(c,file,JSON.stringify(pending));return {status:'pending',pending:{id:pending.id,operation:op,project,target,newName:pending.newName,expiresAt:pending.expiresAt,choices:['yes','no']},diagnostic:`${op} exact project ${target}${pending.newName?' to '+pending.newName:''}? Yes/No required; expires in 5 minutes.`};
+ if(!['rename','retire','delete'].includes(op))return null;if(args.length!==(op==='rename'?2:1))fail('Destructive commands act only on the exact current project');const snapshot=parseState(c),project=current(c,snapshot),target=safePath(path.join(c.projectsRoot,project));if(!outside(target,c.roleFile)||!outside(target,file)||!outside(target,c.archiveRoot))fail('State, pending storage and archive must be outside target');if(op==='rename')absent(c.projectsRoot,args[1]);if(op==='retire'&&!outside(c.projectsRoot,c.archiveRoot))fail('Archive root must be outside projects root');const pending={id:crypto.randomUUID(),operation:op,project,target,newName:op==='rename'?args[1]:null,context:binding(c),stateHash:hash(stateText(c)),identity:identity(target),manifestHash:hash(manifest(target)),expiresAt:Date.now()+300000};atomic(c,file,JSON.stringify(pending));return {status:'pending',pending:{id:pending.id,operation:op,project,target,newName:pending.newName,expiresAt:pending.expiresAt,choices:['yes','no']},diagnostic:`${op} exact project ${target}${pending.newName?' to '+pending.newName:''}? Yes/No required; expires in 5 minutes.`};
 }
 function readSelectionInner(c){const snapshot=parseState(c),p=field(c,'Active project (short name)',snapshot);if(field(c,'Mode',snapshot)==='Free Mode'||!p||p==='none')return {project:null,workstream:null,cwd:null};const project=current(c,snapshot),ws=field(c,'Active workstream',snapshot);return {project,workstream:ws&&ws!=='none'?ws:null,cwd:path.join(c.projectsRoot,project)};}
 export function readSelection(context){return readSelectionInner(contextOf(context));}
 function executeWith(ops,{command,context,confirmation}={}){
- let c,lock,operationResult,operationError;
- try{c=contextOf(context,ops);const args=tokens(String(command??'').trim());const isList=['/project','/projcet'].includes(args[0])&&(args.length===1||(args.length===2&&args[1]==='list'));if(!isList)parseState(c);lock=safePath(c.stateFile+'.project-lock');const fd=fs.openSync(lock,'wx',0o600);fs.closeSync(fd);try{operationResult=destructive(command,c,confirmation)??perform(command,c);}catch(error){operationError=error;}}
+ let c,lock,acquired=false,operationResult,operationError;
+ try{c=contextOf(context,ops);const args=tokens(String(command??'').trim());const isList=['/project','/projcet'].includes(args[0])&&(args.length===1||(args.length===2&&args[1]==='list'));if(!isList)parseState(c);lock=safePath(c.roleFile+'.bLock');const fd=fs.openSync(lock,'wx',0o600);fs.closeSync(fd);acquired=true;try{operationResult=destructive(command,c,confirmation)??perform(command,c);}catch(error){operationError=error;}}
  catch(error){operationError=error;}
- let cleanupError;if(lock&&fs.existsSync(lock)){try{c.ops.unlinkSync(lock);}catch(error){cleanupError=error;}}
+ let cleanupError;if(acquired&&lock&&fs.existsSync(lock)){try{c.ops.unlinkSync(lock);}catch(error){cleanupError=error;}}
  if(operationError){const result={status:'error',diagnostic:operationError.message};if(operationError.quarantinePath)result.quarantinePath=operationError.quarantinePath;return cleanupError?appendWarning(result,`lock cleanup failed: ${cleanupError.message}`):result;}
  return cleanupError?appendWarning(operationResult,`lock cleanup failed: ${cleanupError.message}`):operationResult;
 }

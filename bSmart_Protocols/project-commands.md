@@ -3,15 +3,19 @@
 The portable, Node-stdlib implementation is `scripts/bsmart-project-core.mjs`.
 Both agent-chat adapters and Electron must call this engine, not duplicate command logic.
 
+The engine receives `projectsRoot`, `rolesRoot`, `selectorFile`, `roleFile`, and `archiveRoot`. The selected `roleFile` is the only active project/workstream state owner. `bSmart_State.md` is not read by project commands; migration is an explicit operation performed by `bsmart-role-core.mjs`.
+
 ## API and transport
 
 ```js
 import { execute } from './scripts/bsmart-project-core.mjs';
 const context = {
   projectsRoot: '/explicit/projects',
-  stateFile: '/explicit/home/bSmart_State.md',
+  rolesRoot: '/explicit/home/Roles',
+  selectorFile: '/explicit/home/Roles/current_role.md',
+  roleFile: '/explicit/home/Roles/general_role.md',
   archiveRoot: '/explicit/archives',
-  home: '/explicit/home' // optional; pending storage otherwise beside stateFile
+  home: '/explicit/home' // optional; pending storage otherwise beside the selected role file
 };
 execute({command: '/project list', context});
 // {status:'ok', projectsRoot:'/explicit/projects', projects:[{name,path,kind:'bsmart'|'plain'}], diagnostic:...}
@@ -25,7 +29,7 @@ execute({command:'/project yes',context,confirmation:{id:result.pending.id,answe
 
 `execute` is synchronous and returns `status: ok|pending|cancelled|error` and a human-readable `diagnostic`. Retire success additionally returns `archivePath`. Selection is canonical state, not an adapter-local preference. Errors do not throw across the public API.
 
-CLI: `node scripts/bsmart-project.mjs '<JSON request>'`, or pipe one JSON request to stdin. Exactly one JSON result is emitted on stdout; exit 1 for error, 0 otherwise. Paths must be explicitly resolved by the caller; no implicit live-project defaults. Projects root and state/pending parent directories must exist. State basename must be `bSmart_State.md`.
+CLI: `node scripts/bsmart-project.mjs '<JSON request>'`, or pipe one JSON request to stdin. Exactly one JSON result is emitted on stdout; exit 1 for error, 0 otherwise. Paths must be explicitly resolved by the caller; no implicit live-project defaults. Projects root, selected role, and pending parent directories must exist. Legacy `bSmart_State.md` is not a project-command input.
 
 ## Commands
 

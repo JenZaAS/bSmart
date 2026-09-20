@@ -350,7 +350,7 @@ Nap behavior:
 ## Possible future Dreaming checks
 
 - Detect TODO items marked complete in one file but still pending elsewhere.
-- Flag project files whose active status contradicts `bSmart_State.md`.
+- Flag project files whose active status contradicts the selected role file.
 - Identify long workdocs that should be archived into Library summaries.
 - Detect duplicated decisions across project notes and the global log.
 - Suggest moving reusable knowledge from workdocs into Library.

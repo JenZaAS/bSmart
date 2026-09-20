@@ -56,7 +56,8 @@ roots:
   extensions: <extensions-root>
 
 content_files:
-  state: <content-root>/bSmart_State.md
+  roles: <content-root>/Roles
+  legacy_state: <content-root>/bSmart_State.md
   todo: <content-root>/bSmart_TODO.md
   history: <content-root>/bHistory.md
   log: <content-root>/bSmart_Log.md
@@ -96,7 +97,7 @@ features:
 - Generic rules: `<system-root>/bSmart.md`
 - Absolute cross-runtime rules: `<system-root>/bSmart_Invariants.md`
 - Protocol index: `<system-root>/bSmart_Protocols/protocols.md`
-- Current project/state: `<content-root>/bSmart_State.md`
+- Current project/state: selected role file under `<content-root>/Roles`; legacy migration source: `<content-root>/bSmart_State.md`
 - Current tasks: `<content-root>/bSmart_TODO.md`
 - Completed work: `<content-root>/bHistory.md`
 - Larger instance work: `<content-root>/Workdocs/`

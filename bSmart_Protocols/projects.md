@@ -15,8 +15,8 @@ paths:
     - BSMART_PROJECT_ROOT when set to a readable/writable directory
     - /projects when readable/writable
     - ./projects when readable/writable from the current bSmart/workspace folder
-  state_file: /workspace/bSmart/bSmart_State.md
-  state_file_local: ./bSmart/bSmart_State.md
+  state_owner: selected role file under /workspace/bSmart/Roles
+  legacy_state_file: /workspace/bSmart/bSmart_State.md
 ```
 
 ```yaml

@@ -56,6 +56,8 @@ Role state is stored in one structured Markdown file per role. Do not split one 
 
 Role selection loads exactly one role file. The General role is always available as the fallback.
 
+The shared runtime is exposed by `scripts/bsmart-role-core.mjs` and its JSON transport `scripts/bsmart-role.mjs`. `/role set` updates only `current_role.md`; `/role add` creates a role from the template and selects it. Project commands receive the selected role file and never parse `bSmart_State.md`.
+
 ## Project sharing
 
 - Multiple roles may work with the same project.

@@ -1,9 +1,24 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.31-draft
+current_version: 0.1.32-draft
 updated: 2026-09-20 08:03 UTC
 status: draft
+```
+
+## 0.1.32-draft
+
+```yaml
+release_type: final_role_project_runtime_reconciliation
+scope:
+  - make the selected role file the sole active owner of project, workstream, focus, and handoff state
+  - add /role help, /role list, /role set, and /role add through the shared runtime
+  - make /project and /project ws resolve and update the selected role
+  - preserve bSmart_State.md for explicit migration and review, including unknown legacy fields
+  - verify role-file collision locking and synchronize map, protocol, template, adapter, and tests
+verification:
+  - role/project Node tests pass
+  - Python system, bSwarm, and bStart tests pass
 ```
 
 ## 0.1.19-draft

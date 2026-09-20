@@ -11,18 +11,23 @@ from typing import Any
 
 _DEFAULT_SYSTEM_ROOT = "/workspace/bSmart-System"
 _DEFAULT_PROJECTS_ROOT = "/projects"
-_DEFAULT_STATE_FILE = "/workspace/bSmart/bSmart_State.md"
+_DEFAULT_ROLES_ROOT = "/workspace/bSmart/Roles"
+_DEFAULT_SELECTOR_FILE = "/workspace/bSmart/Roles/current_role.md"
+_DEFAULT_LEGACY_STATE_FILE = "/workspace/bSmart/bSmart_State.md"
 _DEFAULT_ARCHIVE_ROOT = "/workspace/bSmart/.project-archives"
 
 
 def _context() -> dict[str, str]:
     """Resolve trusted process configuration, never paths from chat arguments."""
-    state_file = Path(os.environ.get("BSMART_STATE_FILE", _DEFAULT_STATE_FILE)).resolve()
+    roles_root = Path(os.environ.get("BSMART_ROLES_ROOT", _DEFAULT_ROLES_ROOT)).resolve()
+    selector_file = Path(os.environ.get("BSMART_ROLE_SELECTOR", _DEFAULT_SELECTOR_FILE)).resolve()
     return {
         "projectsRoot": str(Path(os.environ.get("BSMART_PROJECT_ROOT", _DEFAULT_PROJECTS_ROOT)).resolve()),
-        "stateFile": str(state_file),
+        "rolesRoot": str(roles_root),
+        "selectorFile": str(selector_file),
+        "legacyStateFile": str(Path(os.environ.get("BSMART_LEGACY_STATE_FILE", _DEFAULT_LEGACY_STATE_FILE)).resolve()),
         "archiveRoot": str(Path(os.environ.get("BSMART_ARCHIVE_ROOT", _DEFAULT_ARCHIVE_ROOT)).resolve()),
-        "home": str(state_file.parent),
+        "home": str(roles_root.parent),
     }
 
 
@@ -31,6 +36,14 @@ def _cli_path() -> Path:
     cli = root / "scripts" / "bsmart-project.mjs"
     if not cli.is_file():
         raise RuntimeError(f"bSmart project CLI not found: {cli}")
+    return cli
+
+
+def _role_cli_path() -> Path:
+    root = Path(os.environ.get("BSMART_SYSTEM_ROOT", _DEFAULT_SYSTEM_ROOT)).resolve()
+    cli = root / "scripts" / "bsmart-role.mjs"
+    if not cli.is_file():
+        raise RuntimeError(f"bSmart role CLI not found: {cli}")
     return cli
 
 
@@ -58,6 +71,18 @@ def _execute(command: str) -> dict[str, Any]:
     if not isinstance(result, dict):
         return {"status": "error", "diagnostic": "Invalid bSmart project CLI response shape"}
     return result
+
+
+def _execute_role(command: str) -> dict[str, Any]:
+    node = shutil.which("node")
+    if not node:
+        return {"status": "error", "diagnostic": "Node.js executable not found"}
+    try:
+        completed = subprocess.run([node, str(_role_cli_path())], input=json.dumps({"command": command, "context": _context()}), text=True, capture_output=True, timeout=120, check=False, shell=False)
+        result = json.loads(completed.stdout)
+        return result if isinstance(result, dict) else {"status": "error", "diagnostic": "Invalid bSmart role CLI response shape"}
+    except (OSError, subprocess.SubprocessError, RuntimeError, json.JSONDecodeError) as exc:
+        return {"status": "error", "diagnostic": str(exc)}
 
 
 def _format(result: dict[str, Any]) -> str:
@@ -116,8 +141,18 @@ def _handler(prefix: str):
     return handle
 
 
+def _role_handler(raw_args: str) -> str:
+    result = _execute_role("/role" + (f" {raw_args.strip()}" if raw_args and raw_args.strip() else " help"))
+    if result.get("status") == "error":
+        return f"Role command failed: {result.get('diagnostic', 'unknown error')}"
+    if isinstance(result.get("roles"), list):
+        return "Roles:\n" + "\n".join(f"- {r}{' (current)' if r == result.get('current') else ''}" for r in result["roles"])
+    return str(result.get("diagnostic", "Role command completed")) + (f" Current: {result['role']}." if result.get("role") else "")
+
+
 def register(ctx: Any) -> None:
     description = "List, select, create, rename, retire, or delete bSmart projects."
     args_hint = "[list|NAME|ws WS|add NAME|rename NAME|retire|delete|yes ID|no ID]"
     ctx.register_command("project", _handler("/project"), description, args_hint)
     ctx.register_command("projcet", _handler("/projcet"), "Alias for /project.", args_hint)
+    ctx.register_command("role", _role_handler, "List, select, or create bSmart roles.", "[help|list|set ROLE|add ROLE]")

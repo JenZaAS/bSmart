@@ -61,7 +61,7 @@ class ProjectPluginTests(unittest.TestCase):
             return self.ctx.commands[command]["handler"](args)
 
     def test_registers_both_commands_and_lists(self):
-        self.assertEqual(set(self.ctx.commands), {"project", "projcet"})
+        self.assertEqual(set(self.ctx.commands), {"project", "projcet", "role"})
         self.assertIn("Projects:", self.call("project"))
         self.assertIn("Free Mode", self.call("projcet", "list"))
 
