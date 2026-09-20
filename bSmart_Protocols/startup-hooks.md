@@ -15,11 +15,11 @@ Use the same content from `bSmart_Templates/AGENTS.md` for every supported start
 
 - `AGENTS.md`
 - `HERMES.md`
-- `.hermes.md`
 - `CLAUDE.md`
+- `.hermes.md`
 - `.cursorrules`
 
-`init` creates only the canonical `AGENTS.md` and `HERMES.md` files when they are missing. It never overwrites existing hooks.
+`init` creates the canonical `AGENTS.md`, `HERMES.md`, and `CLAUDE.md` files when they are missing. It never overwrites existing hooks.
 
 `reset` is an explicit operator command. It resets the canonical hooks and any other supported hook files that already exist.
 

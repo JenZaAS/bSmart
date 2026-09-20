@@ -14,7 +14,7 @@ protocol_index:
 | `operations.md` | Safe action cadence, approvals, secrets, and traceability | Any action with safety or approval implications |
 | `state.md` | Legacy `bSmart_State.md` migration rules | Migrating an older instance to role-owned state |
 | `projects.md` | Project structure, project focus, and project-context boundaries | Creating, listing, selecting, or opening projects |
-| `project-commands.md` | Hermes `/project` command behavior and lifecycle actions | Using or testing `/project` commands |
+- `project-commands.md` | Hermes `/project` command behavior and lifecycle actions | Using or testing `/project` commands |
 | `project-storage.md` | Project and sandbox roots, mounts, setup prompts, and storage checks | Configuring or troubleshooting project storage |
 | `workdocs.md` | Structured workdocs and larger multi-session work | Creating or maintaining a workdoc |
 | `knowledge.md` | Reusable knowledge storage and retrieval boundaries | Creating or searching bKnowledge |

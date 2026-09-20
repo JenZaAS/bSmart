@@ -1,7 +1,7 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.30-draft
+current_version: 0.1.31-draft
 updated: 2026-09-20 08:03 UTC
 status: draft
 ```
@@ -19,6 +19,23 @@ scope:
 verification:
   - focused bProtective tests pass
   - Hermes plugin manifest and registration are validated
+```
+
+## 0.1.31-draft
+
+```yaml
+release_type: deterministic_startup_entrypoint
+scope:
+  - add bStart.py as the session entrypoint
+  - perform safe bSmart-System auto-update checks and post-update integrity verification
+  - silently recover the role selector and General role
+  - resolve one role, project, and optional workstream
+  - load selected Markdown context and emit the compact startup summary
+  - add CLAUDE.md as an identical canonical launcher hook
+verification:
+  - isolated bStart tests pass
+  - system and bSwarm tests pass
+  - launcher templates remain identical
 ```
 
 ## 0.1.30-draft

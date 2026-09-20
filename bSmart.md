@@ -11,6 +11,22 @@ bsmart:
   extensions_root_local: ./bSmart-Extensions
   version_file: /workspace/bSmart-System/bSmart_Version.md
   setup_file: /workspace/bSmart-System/bSmart_Setup.md
+  startup_output:
+    greeting: "Hi, <operator-name>!"
+    compact_layout: true
+    rule: Do not insert blank lines between Agent, Role, Project, Workstream, or their indented help/status lines.
+    fields:
+      - Agent
+      - Role
+      - Project
+      - Workstream
+    common_commands:
+      role: "/role list | /role set <role> | /role add <role> | /role help"
+      project: "/project list | /project <project> | /project add <project> | /project help"
+      workstream: "/project ws <workstream> | /project add ws <workstream> | /project help"
+    help_commands:
+      role: "/role help shows the complete role command list and short explanations"
+      project: "/project help shows the complete project and workstream command list and short explanations"
   feature_registry: /workspace/bSmart-System/bSmart_Features.md
 
 path_resolution:
@@ -44,6 +60,8 @@ content_files:
   state_status: legacy_migration_only
   roles: /workspace/bSmart/Roles
   roles_local: ./bSmart/Roles
+  current_role: /workspace/bSmart/Roles/current_role.md
+  current_role_local: ./bSmart/Roles/current_role.md
   default_role: general
   todo: /workspace/bSmart/bSmart_TODO.md
   todo_local: ./bSmart/bSmart_TODO.md
@@ -51,6 +69,12 @@ content_files:
   history_local: ./bSmart/bHistory.md
   log: /workspace/bSmart/bSmart_Log.md
   log_local: ./bSmart/bSmart_Log.md
+  roles:
+    root: /workspace/bSmart/Roles
+    selector: /workspace/bSmart/Roles/current_role.md
+    selector_local: ./bSmart/Roles/current_role.md
+    default: general
+  role_state: /workspace/bSmart/Roles/<role-id>_role.md
   guardrails: /workspace/bSmart/bGuardrails.md
   guardrails_local: ./bSmart/bGuardrails.md
   container_storage: /workspace/bSmart/State/container-storage.yaml
@@ -157,6 +181,8 @@ startup_sequence:
   - read bSmart_Agent.md
   - if startup check reports project storage setup_required, immediately prompt the operator with Telegram buttons using clarify choices from bSmart_Protocols/project-storage.md before the normal TODO prompt
   - select exactly one role file, defaulting to /workspace/bSmart/Roles/general_role.md
+  - if Roles/ or current_role.md is missing, silently create the directory, selector, and general_role.md from templates
+  - if the selector names a missing role, fall back to general and repair the selector
   - do not load bSmart_State.md as active state; use it only during explicit role-state migration
   - inspect local Dreaming status after loading instance content
   - if Dreaming status is missing or ask_later, trigger the Dreaming setup prompt before the normal TODO prompt
@@ -164,9 +190,8 @@ startup_sequence:
   - use bHistory.md on request or when a recent completion summary needs historical context; do not load the full diary by default
   - scan bSmart_Protocols summaries and load relevant protocols
   - when the operator explicitly asks to start local-agent onboarding, load /workspace/bSmart-System/bSmart_Protocols/local-agent-onboarding.md
-  - first visible assistant reply starts with: "bSmart — Loading bSmart."
-  - then say: "Hi! Welcome back."
-  - show compact TODO-oriented startup summary
+  - first visible assistant reply starts with the bStart greeting: "Hi, <operator-name>!"
+  - then show the compact bStart startup summary
   - include one short help line: "Info keywords: help, features, setup, projects, tasks, safety."
   - ask whether to continue the current TODO item
 
@@ -195,7 +220,10 @@ visible_action_notes:
 missing_content_behavior:
   bSmart_Agent.md: run setup using bSmart_Templates/bSmart_Agent.template.md
   bGuardrails.md: create from bSmart_Templates/bGuardrails.template.md after approval
-  bSmart_State.md: create from template after approval
+  Roles/: create silently when missing
+  Roles/current_role.md: create silently selecting general when missing
+  Roles/general_role.md: create silently from bSmart_Templates/role.template.md when missing
+  bSmart_State.md: never create; migrate only when explicitly requested
   bSmart_TODO.md: create from template after approval
   bSmart_Log.md: create empty log from template after approval
 

@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 
 HOOK_NAMES = ("AGENTS.md", "HERMES.md", ".hermes.md", "CLAUDE.md", ".cursorrules")
-CANONICAL_HOOKS = ("AGENTS.md", "HERMES.md")
+CANONICAL_HOOKS = ("AGENTS.md", "HERMES.md", "CLAUDE.md")
 
 
 def resolve_root(value: str | None) -> Path:

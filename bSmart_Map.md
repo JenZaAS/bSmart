@@ -54,6 +54,7 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | Path | Purpose | Volatility | Loading |
 |---|---|---:|---|
 | `./bSmart-System/bSmart.md` | Short conceptual definition of bSmart and its major boxes | low | startup |
+| `./bSmart-System/bStart.py` | Deterministic session entrypoint: update, integrity, role recovery, context loading, and startup summary | low | every session |
 | `./bSmart-System/bSmart_Invariants.md` | Absolute cross-runtime bSmart rules | low | startup |
 | `./bSmart-System/bSmart_Map.md` | This logical system map | low | bStart routing |
 | `./bSmart-System/bSmart_Features.md` | Compact feature summaries and detail lookup metadata | low | compact startup |
@@ -64,6 +65,8 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | `./bSmart-System/bSmart_Protocols/roles-and-concurrency.md` | Role-owned state, shared projects, and `.bLock` file concurrency | low | role/concurrency use |
 | `./bSmart-System/bSmart_Templates/` | Templates for instance and project files | low | generation only |
 | `./bSmart-System/bSmart_Templates/role.template.md` | One-file role structure and role-owned state template | low | role setup/migration |
+| `./bSmart-System/bSmart_Templates/current-role.template.md` | Current-role selector template with General fallback | low | role setup/migration |
+| `./bSmart-System/bSmart_Templates/CLAUDE.md` | Claude launcher hook; identical redirect content to AGENTS.md | low | launcher only |
 | `./bSmart-System/bSmart-Extensions/` | Optional and bundled feature implementations | low | feature use only |
 | `./bSmart-System/integrations/` | Runtime-specific adapters | low | active runtime only |
 | `./bSmart-System/scripts/` | Deterministic helper programs and lookup tools | low | execution only |
@@ -130,6 +133,7 @@ It should describe only that project’s:
 | `./bSmart/bSmart_Agent.md` | Stable instance identity and access model | low | startup summary |
 | `./bSmart/bGuardrails.md` | Editable instance-level behavior and preferences | medium | startup |
 | `./bSmart/Roles/` | Named role files containing active project, workstream, focus, and handoff state | high | selected role |
+| `./bSmart/Roles/current_role.md` | Selector for the one role loaded at startup; defaults to General | high | startup |
 | `./bSmart/Roles/<role-id>_role.md` | One role's complete active state and operational focus | high | selected role |
 | `./bSmart/<file>.bLock` | Temporary file-level write lock used by concurrent roles | transient | never automatic |
 | `./bSmart/bSmart_State.md` | Deprecated compatibility state during role migration; not an active source | high | migration only |

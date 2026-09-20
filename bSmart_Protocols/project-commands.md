@@ -29,6 +29,7 @@ CLI: `node scripts/bsmart-project.mjs '<JSON request>'`, or pipe one JSON reques
 
 ## Commands
 
+- `/project help`: show the complete `/project` command list with short explanations.
 - `/project`, `/project list`: immediate non-hidden directories including plain folders; never recursively scan siblings.
 - `/project NAME [WS]`: select project, optionally existing workstream. Quote multiword names.
 - `/project ws WS`: select existing workstream of current project.

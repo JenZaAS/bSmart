@@ -17,10 +17,14 @@ protocol:
 ```yaml
 startup_order:
   - host_framework_persona
+  - bStart.py
   - /workspace/bSmart-System/bSmart.md
+  - /workspace/bSmart-System/bSmart_Invariants.md
   - /workspace/bSmart/bSmart_Agent.md
-  - /workspace/bSmart/bSmart_State.md
-  - /workspace/bSmart/bSmart_TODO.md
+  - /workspace/bSmart/bGuardrails.md when present
+  - /workspace/bSmart/Roles/current_role.md
+  - selected /workspace/bSmart/Roles/<role-id>_role.md
+  - selected project.md and workstream context when active
   - relevant_protocols
 ```
 
@@ -64,9 +68,9 @@ governance:
 After `/new`, the gateway reset itself may not be an agent-authored turn, but the first real reply after reset should be concise and discoverable:
 
 ```text
-bSmart — Loading bSmart.
-Hi! Welcome back.
-<compact startup/TODO summary>
+Hi, <operator-name>!
+bSmart — Startup
+<compact startup summary from bStart.py>
 Info keywords: help, features, setup, projects, tasks, safety.
 <short question about continuing the current TODO item>
 ```

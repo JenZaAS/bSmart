@@ -18,9 +18,14 @@ protocol:
 roles:
   root_container: /workspace/bSmart/Roles
   root_local: ./bSmart/Roles
+  selector: current_role.md
   filename: <role-id>_role.md
   default_role: general
   startup_rule: Load exactly one selected role file every session.
+  recovery:
+    missing_roles_directory: create directory, current_role.md, and general_role.md silently from templates
+    missing_selector: create current_role.md selecting general silently
+    missing_selected_role: fall back to general, create general_role.md if needed, and repair current_role.md
   general_role:
     id: general
     filename: general_role.md
@@ -39,6 +44,17 @@ roles:
 ```
 
 Role state is stored in one structured Markdown file per role. Do not split one role's active state across multiple state files unless a future measured need justifies it.
+
+## Role commands
+
+```text
+/role help             Show the complete role command list and a short explanation of roles.
+/role list             List available role files.
+/role set <role>       Select one role for the current session.
+/role add <role>       Create a role file from the role template, then select it.
+```
+
+Role selection loads exactly one role file. The General role is always available as the fallback.
 
 ## Project sharing
 

@@ -38,7 +38,8 @@ steps:
   - create_content_readme_if_missing
   - create_bSmart_Agent_from_template
   - create_bGuardrails_from_template
-  - create_bSmart_State_from_template
+  - create_role_directory_and_general_role_from_templates
+  - create_current_role_selector_from_template
   - create_bSmart_TODO_from_template
   - create_bHistory_from_template
   - create_bSmart_Log_from_template
@@ -81,7 +82,8 @@ workspace_bootstrap:
     bsmart_system_remote: https://github.com/JenZaAS/bSmart.git
     bsmart_system_updates: safe HTTPS fast-forward auto-pull
     HERMES.md: same shared startup hook as AGENTS.md
-    AGENTS.md: same shared startup hook as HERMES.md
+    CLAUDE.md: same shared startup hook as AGENTS.md
+    AGENTS.md: same shared startup hook as HERMES.md and CLAUDE.md
     HERMES_WRITE_SAFE_ROOT: /opt/data:/workspace:/projects:/sandboxes
     TERMINAL_CWD: /workspace
   rule: all new AI agents should be bSmart-enabled unless the operator explicitly says otherwise
