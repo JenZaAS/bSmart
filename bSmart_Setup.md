@@ -37,6 +37,7 @@ steps:
   - create_content_root_if_missing
   - create_content_readme_if_missing
   - create_bSmart_Agent_from_template
+  - create_bGuardrails_from_template
   - create_bSmart_State_from_template
   - create_bSmart_TODO_from_template
   - create_bHistory_from_template

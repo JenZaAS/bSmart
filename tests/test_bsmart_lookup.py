@@ -56,6 +56,13 @@ class BSmartLookupTests(unittest.TestCase):
         self.assertIn("The scheduled human-facing response must be exactly: `bDreaming has nothing to report.`", protocol)
         self.assertIn("report only the new finding(s), change(s), or ask(s)", protocol)
 
+    def test_guardrails_template_has_instance_scope_and_task_number_rule(self):
+        template = (ROOT / "bSmart_Templates" / "bGuardrails.template.md").read_text(encoding="utf-8")
+        self.assertIn("below bSmart_Invariants.md", template)
+        self.assertIn("operator preferences and instance policy", template)
+        self.assertIn("never leave `N` as a placeholder", template)
+        self.assertNotIn("secret values", template)
+
     def test_missing_entries_are_not_fabricated(self):
         bmap = load_script("bMap")
         bfeature = load_script("bFeature")

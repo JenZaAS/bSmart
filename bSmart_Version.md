@@ -1,7 +1,7 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.27-draft
+current_version: 0.1.28-draft
 updated: 2026-09-20 08:03 UTC
 status: draft
 ```
@@ -19,6 +19,21 @@ scope:
 verification:
   - focused bProtective tests pass
   - Hermes plugin manifest and registration are validated
+```
+
+## 0.1.28-draft
+
+```yaml
+release_type: instance_guardrails
+scope:
+  - add the instance-editable bGuardrails template
+  - keep guardrails below bSmart_Invariants.md in authority
+  - create and route bGuardrails as instance content without modifying existing profiles automatically
+  - add communication, task-label, approval, context, and feature-preference defaults
+verification:
+  - guardrails template regression test passes
+  - setup and missing-content paths reference the template
+  - prior system and bSwarm tests remain green
 ```
 
 ## 0.1.27-draft

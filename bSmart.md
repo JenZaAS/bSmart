@@ -47,6 +47,8 @@ content_files:
   history_local: ./bSmart/bHistory.md
   log: /workspace/bSmart/bSmart_Log.md
   log_local: ./bSmart/bSmart_Log.md
+  guardrails: /workspace/bSmart/bGuardrails.md
+  guardrails_local: ./bSmart/bGuardrails.md
   container_storage: /workspace/bSmart/State/container-storage.yaml
   container_storage_local: ./bSmart/State/container-storage.yaml
   features: /workspace/bSmart-System/bSmart_Features.md
@@ -187,6 +189,7 @@ visible_action_notes:
 
 missing_content_behavior:
   bSmart_Agent.md: run setup using bSmart_Templates/bSmart_Agent.template.md
+  bGuardrails.md: create from bSmart_Templates/bGuardrails.template.md after approval
   bSmart_State.md: create from template after approval
   bSmart_TODO.md: create from template after approval
   bSmart_Log.md: create empty log from template after approval

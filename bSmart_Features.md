@@ -513,6 +513,7 @@ short_description: Keep actions transparent and low-risk.
 files:
   - /workspace/bSmart-System/bSmart_Protocols/operations.md
   - /workspace/bSmart/bSmart_Agent.md
+  - /workspace/bSmart/bGuardrails.md
 description: Defines safe operating behavior: read-first inspection, explicit approval gates, reversible-change preference, secret handling, visible action notes, and careful shared-permission changes.
 commands:
   - show guardrails
