@@ -1,9 +1,22 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.40-draft
+current_version: 0.1.41-draft
 updated: 2026-09-20 08:03 UTC
 status: draft
+```
+
+## 0.1.41-draft
+
+```yaml
+release_type: command_help_clarity
+scope:
+  - explain the role concept in /role help
+  - implement the documented /project help command
+  - add regression coverage for both help surfaces
+verification:
+  - project/role Node tests pass
+  - prior system, bSwarm, and bStart tests remain green
 ```
 
 ## 0.1.40-draft

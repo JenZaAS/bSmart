@@ -19,7 +19,7 @@ export function execute({command, context}={}) {
  try {
   const c=contextOf(context), args=String(command??'').trim().split(/\s+/), op=args[1];
   if (args[0] !== '/role') fail('Expected /role');
-  if (!op || op==='help') return {status:'ok', diagnostic:'Role commands: /role help, /role list, /role set <role>, /role add <role>'};
+  if (!op || op==='help') return {status:'ok', diagnostic:'A role is a session-scoped operational hat that owns its project, workstream, focus, and handoff state; it is not a separate AI identity or a project lock. Commands: /role help, /role list, /role set <role>, /role add <role>'};
   if (op==='list') { const roles=fs.readdirSync(c.rolesRoot).filter(n=>n.endsWith('_role.md') && n !== 'current_role.md').map(n=>n.slice(0,-8)).sort(); return {status:'ok',roles,current:selected(c),diagnostic:'Roles listed'}; }
   if (!['set','add'].includes(op) || args.length!==3) fail('Use /role set <role> or /role add <role>');
   const role=valid(args[2]), target=roleFile(c,role);

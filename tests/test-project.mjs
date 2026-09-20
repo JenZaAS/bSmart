@@ -18,7 +18,7 @@ function fixture(t) {
 
 test('role help/list/set/add and migration are explicit and preserve legacy source', t=>{
  const {context,roleFile,rolesRoot,selectorFile}=fixture(t);
- assert.equal(roleExecute({command:'/role help',context}).status,'ok');
+ assert.match(roleExecute({command:'/role help',context}).diagnostic,/session-scoped operational hat/);
  assert.deepEqual(roleExecute({command:'/role list',context}).roles,['general']);
  assert.equal(roleExecute({command:'/role add admin',context}).role,'admin');
  assert.equal(roleExecute({command:'/role list',context}).current,'admin');
@@ -30,6 +30,7 @@ test('role help/list/set/add and migration are explicit and preserve legacy sour
 
 test('/project and /project ws read and update only the selected role', t=>{
  const {context,run,roleFile}=fixture(t);
+ assert.match(run('/project help').diagnostic,/selected role owns the active project and workstream/);
  assert.equal(run('/project add Alpha').selection.project,'Alpha');
  assert.match(fs.readFileSync(roleFile,'utf8'),/active_project: "Alpha"/);
  assert.equal(run('/project add ws Build').selection.workstream,'Build');
