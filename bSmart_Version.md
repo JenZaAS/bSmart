@@ -1,7 +1,7 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.24-draft
+current_version: 0.1.25-draft
 updated: 2026-09-20 08:03 UTC
 status: draft
 ```
@@ -19,6 +19,20 @@ scope:
 verification:
   - focused bProtective tests pass
   - Hermes plugin manifest and registration are validated
+```
+
+## 0.1.25-draft
+
+```yaml
+release_type: setup_protocol_boundary
+scope:
+  - add the compact protocol index and map it as startup metadata
+  - define ownership between setup, protocols, startup routing, invariants, instance content, and projects
+  - link setup domains to their canonical detailed protocols without removing setup prompts/defaults
+verification:
+  - all indexed protocols exist
+  - setup protocol links resolve
+  - prior system and bSwarm tests remain green
 ```
 
 ## 0.1.24-draft

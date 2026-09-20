@@ -58,6 +58,7 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | `./bSmart-System/bSmart_Version.md` | System version and changelog | low | metadata check only |
 | `./bSmart-System/bSmart_Setup.md` | Setup and repair procedure | low | setup only |
 | `./bSmart-System/bSmart_Protocols/` | Detailed operational protocols | low | need to know |
+| `./bSmart-System/bSmart_Protocols/protocols.md` | Compact protocol index and ownership map | low | compact startup |
 | `./bSmart-System/bSmart_Templates/` | Templates for instance and project files | low | generation only |
 | `./bSmart-System/bSmart-Extensions/` | Optional and bundled feature implementations | low | feature use only |
 | `./bSmart-System/integrations/` | Runtime-specific adapters | low | active runtime only |

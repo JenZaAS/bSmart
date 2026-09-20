@@ -66,6 +66,7 @@ content_folders:
 
 system_folders:
   protocols: /workspace/bSmart-System/bSmart_Protocols
+  protocol_index: /workspace/bSmart-System/bSmart_Protocols/protocols.md
   templates: /workspace/bSmart-System/bSmart_Templates
   docs: /workspace/bSmart-System/Docs
   examples: /workspace/bSmart-System/bSmart_Examples

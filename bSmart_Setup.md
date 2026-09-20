@@ -5,6 +5,18 @@ purpose: Create or update local bSmart content for one Hermes workspace.
 mode: interactive
 system_root: /workspace/bSmart-System
 content_root: /workspace/bSmart
+
+ownership:
+  setup_file: owns interactive setup order, operator questions, defaults, paths, and links to detailed protocols
+  protocol_index: owns compact protocol discovery and ownership summaries
+  detailed_protocols: own domain behavior, constraints, commands, and verification
+  startup_manifest: owns startup routing and loading order
+  invariants: own absolute cross-runtime rules
+  instance_content: owns instance-specific facts, preferences, state, and local configuration
+  project_content: owns project-specific facts, decisions, knowledge, workdocs, and guardrails
+  duplication_rule: Do not copy detailed domain procedures into setup, instance, or project files when a canonical protocol already exists.
+
+protocol_index: /workspace/bSmart-System/bSmart_Protocols/protocols.md
 ```
 
 ## Setup checklist
@@ -198,6 +210,7 @@ hermes_project_integration:
 
 bprotective_integration:
   purpose: install the optional Hermes command-protection plugin without enabling it implicitly
+  protocol: /workspace/bSmart-System/bSmart_Protocols/operations.md
   source: /workspace/bSmart-System/integrations/hermes/bprotective-plugin/
   target: <active Hermes home>/plugins/bprotective/
   setup:
@@ -268,6 +281,7 @@ dreaming:
 
 shared_group:
   purpose: keep bSmart-managed files editable by selected human and agent users
+  protocol: /workspace/bSmart-System/bSmart_Protocols/operations.md
   default_group: bsmart
   group_choice:
     - create_or_use_default_bsmart_group
@@ -311,6 +325,7 @@ operating_policy:
 
 tool_approval_model:
   purpose: reduce repetitive framework permission prompts while preserving operator control through bSmart guardrails
+  protocol: /workspace/bSmart-System/bSmart_Protocols/operations.md
   framework_support:
     Hermes:
       recommended_config:
