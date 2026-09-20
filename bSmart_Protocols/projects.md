@@ -21,8 +21,9 @@ paths:
 
 ```yaml
 state_management:
-  protocol: /workspace/bSmart-System/bSmart_Protocols/state.md
-  rule: Project creation/listing may use state, but active/current project ownership and Free Mode rules are defined by the State protocol.
+  protocol: /workspace/bSmart-System/bSmart_Protocols/roles-and-concurrency.md
+  legacy_protocol: /workspace/bSmart-System/bSmart_Protocols/state.md
+  rule: Project creation/listing may use the selected role state, but role-owned active project/workstream rules are defined by the roles-and-concurrency protocol.
 ```
 
 ```yaml
@@ -98,7 +99,7 @@ project_md_required_fields:
 
 ```yaml
 create_project:
-  default_after_creation: switch active project to the newly created project
-  rule: The current `/project add NAME` command always updates bSmart_State.md and opens the new project. A future API may explicitly support opt-out, but this runtime does not.
-  state_protocol: /workspace/bSmart-System/bSmart_Protocols/state.md
+  default_after_creation: switch active project in the selected role to the newly created project
+  rule: The current `/project add NAME` command updates the selected role file and opens the new project. A future API may explicitly support opt-out, but this runtime does not.
+  state_protocol: /workspace/bSmart-System/bSmart_Protocols/roles-and-concurrency.md
 ```

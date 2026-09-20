@@ -1,86 +1,46 @@
-# bSmart Protocol: State
+# bSmart Protocol: legacy state migration
 
 ```yaml
 protocol:
   id: state
-  title: State
-  purpose: Define the canonical bSmart instance state file and active-project / Free Mode rules.
+  title: Legacy state migration
+  purpose: Migrate deprecated bSmart_State.md information into the selected role file.
   use_when:
-    - reading current project state
-    - changing active project
-    - entering or leaving Free Mode
-    - reconciling duplicate or stale state claims
-  depends_on:
-    - /workspace/bSmart/bSmart_State.md
-    - /workspace/bSmart-System/bSmart_Protocols/projects.md
+    - migrating an existing bSmart instance to role-owned state
+    - inspecting an older instance that still has bSmart_State.md
+  active_state_owner: /workspace/bSmart-System/bSmart_Protocols/roles-and-concurrency.md
 ```
 
-## State ownership
+## Deprecated file
 
 ```yaml
-canonical_state_file:
+legacy_state_file:
   container_path: /workspace/bSmart/bSmart_State.md
   local_path: ./bSmart/bSmart_State.md
-  owns:
-    - mode
-    - active_project_short_name
-    - updated_at_utc
-    - short_notes_about_current_focus
-  rule: The global active/current project is stored only here. Other bSmart files may refer to this file or describe project-local status, but must not duplicate or override the global active/current project selection.
+  status: deprecated_migration_only
+  may_contain:
+    - last known mode
+    - last known active project
+    - last known workstream
+    - last known focus notes
+  must_not:
+    - override the selected role
+    - compete with role-owned active state
+    - be loaded as normal startup context
 ```
 
-## State shape
+## Migration procedure
 
-Preferred content shape:
+1. Confirm that the operator wants to migrate the instance to role-owned state.
+2. Select the destination role, defaulting to `general_role`.
+3. Read the legacy file and classify only project, workstream, focus, and handoff information.
+4. Preserve unknown or ambiguous fields for operator review; do not invent replacements.
+5. Write the accepted information into the selected role file.
+6. Verify the role file and report the migration result.
+7. Retire or remove the legacy file only after explicit approval and successful verification.
 
-```markdown
-# bSmart state
+## Compatibility rule
 
-This file tracks the current/active project selection for bSmart.
+Until migration is explicitly completed, the legacy file may remain as a stored historical/compatibility artifact. It is never an active source of truth. New role-aware commands and startup behavior must use the selected role file and `roles-and-concurrency.md`.
 
-- Mode: `Project` | `Free Mode`
-- Active project (short name): `<project-slug>` | `none`
-- Updated at (UTC): `<ISO-8601 UTC timestamp, e.g. 2026-09-05T17:39:26.217Z>`
-
-Notes:
-- <optional short current-focus note>
-```
-
-## Reading state
-
-1. Read `bSmart_State.md` when present.
-2. Treat it as the source of truth for global active/current project.
-3. If the file is missing, follow the manifest/setup missing-content behavior.
-4. If another file appears to claim a different global active/current project, treat that as drift in the other file unless there is direct evidence that `bSmart_State.md` itself is stale.
-
-## Changing state
-
-Only change the global active/current project when the operator explicitly selects a project, creates a project, or asks to enter Free Mode. `/project add NAME` always opens the new project and updates active state; a future API may add an explicit opt-out, but the current shared runtime has none.
-
-When changing state:
-1. Update `Mode`, `Active project (short name)`, and `Updated at (UTC)` in `bSmart_State.md`.
-2. Keep project-specific TODOs/project files project-local; do not mirror the global active/current project there.
-3. Log meaningful state changes in the local bSmart log when appropriate.
-
-## Workstream selection and command runtime
-
-The shared [project command runtime](project-commands.md) owns project/workstream selection updates. Optional `- Active workstream: \`<name>\`` (or YAML `active_workstream`) stores the current workstream; `none` means no workstream. Workstreams are immediate `workstreams/<name>/` directories within the selected project, not separate projects. Selecting a project without WS clears the workstream; retirement/deletion clears both and enters Free Mode. The runtime preserves unrelated state fields and supports both preferred top metadata bullets (before `Notes:`) and a fenced `yaml` state block. Matching bullet/YAML representations are synchronized; duplicates or conflicts fail closed before mutation. Unfenced YAML-like lines and later documentation are ignored.
-
-## Free Mode
-
-```yaml
-free_mode:
-  mode: Free Mode
-  active_project_short_name: none
-  behavior:
-    - do not write task artifacts into a project folder unless the operator later selects or creates a project
-    - use global bSmart TODO/workdocs for non-project handoff when needed
-```
-
-## Drift handling
-
-When a maintenance or Dreaming workflow finds duplicate or conflicting active-project claims:
-- preserve `bSmart_State.md` as canonical unless there is direct evidence it is stale;
-- normalize or flag the duplicate claim in the other file;
-- ask before changing `bSmart_State.md` unless the operator already gave a clear state-change command;
-- avoid copying the full state rule into feature-specific protocols; link back to this protocol instead.
+Project creation, selection, workstream changes, and Free Mode behavior must be updated in the selected role file. The old global-state model must not be extended.

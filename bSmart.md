@@ -41,6 +41,10 @@ content_files:
   agent_local: ./bSmart/bSmart_Agent.md
   state: /workspace/bSmart/bSmart_State.md
   state_local: ./bSmart/bSmart_State.md
+  state_status: legacy_migration_only
+  roles: /workspace/bSmart/Roles
+  roles_local: ./bSmart/Roles
+  default_role: general
   todo: /workspace/bSmart/bSmart_TODO.md
   todo_local: ./bSmart/bSmart_TODO.md
   history: /workspace/bSmart/bHistory.md
@@ -131,8 +135,9 @@ project_context_scope:
   exception: Listing immediate project names is allowed; do not recursively scan sibling projects.
 
 state_management:
-  protocol: /workspace/bSmart-System/bSmart_Protocols/state.md
-  rule: Active/current project state is governed by the state protocol; feature-specific protocols should reference it rather than restating ownership rules.
+  protocol: /workspace/bSmart-System/bSmart_Protocols/roles-and-concurrency.md
+  legacy_protocol: /workspace/bSmart-System/bSmart_Protocols/state.md
+  rule: Active project, workstream, focus, and role state are owned by exactly one selected role file; bSmart_State.md is migration-only and must not compete as an active source.
 
 github_ai_access:
   provider_protocol: /workspace/bSmart-System/bSmart_Protocols/github-ai-access.md
@@ -151,8 +156,8 @@ startup_sequence:
   - if bSmart_Agent.md missing, run bSmart_Setup.md
   - read bSmart_Agent.md
   - if startup check reports project storage setup_required, immediately prompt the operator with Telegram buttons using clarify choices from bSmart_Protocols/project-storage.md before the normal TODO prompt
-  - read bSmart_State.md when present
-  - read bSmart_TODO.md when present
+  - select exactly one role file, defaulting to /workspace/bSmart/Roles/general_role.md
+  - do not load bSmart_State.md as active state; use it only during explicit role-state migration
   - inspect local Dreaming status after loading instance content
   - if Dreaming status is missing or ask_later, trigger the Dreaming setup prompt before the normal TODO prompt
   - if Dreaming status is enabled, continue without repeating setup; if disabled, do not ask again unless the operator requests Dreaming setup

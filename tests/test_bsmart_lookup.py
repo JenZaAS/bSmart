@@ -63,6 +63,15 @@ class BSmartLookupTests(unittest.TestCase):
         self.assertIn("never leave `N` as a placeholder", template)
         self.assertNotIn("secret values", template)
 
+    def test_role_and_lock_design_is_present(self):
+        role = (ROOT / "bSmart_Templates" / "role.template.md").read_text(encoding="utf-8")
+        protocol = (ROOT / "bSmart_Protocols" / "roles-and-concurrency.md").read_text(encoding="utf-8")
+        self.assertIn("default_role: general", role)
+        self.assertIn("exactly one role is loaded", role)
+        self.assertIn("suffix: .bLock", protocol)
+        self.assertIn("Multiple roles may work with the same project.", protocol)
+        self.assertIn("migration_only: true", protocol)
+
     def test_missing_entries_are_not_fabricated(self):
         bmap = load_script("bMap")
         bfeature = load_script("bFeature")

@@ -125,8 +125,8 @@ It should describe only that project’s:
 |---|---|---:|---|
 | `./bSmart/bSmart_Agent.md` | Stable instance identity and access model | low | startup summary |
 | `./bSmart/bGuardrails.md` | Editable instance-level behavior and preferences | medium | startup |
-| `./bSmart/Roles/` | Named work roles and focus state | high | selected role |
-| `./bSmart/bSmart_State.md` | Temporary compatibility/default state during migration | high | compatibility only |
+| `./bSmart/Roles/` | Named role files containing active project, workstream, focus, and handoff state | high | selected role |
+| `./bSmart/bSmart_State.md` | Deprecated compatibility state during role migration; not an active source | high | migration only |
 | `./bSmart/bSmart_TODO.md` | Instance-level current/open tasks | high | general role only or request |
 | `./bSmart/bSmart_Log.md` | Instance decision/action log | high | explicit request only |
 | `./bSmart/bHistory.md` | Concise completed-work history | medium | explicit request or handoff |

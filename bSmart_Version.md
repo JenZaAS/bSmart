@@ -1,7 +1,7 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.28-draft
+current_version: 0.1.29-draft
 updated: 2026-09-20 08:03 UTC
 status: draft
 ```
@@ -19,6 +19,22 @@ scope:
 verification:
   - focused bProtective tests pass
   - Hermes plugin manifest and registration are validated
+```
+
+## 0.1.29-draft
+
+```yaml
+release_type: role_owned_state_and_concurrency
+scope:
+  - define one always-available General role and one role file per operational hat
+  - make role files the active owners of project, workstream, focus, and handoff state
+  - retire bSmart_State.md as an active source and retain it only for explicit migration
+  - allow multiple roles to work on the same project without project-wide locks
+  - define narrow per-file `.bLock` collision handling with bounded retries and operator override
+verification:
+  - role and concurrency protocols exist and are indexed
+  - no remaining active protocol treats bSmart_State.md as authoritative
+  - prior system and bSwarm tests remain green
 ```
 
 ## 0.1.28-draft
