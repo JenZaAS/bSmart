@@ -73,6 +73,7 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | `./bSmart-System/scripts/bsmart-role-core.mjs` | Shared role command and explicit legacy migration engine | low | role commands/migration |
 | `./bSmart-System/scripts/bsmart-role.mjs` | JSON CLI transport for role commands | low | execution only |
 | `./bSmart-System/scripts/bsmart-instance-upgrade` | Explicit existing-instance startup repair with backups | low | system upgrade/setup |
+| `./bSmart-System/scripts/bsmart-update` | Finalize an already-pulled system update without pulling Git | low | explicit update |
 | `./bSmart-System/tests/` | System validation | low | explicit testing only |
 | `./bSmart-System/bSmart_Docs/` | Human-facing system documentation | low | explicit request only |
 

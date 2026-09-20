@@ -53,13 +53,15 @@ steps:
 ## Existing-instance repair
 
 ```text
+python3 /workspace/bSmart-System/scripts/bsmart-update
+python3 ./bSmart-System/scripts/bsmart-update
 python3 /workspace/bSmart-System/scripts/bsmart-instance-upgrade
 python3 ./bSmart-System/scripts/bsmart-instance-upgrade
 python3 /workspace/bSmart-System/scripts/bsmart-content-upgrade --create-missing
 python3 ./bSmart-System/scripts/bsmart-content-upgrade --create-missing
 ```
 
-Run `bsmart-instance-upgrade` once after updating bSmart-System in an existing instance. It backs up differing startup hooks, installs the workspace `bStart.py`, synchronizes the canonical `HERMES.md`, `AGENTS.md`, and `CLAUDE.md` hooks, and leaves instance content/state untouched. Then run `bsmart-content-upgrade --create-missing` for create-only content repair. Add `--quiet` to the content helper for routine startup checks; healthy runs then produce no agent-facing output.
+For an existing instance, `bsmart-update` is the standard post-pull finalization command. It deliberately does not pull Git: it backs up differing startup hooks, installs the workspace `bStart.py`, synchronizes the canonical hooks, creates only missing standard content, and verifies the managed `/project` integration. It leaves instance content/state untouched. `bsmart-instance-upgrade` and `bsmart-content-upgrade` remain available as focused helpers.
 
 ## Required operator inputs
 

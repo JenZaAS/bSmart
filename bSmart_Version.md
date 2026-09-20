@@ -1,9 +1,22 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.33-draft
+current_version: 0.1.34-draft
 updated: 2026-09-20 08:03 UTC
 status: draft
+```
+
+## 0.1.34-draft
+
+```yaml
+release_type: explicit_pull_then_update_workflow
+scope:
+  - add bsmart-update as the deterministic post-pull finalization command
+  - distinguish Git pull from instance startup integration and content repair
+  - document pull, update, restart, /new, and Hi as the standard sequence
+verification:
+  - update helper preserves instance content/state
+  - prior system, project, bSwarm, and bStart tests remain green
 ```
 
 ## 0.1.33-draft

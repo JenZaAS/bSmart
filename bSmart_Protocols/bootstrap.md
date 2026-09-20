@@ -43,8 +43,10 @@ new_agent_bootstrap_standard:
     HERMES_WRITE_SAFE_ROOT: /opt/data:/workspace:/projects:/sandboxes
   first_run_helper: /workspace/bSmart-System/scripts/bsmart-bootstrap-workspace
   existing_instance_upgrade: /workspace/bSmart-System/scripts/bsmart-instance-upgrade
+  existing_instance_update: /workspace/bSmart-System/scripts/bsmart-update
   existing_instance_repair: /workspace/bSmart-System/scripts/bsmart-content-upgrade --create-missing
   upgrade_rule: back up differing startup hooks, install bStart.py, and synchronize canonical hooks; do not alter instance content/state
+  command_rule: "pull" changes only the system checkout; "update" runs bsmart-update without pulling; setup uses the same finalization for existing instances
   repair_rule: create missing standard content files only; never overwrite existing instance content
   startup_behavior: run the quiet content-upgrade check on every /new; keep heavier Git and storage checks once-per-UTC-day throttled
   integration_behavior: run the quiet /project adapter check on every /new; install/enable the managed adapter when missing and report only changes or setup problems

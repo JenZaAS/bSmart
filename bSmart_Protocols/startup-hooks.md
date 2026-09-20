@@ -33,6 +33,14 @@ python3 /workspace/bSmart-System/scripts/bsmart-instance-upgrade
 
 This explicit upgrade helper backs up differing canonical hooks, installs the workspace-root `bStart.py`, and synchronizes `HERMES.md`, `AGENTS.md`, and `CLAUDE.md`. It does not modify bSmart instance content or state.
 
+The standard post-pull command is:
+
+```bash
+python3 /workspace/bSmart-System/scripts/bsmart-update
+```
+
+It performs the startup integration repair, create-only content repair, and project-integration verification without pulling Git.
+
 ## Runtime defaults
 
 Resolve the workspace root as follows:

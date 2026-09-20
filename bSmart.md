@@ -108,6 +108,18 @@ startup_hooks:
   helper_local: ./bSmart-System/scripts/bsmart-hooks
   rule: HERMES.md, AGENTS.md, and any other supported hook files use the same shared template.
 
+update_workflow:
+  pull: Run `python3 /workspace/bSmart-System/scripts/bsmart-system-update-check --auto-pull` only when the operator asks to pull/update the system checkout.
+  update: Run `python3 /workspace/bSmart-System/scripts/bsmart-update` after the desired system revision is present; this never pulls Git.
+  setup: Run the same `bsmart-update` finalization for an existing instance, then ask only about missing or ambiguous instance-specific configuration.
+  required_sequence: pull_or_confirm_revision, update, restart_or_relaunch, /new, Hi
+  update_effects:
+    - install or replace workspace-root bStart.py with a backup when needed
+    - back up and synchronize HERMES.md, AGENTS.md, and CLAUDE.md
+    - create only missing standard content
+    - verify or install the managed /project integration
+  preserve: Never overwrite instance identity, role state, legacy migration files, projects, secrets, or unrelated content.
+
 deterministic_lookups:
   map: python ./scripts/bMap <scope> <item>
   feature: python ./scripts/bFeature <feature-name>
