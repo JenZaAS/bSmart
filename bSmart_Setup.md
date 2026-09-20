@@ -109,7 +109,7 @@ instance_git:
   protocol: /workspace/bSmart-System/bSmart_Protocols/instance-git-onboarding.md
   spec_file: /workspace/bSmart/State/instance-git.yaml
   defaults_file: /workspace/bSmart/State/instance-git-defaults.yaml
-  default: ask only for /workspace/bSmart content; do not confuse this with bSmart-System Git, which is required system infrastructure
+  default: ask for /workspace/bSmart content Git when not configured; if no Git exists, offer local Git history and explain that it can be connected to a remote later. Do not confuse this with bSmart-System Git, which is required system infrastructure
   choices:
     - none
     - local_git_only

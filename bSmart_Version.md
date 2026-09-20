@@ -1,7 +1,7 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.26-draft
+current_version: 0.1.27-draft
 updated: 2026-09-20 08:03 UTC
 status: draft
 ```
@@ -19,6 +19,20 @@ scope:
 verification:
   - focused bProtective tests pass
   - Hermes plugin manifest and registration are validated
+```
+
+## 0.1.27-draft
+
+```yaml
+release_type: instance_backup_policy
+scope:
+  - prompt before creating local Git for an instance without Git
+  - explain that local history can later be connected to a remote repository
+  - require operator review of dirty instance content before pre-update backup commits
+  - define separate pre-update and post-update commits and remote pushes
+verification:
+  - instance Git protocol and setup document agree
+  - no force-push or silent unrelated-content commit is allowed
 ```
 
 ## 0.1.26-draft
