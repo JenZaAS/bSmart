@@ -1,7 +1,7 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.23-draft
+current_version: 0.1.24-draft
 updated: 2026-09-20 08:03 UTC
 status: draft
 ```
@@ -19,6 +19,19 @@ scope:
 verification:
   - focused bProtective tests pass
   - Hermes plugin manifest and registration are validated
+```
+
+## 0.1.24-draft
+
+```yaml
+release_type: system_boundary_refinement
+scope:
+  - establish bSmart_Invariants.md as the absolute cross-runtime system contract
+  - separate invariants from startup routing and instance-editable guardrails
+  - update the map and startup sequence to load the invariant boundary
+verification:
+  - invariant file exists and is referenced by bSmart.md and bSmart_Map.md
+  - prior system and bSwarm tests remain green
 ```
 
 ## 0.1.23-draft

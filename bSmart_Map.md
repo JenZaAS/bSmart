@@ -52,7 +52,7 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | Path | Purpose | Volatility | Loading |
 |---|---|---:|---|
 | `./bSmart-System/bSmart.md` | Short conceptual definition of bSmart and its major boxes | low | startup |
-| `./bSmart-System/bSmart_Core_Boundary.md` | Absolute cross-runtime bSmart rules | low | startup |
+| `./bSmart-System/bSmart_Invariants.md` | Absolute cross-runtime bSmart rules | low | startup |
 | `./bSmart-System/bSmart_Map.md` | This logical system map | low | bStart routing |
 | `./bSmart-System/bSmart_Features.md` | Compact feature summaries and detail lookup metadata | low | compact startup |
 | `./bSmart-System/bSmart_Version.md` | System version and changelog | low | metadata check only |
