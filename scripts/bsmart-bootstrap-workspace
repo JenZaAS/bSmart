@@ -18,7 +18,7 @@ from pathlib import Path
 
 DEFAULT_REPO_URL = "https://github.com/JenZaAS/bSmart.git"
 SYSTEM_ROOT = Path(__file__).resolve().parent.parent
-BOOTSTRAP_HOOK = """Run `python bStart.py` exactly once at the beginning of every new session, including after `/new`, before replying or taking any action. Follow the startup result and its loaded context.
+BOOTSTRAP_HOOK = """Run `python bStart.py` exactly once at the beginning of every new session, including after `/new`, before replying or taking any action. In the first reply, preserve the bStart startup lines and command-help lines; do not replace them with a custom greeting or reduced summary. Follow the startup result and its loaded context.
 
 Hierarchy:
 - `bSmart-System/bSmart.md`: shared system rules and bStart contract.

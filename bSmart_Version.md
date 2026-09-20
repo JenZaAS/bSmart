@@ -1,9 +1,21 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.36-draft
+current_version: 0.1.37-draft
 updated: 2026-09-20 08:03 UTC
 status: draft
+```
+
+## 0.1.37-draft
+
+```yaml
+release_type: preserve_bstart_first_reply
+scope:
+  - require startup hooks to preserve bStart output and command-help lines
+  - prevent instance-specific greeting policies from replacing the startup summary
+  - synchronize the rule through existing-instance update backups
+verification:
+  - system, project, bSwarm, and bStart tests remain green
 ```
 
 ## 0.1.36-draft

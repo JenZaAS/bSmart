@@ -1,4 +1,4 @@
-Run `python bSmart-System/bStart.py` exactly once at the beginning of every new session, including after `/new`, before replying or taking any action. Follow the startup result and its loaded context.
+Run `python bSmart-System/bStart.py` exactly once at the beginning of every new session, including after `/new`, before replying or taking any action. In the first reply, preserve the bStart startup lines and command-help lines; do not replace them with a custom greeting or reduced summary. Follow the startup result and its loaded context.
 
 Hierarchy:
 - `bSmart-System/bSmart.md`: shared system rules and bStart contract.

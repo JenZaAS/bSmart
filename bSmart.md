@@ -118,6 +118,7 @@ update_workflow:
     - back up and synchronize HERMES.md, AGENTS.md, and CLAUDE.md
     - create only missing standard content
     - verify or install the managed /project integration
+  first_reply_rule: Preserve the bStart startup and command-help lines in the first reply; instance-specific greetings may precede them but must not replace them.
   preserve: Never overwrite instance identity, role state, legacy migration files, projects, secrets, or unrelated content.
   profile_migration: Apply known exact bSmart_Agent.md compatibility migrations automatically with a backup and clear report; ask only for ambiguous or broader changes.
 

@@ -58,6 +58,7 @@ new_agent_bootstrap_standard:
     - send /new to the target bot
     - send Hi as the first agent-authored verification turn
     - confirm bSmart startup summary and no GitHub SSH-key warning
+  first_reply_rule: preserve bStart output and command-help lines; do not replace them with instance-specific greeting-only behavior
 ```
 
 ```yaml
