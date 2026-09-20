@@ -49,6 +49,10 @@ This file defines the rules that must remain true across bSmart instances, proje
 
 - Use logical relative paths in reusable specifications; runtime configuration resolves physical mounts and roots.
 - Do not hardcode site-local usernames, secrets, private endpoints, credentials, or deployment assumptions into reusable system files.
+- Treat changes to logical files, folders, ownership, loading, or state models as map-affecting changes.
+- Update the affected `bSmart_Map.md` scope in the same change/commit.
+- Verify map entries and loading classifications before declaring the structural change complete.
+- Instance and project maps follow the same rule for their respective scopes.
 - Runtime-specific adapters may implement bSmart behavior, but must not change the portable ownership model.
 - Instance-specific facts belong in instance files; project-specific facts belong in project files.
 

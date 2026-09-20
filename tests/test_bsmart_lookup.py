@@ -72,6 +72,13 @@ class BSmartLookupTests(unittest.TestCase):
         self.assertIn("Multiple roles may work with the same project.", protocol)
         self.assertIn("migration_only: true", protocol)
 
+    def test_map_tracks_role_state_and_requires_same_change_update(self):
+        map_text = (ROOT / "bSmart_Map.md").read_text(encoding="utf-8")
+        self.assertIn("<role-id>_role.md", map_text)
+        self.assertIn("<file>.bLock", map_text)
+        self.assertIn("same change/commit", map_text)
+        self.assertIn("roles-and-concurrency.md", map_text)
+
     def test_missing_entries_are_not_fabricated(self):
         bmap = load_script("bMap")
         bfeature = load_script("bFeature")

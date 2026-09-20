@@ -1,7 +1,7 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.29-draft
+current_version: 0.1.30-draft
 updated: 2026-09-20 08:03 UTC
 status: draft
 ```
@@ -19,6 +19,20 @@ scope:
 verification:
   - focused bProtective tests pass
   - Hermes plugin manifest and registration are validated
+```
+
+## 0.1.30-draft
+
+```yaml
+release_type: map_maintenance_contract
+scope:
+  - reflect role-owned state, role files, and `.bLock` artifacts in bSmart_Map.md
+  - list the role protocol and template in the system map
+  - require same-change map updates for logical structure, ownership, loading, and state-model changes
+  - add regression coverage for map completeness and maintenance guidance
+verification:
+  - map entries resolve to existing system files
+  - system and bSwarm tests pass
 ```
 
 ## 0.1.29-draft

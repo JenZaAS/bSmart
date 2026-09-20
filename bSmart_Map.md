@@ -12,6 +12,8 @@ map:
     instance: Instance map at ./bSmart/bSmart_InstanceMap.md when present.
     project: Project map at ./projects/<project>/bSmart_ProjectMap.md when present.
   rule: This map describes logical locations and ownership, not physical mounts.
+  maintenance: Update this map in the same change/commit whenever a logical file, folder, ownership boundary, loading rule, or state model is added, removed, renamed, or reclassified.
+  verification: Before completing structural bSmart-System work, verify that the affected map scope and loading entries are current.
   output: Return only the matching heading or map row plus scope and map path.
 ```
 
@@ -59,7 +61,9 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | `./bSmart-System/bSmart_Setup.md` | Setup and repair procedure | low | setup only |
 | `./bSmart-System/bSmart_Protocols/` | Detailed operational protocols | low | need to know |
 | `./bSmart-System/bSmart_Protocols/protocols.md` | Compact protocol index and ownership map | low | compact startup |
+| `./bSmart-System/bSmart_Protocols/roles-and-concurrency.md` | Role-owned state, shared projects, and `.bLock` file concurrency | low | role/concurrency use |
 | `./bSmart-System/bSmart_Templates/` | Templates for instance and project files | low | generation only |
+| `./bSmart-System/bSmart_Templates/role.template.md` | One-file role structure and role-owned state template | low | role setup/migration |
 | `./bSmart-System/bSmart-Extensions/` | Optional and bundled feature implementations | low | feature use only |
 | `./bSmart-System/integrations/` | Runtime-specific adapters | low | active runtime only |
 | `./bSmart-System/scripts/` | Deterministic helper programs and lookup tools | low | execution only |
@@ -126,6 +130,8 @@ It should describe only that project’s:
 | `./bSmart/bSmart_Agent.md` | Stable instance identity and access model | low | startup summary |
 | `./bSmart/bGuardrails.md` | Editable instance-level behavior and preferences | medium | startup |
 | `./bSmart/Roles/` | Named role files containing active project, workstream, focus, and handoff state | high | selected role |
+| `./bSmart/Roles/<role-id>_role.md` | One role's complete active state and operational focus | high | selected role |
+| `./bSmart/<file>.bLock` | Temporary file-level write lock used by concurrent roles | transient | never automatic |
 | `./bSmart/bSmart_State.md` | Deprecated compatibility state during role migration; not an active source | high | migration only |
 | `./bSmart/bSmart_TODO.md` | Instance-level current/open tasks | high | general role only or request |
 | `./bSmart/bSmart_Log.md` | Instance decision/action log | high | explicit request only |
