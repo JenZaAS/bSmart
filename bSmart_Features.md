@@ -21,7 +21,92 @@ feature_registry:
     - show features by group
     - show feature <name>
   progressive_help_rule: First answer briefly; if a numbered list was shown, a later number expands only that item.
+  detail_lookup: python ./scripts/bFeature <feature-name>
+  compact_entry_shape:
+    - name
+    - status
+    - summary
+    - detail_lookup
 ```
+
+## Compact feature index
+
+```yaml
+features:
+  - name: Projects
+    status: active
+    summary: Manage project context and project folders.
+    detail_lookup: python ./scripts/bFeature Projects
+  - name: Tasks
+    status: active
+    summary: Track next actions and handoffs.
+    detail_lookup: python ./scripts/bFeature Tasks
+  - name: Workdocs
+    status: active
+    summary: Keep detailed notes for larger work.
+    detail_lookup: python ./scripts/bFeature Workdocs
+  - name: Library
+    status: active
+    summary: Store and reuse durable knowledge.
+    detail_lookup: python ./scripts/bFeature Library
+  - name: Decision Log
+    status: active
+    summary: Record important decisions and approvals.
+    detail_lookup: python ./scripts/bFeature 'Decision Log'
+  - name: History
+    status: active
+    summary: Keep a concise diary of completed work.
+    detail_lookup: python ./scripts/bFeature History
+  - name: Dreaming
+    status: active
+    summary: Improve local bSmart content while you sleep.
+    detail_lookup: python ./scripts/bFeature Dreaming
+  - name: Safety
+    status: active
+    summary: Keep actions transparent and low-risk.
+    detail_lookup: python ./scripts/bFeature Safety
+  - name: Setup
+    status: active
+    summary: Initialize and maintain bSmart structure.
+    detail_lookup: python ./scripts/bFeature Setup
+  - name: Extensions
+    status: active
+    summary: Enable optional add-on packs.
+    detail_lookup: python ./scripts/bFeature Extensions
+  - name: Features
+    status: active
+    summary: Show available bSmart capabilities.
+    detail_lookup: python ./scripts/bFeature Features
+  - name: bPrivate
+    status: active
+    summary: Optionally protect sensitive content before online-model use.
+    detail_lookup: python ./scripts/bFeature bPrivate
+  - name: bProtective
+    status: active
+    summary: Add approval-gated command protection for Hermes terminal actions.
+    detail_lookup: python ./scripts/bFeature bProtective
+  - name: bAccountant
+    status: active
+    summary: Optionally turn an agent into a cautious accountant assistant.
+    detail_lookup: python ./scripts/bFeature bAccountant
+  - name: bADR
+    status: active
+    summary: Add and maintain standardized Architecture Decision Records in projects.
+    detail_lookup: python ./scripts/bFeature bADR
+  - name: Improvement Scout
+    status: active
+    summary: Find external ideas to improve bSmart itself.
+    detail_lookup: python ./scripts/bFeature 'Improvement Scout'
+  - name: bQAbuild
+    status: active
+    summary: Clarify the work before building it.
+    detail_lookup: python ./scripts/bFeature bQAbuild
+  - name: Security Watch
+    status: active
+    summary: Check visible VPS/container security drift.
+    detail_lookup: python ./scripts/bFeature 'Security Watch'
+```
+
 
 ## Display rules
 

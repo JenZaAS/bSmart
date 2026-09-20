@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+"""Deterministically retrieve one entry from a bSmart map."""
+from __future__ import annotations
+
+import argparse
+import os
+import re
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+SYSTEM_ROOT = SCRIPT_DIR.parent
+WORKSPACE_ROOT = SYSTEM_ROOT.parent
+
+
+def resolve_scope(scope: str, item: str) -> tuple[str, Path, str]:
+    normalized = scope.strip().lower().replace("_", "-")
+    if normalized in {"system", "bsmart-system", "smart-system"}:
+        return "system", SYSTEM_ROOT / "bSmart_Map.md", item
+    if normalized in {"instance", "content", "bsmart"}:
+        root = Path(os.environ.get("BSMART_INSTANCE_ROOT", os.environ.get("BSMART_CONTENT_ROOT", WORKSPACE_ROOT / "bSmart")))
+        return "instance", root / "bSmart_InstanceMap.md", item
+    if normalized in {"project", "projects"}:
+        project_root = Path(os.environ.get("BSMART_PROJECT_ROOT", WORKSPACE_ROOT / "projects"))
+        project_name, separator, entry = item.partition(":")
+        if not separator:
+            project_name, separator, entry = item.partition("/")
+        if not separator:
+            return "project", project_root / "bSmart_ProjectMap.md", item
+        return "project", project_root / project_name / "bSmart_ProjectMap.md", entry
+    raise ValueError(f"unknown map scope: {scope}")
+
+
+def extract_entry(text: str, item: str) -> str | None:
+    wanted = item.strip().lower()
+    if not wanted:
+        return None
+    lines = text.splitlines()
+    heading = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+    for index, line in enumerate(lines):
+        match = heading.match(line)
+        if match and wanted in match.group(2).lower():
+            level = len(match.group(1))
+            end = len(lines)
+            for next_index in range(index + 1, len(lines)):
+                next_match = heading.match(lines[next_index])
+                if next_match and len(next_match.group(1)) <= level:
+                    end = next_index
+                    break
+            return "\n".join(lines[index:end]).strip()
+    matches = [line.strip() for line in lines if wanted in line.lower()]
+    if matches:
+        return "\n".join(matches)
+    return None
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Retrieve one deterministic bSmart map entry.")
+    parser.add_argument("scope", help="system, instance, or project")
+    parser.add_argument("item", help="heading, path, or project:item to retrieve")
+    args = parser.parse_args()
+    try:
+        scope, path, item = resolve_scope(args.scope, args.item)
+    except ValueError as exc:
+        parser.error(str(exc))
+    if not path.is_file():
+        print(f"bMap: map not found for scope '{scope}': {path}")
+        return 2
+    entry = extract_entry(path.read_text(encoding="utf-8", errors="replace"), item)
+    if entry is None:
+        print(f"bMap: entry not found: {args.scope} {args.item}")
+        return 1
+    print(f"scope: {scope}")
+    print(f"map: {path}")
+    print(entry)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

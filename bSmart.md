@@ -77,6 +77,12 @@ startup_hooks:
   helper_local: ./bSmart-System/scripts/bsmart-hooks
   rule: HERMES.md, AGENTS.md, and any other supported hook files use the same shared template.
 
+deterministic_lookups:
+  map: python ./scripts/bMap <scope> <item>
+  feature: python ./scripts/bFeature <feature-name>
+  knowledge: python ./scripts/bKnowledge <query>
+  rule: Return only the requested compact entry; do not recursively search the workspace.
+
 instance_git:
   status: optional_but_recommended
   protocol: /workspace/bSmart-System/bSmart_Protocols/instance-git-onboarding.md

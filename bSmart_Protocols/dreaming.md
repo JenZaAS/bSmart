@@ -193,23 +193,23 @@ Backlog rules:
 - deduplicate obvious repeats by linking a later run to the existing pending action instead of adding another copy.
 
 No-op/no-interaction rule:
-- If no relevant content changed and no new Dreaming actions/asks were produced, do not create a bulky new report.
-- Optionally update a tiny state file with `last_noop_run_at`, `files_scanned`, and `reason: no_relevant_changes`.
+- If no relevant content changed and no new Dreaming actions/asks were produced, do not create a bulky new report or list healthy checks.
+- The scheduled human-facing response must be exactly: `bDreaming has nothing to report.`
+- Optionally update a tiny state file with `last_noop_run_at`, `files_scanned`, and `reason: no_relevant_changes`; do not expose that bookkeeping in chat.
 - Do not repeat-deliver old pending asks every day when the user has not interacted; keep them in the backlog for the next user-visible Dream review.
 - If new real Dreaming findings appear while old asks are pending, append them to the same backlog; pending dreams may stack, but no-op dreams should not inflate content.
 
 ## Brevity/token policy
 
-Dreaming interaction must be terse by default. Use detail files for depth; chat should only carry enough to decide next action.
+Dreaming interaction must be terse by default. Use detail files for depth; chat should only carry enough to decide the next action. Report findings, not the absence of findings.
 
 Defaults:
-- no-op run: silent, or tiny state only;
-- non-empty scheduled report: aim for 3–8 short, plain-language lines in chat;
-- explain what was found and done in everyday words, without intimidating internal terminology;
+- no-op run: deliver exactly `bDreaming has nothing to report.`;
+- non-empty scheduled report: report only the new finding(s), change(s), or ask(s), in the fewest clear plain-language lines;
+- never list healthy checks, absent problems, inspected sources, or unchanged items;
 - do not include filenames, backup paths, backup filenames, run IDs, action IDs, manifests, or internal commands in normal delivery;
-- mention a safety copy only generically unless the user asks for details;
-- summarize the number of earlier pending items and describe only the next item in plain language;
-- decision prompt: one clear sentence plus simple choices;
+- mention a safety copy only when a change was actually made, and only generically unless details are requested;
+- mention pending asks only when they are relevant to the current finding or require operator action;
 - details only on `Inspect details` or explicit request;
 - avoid repeating file lists, diffs, backups, and rationale in chat unless needed for the current decision.
 
@@ -265,8 +265,8 @@ Daily Dreaming should be cheap:
 4. Identify stale handoff items, duplicate TODOs, unresolved conflicts, and obvious compaction opportunities.
 5. Auto-apply only clear low-risk instance-content changes with backups; ask for unclear or meaning-changing changes.
 6. Produce at most 3 user-visible findings.
-7. Write a short dated report under `/workspace/bSmart/Workdocs/dreaming/`.
-8. Deliver a compact summary with review/undo commands.
+7. Write a short dated report under `/workspace/bSmart/Workdocs/dreaming/` only when there is a finding, change, or pending ask.
+8. Deliver only the finding(s), change(s), or ask(s). If there is nothing new, deliver exactly `bDreaming has nothing to report.`
 
 ## Recurring Dreams
 

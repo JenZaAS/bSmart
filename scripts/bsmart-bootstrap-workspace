@@ -134,6 +134,18 @@ def main() -> int:
 
     system_action = ensure_system_repo(workspace, args.repo_url)
 
+    # Fresh native/local instances may not yet have reached a /new startup turn.
+    # Install the managed adapter during bootstrap so the first Hermes session
+    # starts with the same standard integration as an existing instance.
+    integration_helper = workspace / "bSmart-System" / "scripts" / "bsmart-project-integration-check"
+    if integration_helper.is_file():
+        integration = run([sys.executable, str(integration_helper), "--install", "--quiet"], check=False)
+        if integration.returncode != 0:
+            print(
+                "WARNING: bSmart /project adapter was not installed automatically; "
+                "run the integration helper after Hermes is available."
+            )
+
     content_root = workspace / "bSmart"
     for rel in ["Docs", "Library", "Projects", "Sandboxes", "Workdocs", "State"]:
         install_dir(content_root / rel, args.uid, args.gid)

@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.21-draft
-updated: 2026-09-11 21:34 UTC
+current_version: 0.1.23-draft
+updated: 2026-09-20 08:03 UTC
 status: draft
 ```
 
@@ -19,6 +19,34 @@ scope:
 verification:
   - focused bProtective tests pass
   - Hermes plugin manifest and registration are validated
+```
+
+## 0.1.23-draft
+
+```yaml
+release_type: deterministic_startup_and_dreaming_revision
+scope:
+  - add the generic bSmart map and feature lookup tools
+  - add compact machine-readable feature index entries
+  - include the revised Dreaming no-op and change-only reporting contract
+  - document bootstrap and setup behavior for the revision
+verification:
+  - system lookup tests pass
+  - existing system and bSwarm tests pass
+  - Dreaming protocol contains the exact no-op response contract
+```
+
+## 0.1.22-draft
+
+```yaml
+release_type: reporting_refinement
+scope:
+  - make Dreaming report only actual findings, changes, or actionable asks
+  - require the exact no-op message `bDreaming has nothing to report.`
+  - align daily and weekly Dreaming cron prompts with the concise reporting contract
+verification:
+  - canonical Dreaming protocol updated
+  - daily and weekly scheduler jobs updated and remain enabled
 ```
 
 ## 0.1.21-draft

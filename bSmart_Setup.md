@@ -187,7 +187,8 @@ hermes_project_integration:
     - send `/project list`
   existing_instances:
     - run the integration check during every `/new` startup, even when daily checks are throttled
-    - if setup is required, present an onboarding/migration action; do not silently install or restart
+    - install/enable the managed adapter when the source and active Hermes home are available
+    - report that a restart or relaunch is needed when plugin discovery requires it
   container_defaults:
     hermes_home: /opt/data
     system_root: /workspace/bSmart-System
