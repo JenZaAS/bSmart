@@ -42,13 +42,16 @@ new_agent_bootstrap_standard:
     TERMINAL_CWD: /workspace
     HERMES_WRITE_SAFE_ROOT: /opt/data:/workspace:/projects:/sandboxes
   first_run_helper: /workspace/bSmart-System/scripts/bsmart-bootstrap-workspace
+  existing_instance_upgrade: /workspace/bSmart-System/scripts/bsmart-instance-upgrade
   existing_instance_repair: /workspace/bSmart-System/scripts/bsmart-content-upgrade --create-missing
+  upgrade_rule: back up differing startup hooks, install bStart.py, and synchronize canonical hooks; do not alter instance content/state
   repair_rule: create missing standard content files only; never overwrite existing instance content
   startup_behavior: run the quiet content-upgrade check on every /new; keep heavier Git and storage checks once-per-UTC-day throttled
   integration_behavior: run the quiet /project adapter check on every /new; install/enable the managed adapter when missing and report only changes or setup problems
   action_note_behavior: explain the purpose before startup maintenance; name the concrete operation (update, create missing bHistory, or install/enable /project) rather than exposing only a generic tool-execution description
   verification:
     - restart_or_redeploy_after workspace/bootstrap/compose changes
+    - run bsmart-instance-upgrade after a system checkout update on an existing instance
     - send /new to the target bot
     - send Hi as the first agent-authored verification turn
     - confirm bSmart startup summary and no GitHub SSH-key warning

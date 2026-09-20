@@ -1,9 +1,23 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.32-draft
+current_version: 0.1.33-draft
 updated: 2026-09-20 08:03 UTC
 status: draft
+```
+
+## 0.1.33-draft
+
+```yaml
+release_type: existing_instance_startup_upgrade
+scope:
+  - add an explicit instance-upgrade helper for existing workspaces
+  - back up and synchronize canonical startup hooks
+  - install workspace-root bStart.py without changing instance content/state
+  - update fresh bootstrap to install bStart.py and the current hook
+verification:
+  - isolated upgrade test passes
+  - system, project, bSwarm, and bStart tests remain green
 ```
 
 ## 0.1.32-draft

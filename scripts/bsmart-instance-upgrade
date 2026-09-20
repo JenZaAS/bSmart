@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+"""Finalize a bSmart-System upgrade in an existing workspace.
+
+This is an explicit, reversible repair for instances that already have an old
+HERMES.md/AGENTS.md hook. It updates only startup integration files, preserving
+backups and leaving bSmart instance content untouched.
+"""
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import hashlib
+import shutil
+from pathlib import Path
+
+HOOKS = ("HERMES.md", "AGENTS.md", "CLAUDE.md")
+
+
+def resolve_workspace(value: str | None) -> Path:
+    return Path(value).expanduser().resolve() if value else Path("/workspace").resolve()
+
+
+def sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Repair bSmart startup integration after a system upgrade.")
+    parser.add_argument("--workspace", help="Workspace root; defaults to /workspace")
+    parser.add_argument("--backup-root", help="Optional backup directory")
+    args = parser.parse_args()
+    workspace = resolve_workspace(args.workspace)
+    system = workspace / "bSmart-System"
+    source_start = system / "bStart.py"
+    template = system / "bSmart_Templates" / "AGENTS.md"
+    if not source_start.is_file():
+        print(f"ERROR: missing system entrypoint: {source_start}")
+        return 1
+    if not template.is_file():
+        print(f"ERROR: missing startup hook template: {template}")
+        return 1
+
+    stamp = dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
+    backup = Path(args.backup_root).expanduser().resolve() if args.backup_root else workspace / ".bsmart-upgrade-backups" / stamp
+    backup.mkdir(parents=True, exist_ok=True)
+    changed: list[str] = []
+    backed_up: list[str] = []
+
+    target_start = workspace / "bStart.py"
+    if target_start.exists() and sha256(target_start) != sha256(source_start):
+        destination = backup / "bStart.py"
+        shutil.copy2(target_start, destination)
+        backed_up.append(str(destination))
+    if not target_start.exists() or sha256(target_start) != sha256(source_start):
+        shutil.copy2(source_start, target_start)
+        changed.append(str(target_start))
+
+    hook = template.read_text(encoding="utf-8")
+    for name in HOOKS:
+        target = workspace / name
+        if target.exists() and target.read_text(encoding="utf-8", errors="replace") != hook:
+            destination = backup / name
+            shutil.copy2(target, destination)
+            backed_up.append(str(destination))
+        if not target.exists() or target.read_text(encoding="utf-8", errors="replace") != hook:
+            target.write_text(hook, encoding="utf-8")
+            changed.append(str(target))
+
+    print("bSmart instance upgrade: verified")
+    print(f"workspace: {workspace}")
+    print(f"system: {system}")
+    print(f"bStart: {target_start}")
+    print(f"hooks: {', '.join(HOOKS)}")
+    print(f"changed: {len(changed)}")
+    for item in changed:
+        print(f"  updated: {item}")
+    print(f"backups: {len(backed_up)}")
+    for item in backed_up:
+        print(f"  backup: {item}")
+    print("instance content: untouched")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

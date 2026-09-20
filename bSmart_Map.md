@@ -72,6 +72,7 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | `./bSmart-System/scripts` | Deterministic helper programs and lookup tools | low | execution only |
 | `./bSmart-System/scripts/bsmart-role-core.mjs` | Shared role command and explicit legacy migration engine | low | role commands/migration |
 | `./bSmart-System/scripts/bsmart-role.mjs` | JSON CLI transport for role commands | low | execution only |
+| `./bSmart-System/scripts/bsmart-instance-upgrade` | Explicit existing-instance startup repair with backups | low | system upgrade/setup |
 | `./bSmart-System/tests/` | System validation | low | explicit testing only |
 | `./bSmart-System/bSmart_Docs/` | Human-facing system documentation | low | explicit request only |
 

@@ -18,13 +18,13 @@ from pathlib import Path
 
 DEFAULT_REPO_URL = "https://github.com/JenZaAS/bSmart.git"
 SYSTEM_ROOT = Path(__file__).resolve().parent.parent
-BOOTSTRAP_HOOK = """# bSmart startup hook
-
-Read `bSmart-System/bSmart.md` first; follow it.
+BOOTSTRAP_HOOK = """Run `python bStart.py` exactly once at the beginning of every new session, including after `/new`, before replying or taking any action. Follow the startup result and its loaded context.
 
 Hierarchy:
-- `bSmart-System/bSmart.md`: shared system rules.
-- `bSmart/bSmart_Agent.md`: instance rules; project files are project-scoped.
+- `bSmart-System/bSmart.md`: shared system rules and bStart contract.
+- `bSmart/bSmart_Agent.md`: stable instance identity and access facts.
+- selected role file: current role/project/workstream state.
+- project files: project-scoped instructions and facts.
 
 Do not duplicate system/project rules here. Do not delete or rewrite this hook for task-specific instructions.
 """
@@ -133,6 +133,11 @@ def main() -> int:
     install_dir(workspace, args.uid, args.gid)
 
     system_action = ensure_system_repo(workspace, args.repo_url)
+
+    entrypoint = workspace / "bStart.py"
+    source_entrypoint = workspace / "bSmart-System" / "bStart.py"
+    if not entrypoint.exists() and source_entrypoint.is_file():
+        shutil.copy2(source_entrypoint, entrypoint)
 
     # Fresh native/local instances may not yet have reached a /new startup turn.
     # Install the managed adapter during bootstrap so the first Hermes session

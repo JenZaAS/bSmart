@@ -25,6 +25,14 @@ Use the same content from `bSmart_Templates/AGENTS.md` for every supported start
 
 `check` reports whether existing hooks match the shared template.
 
+After updating bSmart-System in an existing workspace, run:
+
+```bash
+python3 /workspace/bSmart-System/scripts/bsmart-instance-upgrade
+```
+
+This explicit upgrade helper backs up differing canonical hooks, installs the workspace-root `bStart.py`, and synchronizes `HERMES.md`, `AGENTS.md`, and `CLAUDE.md`. It does not modify bSmart instance content or state.
+
 ## Runtime defaults
 
 Resolve the workspace root as follows:

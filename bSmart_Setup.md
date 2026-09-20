@@ -53,11 +53,13 @@ steps:
 ## Existing-instance repair
 
 ```text
+python3 /workspace/bSmart-System/scripts/bsmart-instance-upgrade
+python3 ./bSmart-System/scripts/bsmart-instance-upgrade
 python3 /workspace/bSmart-System/scripts/bsmart-content-upgrade --create-missing
 python3 ./bSmart-System/scripts/bsmart-content-upgrade --create-missing
 ```
 
-The repair helper creates only missing standard content files and never overwrites existing instance content. Use it for an existing or externally managed agent after reviewing the target workspace. Add `--quiet` for routine startup checks; healthy runs then produce no agent-facing output.
+Run `bsmart-instance-upgrade` once after updating bSmart-System in an existing instance. It backs up differing startup hooks, installs the workspace `bStart.py`, synchronizes the canonical `HERMES.md`, `AGENTS.md`, and `CLAUDE.md` hooks, and leaves instance content/state untouched. Then run `bsmart-content-upgrade --create-missing` for create-only content repair. Add `--quiet` to the content helper for routine startup checks; healthy runs then produce no agent-facing output.
 
 ## Required operator inputs
 
