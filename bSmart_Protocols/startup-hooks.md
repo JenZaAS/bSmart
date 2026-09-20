@@ -39,7 +39,7 @@ The standard post-pull command is:
 python3 /workspace/bSmart-System/scripts/bsmart-update
 ```
 
-It performs the startup integration repair, create-only content repair, and project-integration verification without pulling Git.
+It performs the startup integration repair, create-only content repair, and project-integration verification without pulling Git. It also reports known outdated instance-profile sections with a proposed narrow patch; applying that patch requires operator approval.
 
 ## Runtime defaults
 

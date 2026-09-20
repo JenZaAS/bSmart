@@ -14,6 +14,12 @@ import shutil
 from pathlib import Path
 
 HOOKS = ("HERMES.md", "AGENTS.md", "CLAUDE.md")
+PROFILE_REVIEW_MARKER = "## Startup reply behavior"
+PROFILE_RECOMMENDED = """## Startup reply behavior
+- Preserve the compact command lines emitted by bStart.py.
+- Do not replace the bStart startup summary with a generic greeting or reduced status summary.
+- A first reply after `/new` may add a short greeting, but must retain the Role, Project, Workstream, and command-help lines.
+"""
 
 
 def resolve_workspace(value: str | None) -> Path:
@@ -45,6 +51,7 @@ def main() -> int:
     backup.mkdir(parents=True, exist_ok=True)
     changed: list[str] = []
     backed_up: list[str] = []
+    profile = workspace / "bSmart" / "bSmart_Agent.md"
 
     target_start = workspace / "bStart.py"
     if target_start.exists() and sha256(target_start) != sha256(source_start):
@@ -65,6 +72,13 @@ def main() -> int:
         if not target.exists() or target.read_text(encoding="utf-8", errors="replace") != hook:
             target.write_text(hook, encoding="utf-8")
             changed.append(str(target))
+
+    if profile.is_file():
+        profile_text = profile.read_text(encoding="utf-8", errors="replace")
+        if PROFILE_REVIEW_MARKER in profile_text and "Preserve the compact command lines emitted by bStart.py." not in profile_text:
+            print("profile_review: bSmart_Agent.md contains an older startup-reply policy")
+            print("profile_action: propose a narrow replacement; approval required before changing instance content")
+            print(PROFILE_RECOMMENDED.rstrip())
 
     print("bSmart instance upgrade: verified")
     print(f"workspace: {workspace}")

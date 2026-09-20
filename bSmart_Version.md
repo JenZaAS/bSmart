@@ -1,9 +1,22 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.34-draft
+current_version: 0.1.35-draft
 updated: 2026-09-20 08:03 UTC
 status: draft
+```
+
+## 0.1.35-draft
+
+```yaml
+release_type: low_friction_instance_profile_migration
+scope:
+  - detect known outdated bSmart_Agent.md startup-reply sections during update
+  - print a narrow proposed replacement without silently changing instance content
+  - require one explicit operator approval before applying the instance-local patch
+verification:
+  - upgrade review test passes
+  - prior system, project, bSwarm, and bStart tests remain green
 ```
 
 ## 0.1.34-draft
