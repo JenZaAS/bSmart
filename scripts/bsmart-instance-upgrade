@@ -30,6 +30,22 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def migrate_known_profile(profile: Path, backup: Path, backed_up: list[str]) -> str | None:
+    if not profile.is_file():
+        return None
+    text = profile.read_text(encoding="utf-8", errors="replace")
+    if PROFILE_REVIEW_MARKER not in text or "Preserve the compact command lines emitted by bStart.py." in text:
+        return None
+    start = text.index(PROFILE_REVIEW_MARKER)
+    next_heading = text.find("\n## ", start + len(PROFILE_REVIEW_MARKER))
+    end = len(text) if next_heading < 0 else next_heading + 1
+    destination = backup / "bSmart_Agent.md"
+    shutil.copy2(profile, destination)
+    backed_up.append(str(destination))
+    profile.write_text(text[:start] + PROFILE_RECOMMENDED.rstrip() + "\n\n" + text[end:], encoding="utf-8")
+    return str(profile)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Repair bSmart startup integration after a system upgrade.")
     parser.add_argument("--workspace", help="Workspace root; defaults to /workspace")
@@ -73,12 +89,11 @@ def main() -> int:
             target.write_text(hook, encoding="utf-8")
             changed.append(str(target))
 
-    if profile.is_file():
-        profile_text = profile.read_text(encoding="utf-8", errors="replace")
-        if PROFILE_REVIEW_MARKER in profile_text and "Preserve the compact command lines emitted by bStart.py." not in profile_text:
-            print("profile_review: bSmart_Agent.md contains an older startup-reply policy")
-            print("profile_action: propose a narrow replacement; approval required before changing instance content")
-            print(PROFILE_RECOMMENDED.rstrip())
+    migrated_profile = migrate_known_profile(profile, backup, backed_up)
+    if migrated_profile:
+        changed.append(migrated_profile)
+        print("profile_migration: applied known startup-reply compatibility update")
+        print(f"profile_backup: {backup / 'bSmart_Agent.md'}")
 
     print("bSmart instance upgrade: verified")
     print(f"workspace: {workspace}")

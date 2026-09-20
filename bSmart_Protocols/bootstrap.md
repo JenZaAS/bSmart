@@ -47,7 +47,7 @@ new_agent_bootstrap_standard:
   existing_instance_repair: /workspace/bSmart-System/scripts/bsmart-content-upgrade --create-missing
   upgrade_rule: back up differing startup hooks, install bStart.py, and synchronize canonical hooks; do not alter instance content/state
   command_rule: "pull" changes only the system checkout; "update" runs bsmart-update without pulling; setup uses the same finalization for existing instances
-  profile_migration: detect known outdated bSmart_Agent.md sections, show a narrow proposed replacement, and ask for one approval before applying an instance-local patch
+  profile_migration: apply known exact bSmart_Agent.md compatibility migrations automatically with a backup and clear report; ask only for ambiguous or broader changes
   repair_rule: create missing standard content files only; never overwrite existing instance content
   startup_behavior: run the quiet content-upgrade check on every /new; keep heavier Git and storage checks once-per-UTC-day throttled
   integration_behavior: run the quiet /project adapter check on every /new; install/enable the managed adapter when missing and report only changes or setup problems

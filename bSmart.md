@@ -119,7 +119,7 @@ update_workflow:
     - create only missing standard content
     - verify or install the managed /project integration
   preserve: Never overwrite instance identity, role state, legacy migration files, projects, secrets, or unrelated content.
-  profile_migration: Detect known outdated bSmart_Agent.md sections, show a narrow proposed replacement, and ask for one approval before applying an instance-local patch.
+  profile_migration: Apply known exact bSmart_Agent.md compatibility migrations automatically with a backup and clear report; ask only for ambiguous or broader changes.
 
 deterministic_lookups:
   map: python ./scripts/bMap <scope> <item>

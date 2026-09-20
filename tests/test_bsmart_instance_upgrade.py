@@ -44,8 +44,9 @@ class InstanceUpgradeTests(unittest.TestCase):
             self.assertEqual(len(backups), 1)
             self.assertEqual(backups[0].read_text(), "Read bSmart.md\n")
             self.assertEqual((workspace / "bSmart" / "bSmart_State.md").read_text(), "preserve me\n")
-            self.assertIn("profile_review: bSmart_Agent.md contains an older startup-reply policy", output.getvalue())
-            self.assertIn("approval required", output.getvalue())
+            self.assertIn("profile_migration: applied known startup-reply compatibility update", output.getvalue())
+            self.assertIn("profile_backup:", output.getvalue())
+            self.assertIn("Preserve the compact command lines emitted by bStart.py.", (workspace / "bSmart" / "bSmart_Agent.md").read_text())
 
 
 if __name__ == "__main__":

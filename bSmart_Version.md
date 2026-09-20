@@ -1,9 +1,22 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.35-draft
+current_version: 0.1.36-draft
 updated: 2026-09-20 08:03 UTC
 status: draft
+```
+
+## 0.1.36-draft
+
+```yaml
+release_type: automatic_known_instance_migrations
+scope:
+  - apply the known startup-reply compatibility migration during bsmart-update
+  - back up bSmart_Agent.md before the narrow exact replacement
+  - reserve approval prompts for ambiguous or broader instance changes
+verification:
+  - upgrade migration test passes
+  - prior system, project, bSwarm, and bStart tests remain green
 ```
 
 ## 0.1.35-draft

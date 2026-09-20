@@ -61,7 +61,7 @@ python3 /workspace/bSmart-System/scripts/bsmart-content-upgrade --create-missing
 python3 ./bSmart-System/scripts/bsmart-content-upgrade --create-missing
 ```
 
-For an existing instance, `bsmart-update` is the standard post-pull finalization command. It deliberately does not pull Git: it backs up differing startup hooks, installs the workspace `bStart.py`, synchronizes the canonical hooks, creates only missing standard content, and verifies the managed `/project` integration. It leaves instance content/state untouched. It also detects known outdated instance-profile sections and prints a narrow proposed replacement; the agent should show that proposal and ask for one approval before applying it. `bsmart-instance-upgrade` and `bsmart-content-upgrade` remain available as focused helpers.
+For an existing instance, `bsmart-update` is the standard post-pull finalization command. It deliberately does not pull Git: it backs up differing startup hooks, installs the workspace `bStart.py`, synchronizes the canonical hooks, creates only missing standard content, and verifies the managed `/project` integration. It automatically applies only known exact instance-profile compatibility migrations with a backup and clear report; ambiguous or broader changes still require a question. `bsmart-instance-upgrade` and `bsmart-content-upgrade` remain available as focused helpers.
 
 ## Required operator inputs
 
