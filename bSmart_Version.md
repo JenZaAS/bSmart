@@ -1,7 +1,7 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.25-draft
+current_version: 0.1.26-draft
 updated: 2026-09-20 08:03 UTC
 status: draft
 ```
@@ -19,6 +19,20 @@ scope:
 verification:
   - focused bProtective tests pass
   - Hermes plugin manifest and registration are validated
+```
+
+## 0.1.26-draft
+
+```yaml
+release_type: instance_profile_structure
+scope:
+  - reduce bSmart_Agent.md to stable identity, verified access, paths, feature pointers, and ownership links
+  - move generic safety and operational guidance to invariants and protocols
+  - update the reusable bSmart_Agent template to prevent mixed policy/state profiles
+verification:
+  - existing instance facts preserved or routed to canonical system protocols
+  - profile backup created before restructuring
+  - prior system and bSwarm tests remain green
 ```
 
 ## 0.1.25-draft

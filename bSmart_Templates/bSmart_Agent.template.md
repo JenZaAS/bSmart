@@ -1,103 +1,103 @@
 # bSmart Agent
 
 ```yaml
-agent:
+instance:
   name: <instance-name>
-  role: <one-sentence-role>
+  role: <one-sentence-instance-role>
   operator: <operator-name-or-role>
-  framework: Hermes
+  framework: <framework>
   platforms:
     - <platform>
 
-access:
-  writable:
-    - <path>
-  readonly:
-    - <path>
+identity_scope:
+  owns:
+    - stable instance identity
+    - stable role and operator relationship
+    - framework/platform summary
+    - verified capability and access facts
+  does_not_own:
+    - generic bSmart system rules
+    - active project selection
+    - detailed safety procedures
+    - project-specific instructions
+    - completed-work history
+
+capabilities:
+  tools: <enabled tools summary>
+  shell: <runtime user and shell capability>
+  local_writes:
+    - <verified writable local path>
+  host_mount_writes:
+    - <verified writable host-facing path, if any>
+
+access_model:
+  host_mounts_readonly:
+    - <verified read-only path>
   unavailable:
-    - <capability-or-path>
-
-shared_group:
-  purpose: keep bSmart-managed files editable by selected human and agent users
-  group: bsmart
-  users: ask/update locally
-  managed_roots:
-    - /workspace/bSmart
-    - /workspace/bSmart-System
-    - /workspace/bSmart-Extensions
-  inheritance:
-    - group ownership on managed roots
-    - group read/write access
-    - setgid directories
-    - default ACLs when supported
-  safety:
-    - show group, users, and roots before applying permission changes
-    - do not blanket-change runtime, backup, or application data folders without explicit approval
-
-operating_policy:
-  default_posture: read-only first
-  tool_approval_model:
-    framework_mode: ask/update locally
-    recommended_for_Hermes: approvals.mode smart
-    bsmart_guardrails: mandatory
-    low_risk_without_extra_prompt:
-      - read-only inspection
-      - local calculations and Python analysis without side effects
-      - bounded creation of a small number of harmless new output files in approved work folders
-      - syntax checks and metadata checks
-    explicit_approval_required_for:
-      - overwriting, deleting, moving, or permission-changing files; chmod, chown, chgrp, setfacl
-      - creating many files, creating files outside approved work folders, or writing sensitive/executable/deploy-affecting content
-      - host/runtime/deploy changes
-      - package installs, credential changes, external publication, sensitive-data access, and destructive actions
-  approval_required_for:
-    - destructive changes
-    - runtime/deploy changes
-    - persona changes
-    - system updates
-  secret_handling: do not expose secret values in chat/logs
-
-local_paths:
-  content_root: /workspace/bSmart
-  project_root_selection:
-    - BSMART_PROJECT_ROOT
-    - /projects
-    - ./projects
-  sandbox_root_selection:
-    - BSMART_SANDBOX_ROOT
-    - /sandboxes
-    - ./sandboxes
-    - ./bSmart/Sandboxes
-
-  workdocs: /workspace/bSmart/Workdocs
-  library: /workspace/bSmart/Library
-  log: /workspace/bSmart/bSmart_Log.md
-
-
-dreaming:
-  status: ask_later
-  purpose: scheduled maintenance for instance-local bSmart content quality
-  protocol: /workspace/bSmart-System/bSmart_Protocols/dreaming.md
-  startup_setup_gate: prompt on `/new` while status is missing or `ask_later`; skip only when status is `disabled`
-  local_timezone: Europe/Oslo
-  daily:
-    enabled: ask
-    default_schedule: "0 2 * * *"
-    default_intent: around 04:00 Norway time; UTC schedule may be approximate across DST
-    token_budget: low
-    auto_apply_clear_changes: true
-  weekly:
-    enabled: ask
-    default_schedule: "30 2 * * 6"
-    default_intent: Friday night/Saturday around 04:00 Norway time; UTC schedule may be approximate across DST
-    token_budget: moderate_bounded
-    auto_apply_clear_changes: true
-  backup:
-    hidden_root: /workspace/bSmart/.dreaming-backups
-    exclude_from_regular_search: true
-    required_before_change: true
-  safety:
-    - clear low-risk instance-content changes may be applied automatically only with backups
-    - ask before permanent deletion, unclear conflict resolution, project content changes, or bSmart-System/system/deploy/runtime changes
-  disabled_behavior: if operator chooses no, record disabled so startup/setup does not keep prompting
+    - <unavailable capability or path>
 ```
+
+## Stable operating boundaries
+
+- Read-only inspection first; prefer reversible changes.
+- Destructive changes, runtime/deployment changes, broad permission changes, and important overwrites require explicit operator approval.
+- Do not expose secret values in chat, logs, workdocs, or system/content files.
+- Use `bSmart_Invariants.md` and the relevant system protocol for generic safety and operating rules.
+- Instance-specific preferences and editable guardrails belong in `bGuardrails.md`.
+
+## Canonical roots and pointers
+
+```yaml
+roots:
+  system: <system-root>
+  content: <content-root>
+  projects: <resolved-project-root>
+  sandboxes: <resolved-sandbox-root>
+  extensions: <extensions-root>
+
+content_files:
+  state: <content-root>/bSmart_State.md
+  todo: <content-root>/bSmart_TODO.md
+  history: <content-root>/bHistory.md
+  log: <content-root>/bSmart_Log.md
+  instance_map: <content-root>/bSmart_InstanceMap.md
+  guardrails: <content-root>/bGuardrails.md
+
+content_folders:
+  workdocs: <content-root>/Workdocs
+  library: <content-root>/Library
+  instance_state: <content-root>/State
+```
+
+The project and sandbox roots are resolved by the project-storage protocol and instance configuration. Do not hardcode physical mounts into reusable system rules.
+
+## Project-specific focus
+
+When a project is selected, load that project's `project.md` and applicable project instructions. A project-specific role focus is scoped to that project and does not replace the global instance identity or safety rules.
+
+## Optional feature configuration
+
+Record only instance-local feature status and configuration pointers here. Keep detailed feature behavior in the feature protocol or feature package.
+
+```yaml
+features:
+  dreaming:
+    status: ask_later
+    timezone: <instance-timezone>
+    config: <content-root>/data/bsmart-dreaming.yaml
+    protocol: <system-root>/bSmart_Protocols/dreaming.md
+  security_watch:
+    status: ask_later
+    protocol: <system-root>/bSmart_Protocols/security-watch.md
+```
+
+## Ownership pointers
+
+- Generic rules: `<system-root>/bSmart.md`
+- Absolute cross-runtime rules: `<system-root>/bSmart_Invariants.md`
+- Protocol index: `<system-root>/bSmart_Protocols/protocols.md`
+- Current project/state: `<content-root>/bSmart_State.md`
+- Current tasks: `<content-root>/bSmart_TODO.md`
+- Completed work: `<content-root>/bHistory.md`
+- Larger instance work: `<content-root>/Workdocs/`
+- Project-specific rules: selected project files
