@@ -114,10 +114,8 @@ def _format(result: dict[str, Any]) -> str:
             lines.append("- none")
         for project in projects:
             name = project.get("name", "?") if isinstance(project, dict) else str(project)
-            kind = project.get("kind") if isinstance(project, dict) else None
             marker = " (current)" if name == current else ""
-            suffix = f" [{kind}]" if kind else ""
-            lines.append(f"- {name}{suffix}{marker}")
+            lines.append(f"- {name}{marker}")
         lines.append(f"Current: {current or 'Free Mode'}")
         if selection.get("workstream"):
             lines[-1] += f" / {selection['workstream']}"
