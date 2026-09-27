@@ -5,6 +5,18 @@ purpose: Create or update local bSmart content for one Hermes workspace.
 mode: interactive
 system_root: /workspace/bSmart-System
 content_root: /workspace/bSmart
+
+ownership:
+  setup_file: owns interactive setup order, operator questions, defaults, paths, and links to detailed protocols
+  protocol_index: owns compact protocol discovery and ownership summaries
+  detailed_protocols: own domain behavior, constraints, commands, and verification
+  startup_manifest: owns startup routing and loading order
+  invariants: own absolute cross-runtime rules
+  instance_content: owns instance-specific facts, preferences, state, and local configuration
+  project_content: owns project-specific facts, decisions, knowledge, workdocs, and guardrails
+  duplication_rule: Do not copy detailed domain procedures into setup, instance, or project files when a canonical protocol already exists.
+
+protocol_index: /workspace/bSmart-System/bSmart_Protocols/protocols.md
 ```
 
 ## Setup checklist
@@ -25,7 +37,9 @@ steps:
   - create_content_root_if_missing
   - create_content_readme_if_missing
   - create_bSmart_Agent_from_template
-  - create_bSmart_State_from_template
+  - create_bGuardrails_from_template
+  - create_role_directory_and_general_role_from_templates
+  - create_current_role_selector_from_template
   - create_bSmart_TODO_from_template
   - create_bHistory_from_template
   - create_bSmart_Log_from_template
@@ -39,11 +53,15 @@ steps:
 ## Existing-instance repair
 
 ```text
+python3 /workspace/bSmart-System/scripts/bsmart-update
+python3 ./bSmart-System/scripts/bsmart-update
+python3 /workspace/bSmart-System/scripts/bsmart-instance-upgrade
+python3 ./bSmart-System/scripts/bsmart-instance-upgrade
 python3 /workspace/bSmart-System/scripts/bsmart-content-upgrade --create-missing
 python3 ./bSmart-System/scripts/bsmart-content-upgrade --create-missing
 ```
 
-The repair helper creates only missing standard content files and never overwrites existing instance content. Use it for an existing or externally managed agent after reviewing the target workspace. Add `--quiet` for routine startup checks; healthy runs then produce no agent-facing output.
+For an existing instance, `bsmart-update` is the standard post-pull finalization command. It deliberately does not pull Git: it backs up differing startup hooks, installs the workspace `bStart.py`, synchronizes the canonical hooks, creates only missing standard content, refreshes or installs the managed `/project` integration, and reports when Hermes must restart. It automatically applies only known exact instance-profile compatibility migrations with a backup and clear report; ambiguous or broader changes still require a question. `bsmart-instance-upgrade` and `bsmart-content-upgrade` remain available as focused helpers.
 
 ## Required operator inputs
 
@@ -68,7 +86,8 @@ workspace_bootstrap:
     bsmart_system_remote: https://github.com/JenZaAS/bSmart.git
     bsmart_system_updates: safe HTTPS fast-forward auto-pull
     HERMES.md: same shared startup hook as AGENTS.md
-    AGENTS.md: same shared startup hook as HERMES.md
+    CLAUDE.md: same shared startup hook as AGENTS.md
+    AGENTS.md: same shared startup hook as HERMES.md and CLAUDE.md
     HERMES_WRITE_SAFE_ROOT: /opt/data:/workspace:/projects:/sandboxes
     TERMINAL_CWD: /workspace
   rule: all new AI agents should be bSmart-enabled unless the operator explicitly says otherwise
@@ -97,7 +116,7 @@ instance_git:
   protocol: /workspace/bSmart-System/bSmart_Protocols/instance-git-onboarding.md
   spec_file: /workspace/bSmart/State/instance-git.yaml
   defaults_file: /workspace/bSmart/State/instance-git-defaults.yaml
-  default: ask only for /workspace/bSmart content; do not confuse this with bSmart-System Git, which is required system infrastructure
+  default: ask for /workspace/bSmart content Git when not configured; if no Git exists, offer local Git history and explain that it can be connected to a remote later. Do not confuse this with bSmart-System Git, which is required system infrastructure
   choices:
     - none
     - local_git_only
@@ -187,7 +206,8 @@ hermes_project_integration:
     - send `/project list`
   existing_instances:
     - run the integration check during every `/new` startup, even when daily checks are throttled
-    - if setup is required, present an onboarding/migration action; do not silently install or restart
+    - install/enable the managed adapter when the source and active Hermes home are available
+    - report that a restart or relaunch is needed when plugin discovery requires it
   container_defaults:
     hermes_home: /opt/data
     system_root: /workspace/bSmart-System
@@ -197,6 +217,7 @@ hermes_project_integration:
 
 bprotective_integration:
   purpose: install the optional Hermes command-protection plugin without enabling it implicitly
+  protocol: /workspace/bSmart-System/bSmart_Protocols/operations.md
   source: /workspace/bSmart-System/integrations/hermes/bprotective-plugin/
   target: <active Hermes home>/plugins/bprotective/
   setup:
@@ -267,6 +288,7 @@ dreaming:
 
 shared_group:
   purpose: keep bSmart-managed files editable by selected human and agent users
+  protocol: /workspace/bSmart-System/bSmart_Protocols/operations.md
   default_group: bsmart
   group_choice:
     - create_or_use_default_bsmart_group
@@ -310,6 +332,7 @@ operating_policy:
 
 tool_approval_model:
   purpose: reduce repetitive framework permission prompts while preserving operator control through bSmart guardrails
+  protocol: /workspace/bSmart-System/bSmart_Protocols/operations.md
   framework_support:
     Hermes:
       recommended_config:

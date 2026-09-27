@@ -33,6 +33,7 @@ repo_boundary:
     usual_path_container: /workspace/bSmart
     usual_path_local: ./bSmart
     optional: true
+    no_git_behavior: Ask before creating local Git; explain that local history can later be connected to a remote repository such as GitHub.
   rule:
     - do not confuse bSmart-System Git with instance/content Git
     - public bSmart-System must remain third-party reusable
@@ -88,7 +89,7 @@ prompt_flow:
     Should this AI instance use Git for its bSmart content root?
   choices_1:
     - No Git
-    - Local Git only
+    - Create local Git history (recommended for a persistent instance; can be connected to a remote later)
     - Existing remote repo
     - Create/request new remote repo
 ```
@@ -108,8 +109,9 @@ modes:
       - do not run git init
       - do not ask for credentials
   local_git_only:
-    meaning: local Git history without remote push/pull
+    meaning: local Git history without remote push/pull; a remote may be connected later
     actions:
+      - explain that local history can later be connected to GitHub or another remote provider
       - run git init in the content root after approval
       - create/update .gitignore with bSmart defaults
       - commit initial local snapshot if operator approves
@@ -140,7 +142,28 @@ modes:
       - protect main/default branch where practical
 ```
 
-## Auth choices
+## Update backup policy
+
+```yaml
+update_backup_policy:
+  trigger: Before any approved system update or migration that may change instance content
+  pre_update:
+    - inform the operator that instance content may change and a backup commit will be made
+    - inspect the instance repository status and remote configuration
+    - if uncommitted changes exist, show them and ask whether they should be included
+    - commit the approved current state
+    - push the backup commit when a configured remote exists and push is approved/available
+  post_update:
+    - verify the update or migration result
+    - commit the resulting instance changes separately
+    - push the post-update commit when a configured remote exists and push is approved/available
+  no_git:
+    - ask whether to create local Git history before proceeding
+    - explain that the local repository can later be connected to GitHub or another remote
+  safety:
+    - never silently commit unrelated dirty content
+    - never force-push, reset, or overwrite remote history without explicit approval
+```
 
 ```yaml
 auth_methods:

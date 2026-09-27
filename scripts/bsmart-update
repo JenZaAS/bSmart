@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+"""Finalize an already-pulled bSmart-System update for one workspace.
+
+This command deliberately does not pull Git. Use bsmart-system-update-check
+separately when the operator explicitly requests a pull.
+"""
+from __future__ import annotations
+
+import argparse
+import subprocess
+import sys
+from pathlib import Path
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Finalize a pulled bSmart-System update without pulling Git.")
+    parser.add_argument("--workspace", default="/workspace")
+    args = parser.parse_args()
+    workspace = Path(args.workspace).expanduser().resolve()
+    system = workspace / "bSmart-System"
+    scripts = system / "scripts"
+    commands = [
+        [sys.executable, str(scripts / "bsmart-instance-upgrade"), "--workspace", str(workspace)],
+        [sys.executable, str(scripts / "bsmart-content-upgrade"), "--create-missing"],
+        [sys.executable, str(scripts / "bsmart-project-integration-check"), "--install", "--quiet"],
+    ]
+    print("bSmart update: finalizing pulled system; Git pull not requested")
+    for command in commands:
+        result = subprocess.run(command, cwd=workspace, text=True)
+        if result.returncode != 0:
+            print(f"bSmart update: blocked at {Path(command[1]).name}")
+            return result.returncode
+    print("bSmart update: complete; restart Hermes, then verify with /new and Hi")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -11,6 +11,22 @@ bsmart:
   extensions_root_local: ./bSmart-Extensions
   version_file: /workspace/bSmart-System/bSmart_Version.md
   setup_file: /workspace/bSmart-System/bSmart_Setup.md
+  startup_output:
+    greeting: "Hi, <operator-name>!"
+    compact_layout: true
+    rule: Do not insert blank lines between Agent, Role, Project, Workstream, or their indented help/status lines.
+    fields:
+      - Agent
+      - Role
+      - Project
+      - Workstream
+    common_commands:
+      role: "/role list | /role set <role> | /role add <role> | /role help"
+      project: "/project list | /project <project> | /project add <project> | /project help"
+      workstream: "/project ws <workstream> | /project add ws <workstream> | /project help"
+    help_commands:
+      role: "/role help shows the complete role command list and short explanations"
+      project: "/project help shows the complete project and workstream command list and short explanations"
   feature_registry: /workspace/bSmart-System/bSmart_Features.md
 
 path_resolution:
@@ -41,12 +57,26 @@ content_files:
   agent_local: ./bSmart/bSmart_Agent.md
   state: /workspace/bSmart/bSmart_State.md
   state_local: ./bSmart/bSmart_State.md
+  state_status: legacy_migration_only
+  roles: /workspace/bSmart/Roles
+  roles_local: ./bSmart/Roles
+  current_role: /workspace/bSmart/Roles/current_role.md
+  current_role_local: ./bSmart/Roles/current_role.md
+  default_role: general
   todo: /workspace/bSmart/bSmart_TODO.md
   todo_local: ./bSmart/bSmart_TODO.md
   history: /workspace/bSmart/bHistory.md
   history_local: ./bSmart/bHistory.md
   log: /workspace/bSmart/bSmart_Log.md
   log_local: ./bSmart/bSmart_Log.md
+  roles:
+    root: /workspace/bSmart/Roles
+    selector: /workspace/bSmart/Roles/current_role.md
+    selector_local: ./bSmart/Roles/current_role.md
+    default: general
+  role_state: /workspace/bSmart/Roles/<role-id>_role.md
+  guardrails: /workspace/bSmart/bGuardrails.md
+  guardrails_local: ./bSmart/bGuardrails.md
   container_storage: /workspace/bSmart/State/container-storage.yaml
   container_storage_local: ./bSmart/State/container-storage.yaml
   features: /workspace/bSmart-System/bSmart_Features.md
@@ -66,6 +96,7 @@ content_folders:
 
 system_folders:
   protocols: /workspace/bSmart-System/bSmart_Protocols
+  protocol_index: /workspace/bSmart-System/bSmart_Protocols/protocols.md
   templates: /workspace/bSmart-System/bSmart_Templates
   docs: /workspace/bSmart-System/Docs
   examples: /workspace/bSmart-System/bSmart_Examples
@@ -76,6 +107,26 @@ startup_hooks:
   helper: /workspace/bSmart-System/scripts/bsmart-hooks
   helper_local: ./bSmart-System/scripts/bsmart-hooks
   rule: HERMES.md, AGENTS.md, and any other supported hook files use the same shared template.
+
+update_workflow:
+  pull: Run `python3 /workspace/bSmart-System/scripts/bsmart-system-update-check --auto-pull` only when the operator asks to pull/update the system checkout; the currently checked-out branch and its upstream are authoritative unless a specific expected branch is requested.
+  update: Run `python3 /workspace/bSmart-System/scripts/bsmart-update` after the desired system revision is present; this never pulls Git.
+  setup: Run the same `bsmart-update` finalization for an existing instance, then ask only about missing or ambiguous instance-specific configuration.
+  required_sequence: pull_or_confirm_revision, update, restart_or_relaunch, /new, Hi
+  update_effects:
+    - install or replace workspace-root bStart.py with a backup when needed
+    - back up and synchronize HERMES.md, AGENTS.md, and CLAUDE.md
+    - create only missing standard content
+    - verify, refresh, or install the managed /project integration
+  first_reply_rule: Preserve the bStart startup and command-help lines in the first reply; instance-specific greetings may precede them but must not replace them.
+  preserve: Never overwrite instance identity, role state, legacy migration files, projects, secrets, or unrelated content.
+  profile_migration: Apply known exact bSmart_Agent.md compatibility migrations automatically with a backup and clear report; ask only for ambiguous or broader changes.
+
+deterministic_lookups:
+  map: python ./scripts/bMap <scope> <item>
+  feature: python ./scripts/bFeature <feature-name>
+  knowledge: python ./scripts/bKnowledge <query>
+  rule: Return only the requested compact entry; do not recursively search the workspace.
 
 instance_git:
   status: optional_but_recommended
@@ -122,8 +173,9 @@ project_context_scope:
   exception: Listing immediate project names is allowed; do not recursively scan sibling projects.
 
 state_management:
-  protocol: /workspace/bSmart-System/bSmart_Protocols/state.md
-  rule: Active/current project state is governed by the state protocol; feature-specific protocols should reference it rather than restating ownership rules.
+  protocol: /workspace/bSmart-System/bSmart_Protocols/roles-and-concurrency.md
+  legacy_protocol: /workspace/bSmart-System/bSmart_Protocols/state.md
+  rule: Active project, workstream, focus, and role state are owned by exactly one selected role file; bSmart_State.md is migration-only and must not compete as an active source.
 
 github_ai_access:
   provider_protocol: /workspace/bSmart-System/bSmart_Protocols/github-ai-access.md
@@ -133,6 +185,7 @@ github_ai_access:
 
 startup_sequence:
   - read this manifest
+  - read /workspace/bSmart-System/bSmart_Invariants.md before applying system, instance, project, or runtime rules
   - before running startup maintenance, show a concise action note: "bSmart — Checking for bSmart-System updates and required integrations." If an update is being pulled, say so explicitly; if the `/project` adapter is missing, explain that it will be installed/enabled and may require a restart; if standard content is missing, explain that it will be created from a template.
   - run python3 /workspace/bSmart-System/scripts/bsmart-startup-check --auto-pull when the helper exists; use the local ./bSmart-System path on non-container agents; if the checkout is read-only or a platform lacks Linux-only helpers such as findmnt, continue with direct Git checks and report the skipped cache/mount inference
   - check Hermes `/project` integration with `scripts/bsmart-project-integration-check` when available; install/enable the managed adapter when missing and report only changes or setup problems; request a restart or relaunch when discovery requires it
@@ -141,17 +194,18 @@ startup_sequence:
   - if bSmart_Agent.md missing, run bSmart_Setup.md
   - read bSmart_Agent.md
   - if startup check reports project storage setup_required, immediately prompt the operator with Telegram buttons using clarify choices from bSmart_Protocols/project-storage.md before the normal TODO prompt
-  - read bSmart_State.md when present
-  - read bSmart_TODO.md when present
+  - select exactly one role file, defaulting to /workspace/bSmart/Roles/general_role.md
+  - if Roles/ or current_role.md is missing, silently create the directory, selector, and general_role.md from templates
+  - if the selector names a missing role, fall back to general and repair the selector
+  - do not load bSmart_State.md as active state; use it only during explicit role-state migration
   - inspect local Dreaming status after loading instance content
   - if Dreaming status is missing or ask_later, trigger the Dreaming setup prompt before the normal TODO prompt
   - if Dreaming status is enabled, continue without repeating setup; if disabled, do not ask again unless the operator requests Dreaming setup
   - use bHistory.md on request or when a recent completion summary needs historical context; do not load the full diary by default
   - scan bSmart_Protocols summaries and load relevant protocols
   - when the operator explicitly asks to start local-agent onboarding, load /workspace/bSmart-System/bSmart_Protocols/local-agent-onboarding.md
-  - first visible assistant reply starts with: "bSmart — Loading bSmart."
-  - then say: "Hi! Welcome back."
-  - show compact TODO-oriented startup summary
+  - first visible assistant reply starts with the bStart greeting: "Hi, <operator-name>!"
+  - then show the compact bStart startup summary
   - include one short help line: "Info keywords: help, features, setup, projects, tasks, safety."
   - ask whether to continue the current TODO item
 
@@ -179,7 +233,11 @@ visible_action_notes:
 
 missing_content_behavior:
   bSmart_Agent.md: run setup using bSmart_Templates/bSmart_Agent.template.md
-  bSmart_State.md: create from template after approval
+  bGuardrails.md: create from bSmart_Templates/bGuardrails.template.md after approval
+  Roles/: create silently when missing
+  Roles/current_role.md: create silently selecting general when missing
+  Roles/general_role.md: create silently from bSmart_Templates/role.template.md when missing
+  bSmart_State.md: never create; migrate only when explicitly requested
   bSmart_TODO.md: create from template after approval
   bSmart_Log.md: create empty log from template after approval
 

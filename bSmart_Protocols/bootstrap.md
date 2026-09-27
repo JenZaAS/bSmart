@@ -17,10 +17,14 @@ protocol:
 ```yaml
 startup_order:
   - host_framework_persona
+  - bStart.py
   - /workspace/bSmart-System/bSmart.md
+  - /workspace/bSmart-System/bSmart_Invariants.md
   - /workspace/bSmart/bSmart_Agent.md
-  - /workspace/bSmart/bSmart_State.md
-  - /workspace/bSmart/bSmart_TODO.md
+  - /workspace/bSmart/bGuardrails.md when present
+  - /workspace/bSmart/Roles/current_role.md
+  - selected /workspace/bSmart/Roles/<role-id>_role.md
+  - selected project.md and workstream context when active
   - relevant_protocols
 ```
 
@@ -38,16 +42,23 @@ new_agent_bootstrap_standard:
     TERMINAL_CWD: /workspace
     HERMES_WRITE_SAFE_ROOT: /opt/data:/workspace:/projects:/sandboxes
   first_run_helper: /workspace/bSmart-System/scripts/bsmart-bootstrap-workspace
+  existing_instance_upgrade: /workspace/bSmart-System/scripts/bsmart-instance-upgrade
+  existing_instance_update: /workspace/bSmart-System/scripts/bsmart-update
   existing_instance_repair: /workspace/bSmart-System/scripts/bsmart-content-upgrade --create-missing
+  upgrade_rule: back up differing startup hooks, install bStart.py, and synchronize canonical hooks; do not alter instance content/state
+  command_rule: "pull" changes only the system checkout; "update" runs bsmart-update without pulling; setup uses the same finalization for existing instances
+  profile_migration: apply known exact bSmart_Agent.md compatibility migrations automatically with a backup and clear report; ask only for ambiguous or broader changes
   repair_rule: create missing standard content files only; never overwrite existing instance content
   startup_behavior: run the quiet content-upgrade check on every /new; keep heavier Git and storage checks once-per-UTC-day throttled
-  integration_behavior: run the quiet /project adapter check on every /new; install/enable the managed adapter when missing and report only changes or setup problems
+  integration_behavior: run the quiet /project adapter check on every /new; refresh or install the managed adapter when stale or missing and report only changes or setup problems
   action_note_behavior: explain the purpose before startup maintenance; name the concrete operation (update, create missing bHistory, or install/enable /project) rather than exposing only a generic tool-execution description
   verification:
     - restart_or_redeploy_after workspace/bootstrap/compose changes
+    - run bsmart-instance-upgrade after a system checkout update on an existing instance
     - send /new to the target bot
     - send Hi as the first agent-authored verification turn
     - confirm bSmart startup summary and no GitHub SSH-key warning
+  first_reply_rule: preserve bStart output and command-help lines; do not replace them with instance-specific greeting-only behavior
 ```
 
 ```yaml
@@ -64,9 +75,9 @@ governance:
 After `/new`, the gateway reset itself may not be an agent-authored turn, but the first real reply after reset should be concise and discoverable:
 
 ```text
-bSmart — Loading bSmart.
-Hi! Welcome back.
-<compact startup/TODO summary>
+Hi, <operator-name>!
+bSmart — Startup
+<compact startup summary from bStart.py>
 Info keywords: help, features, setup, projects, tasks, safety.
 <short question about continuing the current TODO item>
 ```

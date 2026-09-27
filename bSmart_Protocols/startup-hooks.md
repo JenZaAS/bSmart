@@ -15,15 +15,31 @@ Use the same content from `bSmart_Templates/AGENTS.md` for every supported start
 
 - `AGENTS.md`
 - `HERMES.md`
-- `.hermes.md`
 - `CLAUDE.md`
+- `.hermes.md`
 - `.cursorrules`
 
-`init` creates only the canonical `AGENTS.md` and `HERMES.md` files when they are missing. It never overwrites existing hooks.
+`init` creates the canonical `AGENTS.md`, `HERMES.md`, and `CLAUDE.md` files when they are missing. It never overwrites existing hooks.
 
 `reset` is an explicit operator command. It resets the canonical hooks and any other supported hook files that already exist.
 
 `check` reports whether existing hooks match the shared template.
+
+After updating bSmart-System in an existing workspace, run:
+
+```bash
+python3 /workspace/bSmart-System/scripts/bsmart-instance-upgrade
+```
+
+This explicit upgrade helper backs up differing canonical hooks, installs the workspace-root `bStart.py`, and synchronizes `HERMES.md`, `AGENTS.md`, and `CLAUDE.md`. It does not modify bSmart instance content or state.
+
+The standard post-pull command is:
+
+```bash
+python3 /workspace/bSmart-System/scripts/bsmart-update
+```
+
+It performs the startup integration repair, create-only content repair, and project-integration verification without pulling Git. It also applies known exact instance-profile compatibility migrations with a backup and clear report; ambiguous or broader changes require operator approval.
 
 ## Runtime defaults
 

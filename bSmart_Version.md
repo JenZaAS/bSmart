@@ -1,9 +1,141 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.21-draft
-updated: 2026-09-11 21:34 UTC
+current_version: 0.1.41-draft
+updated: 2026-09-20 08:03 UTC
 status: draft
+```
+
+## 0.1.41-draft
+
+```yaml
+release_type: command_help_clarity
+scope:
+  - explain the role concept in /role help
+  - implement the documented /project help command
+  - add regression coverage for both help surfaces
+verification:
+  - project/role Node tests pass
+  - prior system, bSwarm, and bStart tests remain green
+```
+
+## 0.1.40-draft
+
+```yaml
+release_type: mounted_git_ownership_compatibility
+scope:
+  - handle Git safe-directory checks for mounted repositories
+  - accept the selected branch and upstream during freshness checks
+  - make bStart Git status work under differing container filesystem ownership
+verification:
+  - Git ownership/branch smoke check passes
+  - prior system, project, bSwarm, and bStart tests remain green
+```
+
+## 0.1.39-draft
+
+```yaml
+release_type: container_git_and_branch_compatibility
+scope:
+  - handle mounted bSmart-System repositories with differing filesystem ownership
+  - accept the selected branch and its upstream during freshness checks unless a branch is explicitly required
+  - support Hugo testing on redesign/deterministic-startup without a false main-branch warning
+verification:
+  - system update helper compiles and runs
+  - prior system, project, bSwarm, and bStart tests remain green
+```
+
+## 0.1.38-draft
+
+```yaml
+release_type: refresh_stale_managed_project_plugin
+scope:
+  - detect stale installed bsmart-project plugin files
+  - back up and refresh the managed plugin during bsmart-update
+  - ensure role-owned project context reaches /project commands
+verification:
+  - project plugin tests pass
+  - prior system, project, bSwarm, and bStart tests remain green
+```
+
+## 0.1.37-draft
+
+```yaml
+release_type: preserve_bstart_first_reply
+scope:
+  - require startup hooks to preserve bStart output and command-help lines
+  - prevent instance-specific greeting policies from replacing the startup summary
+  - synchronize the rule through existing-instance update backups
+verification:
+  - system, project, bSwarm, and bStart tests remain green
+```
+
+## 0.1.36-draft
+
+```yaml
+release_type: automatic_known_instance_migrations
+scope:
+  - apply the known startup-reply compatibility migration during bsmart-update
+  - back up bSmart_Agent.md before the narrow exact replacement
+  - reserve approval prompts for ambiguous or broader instance changes
+verification:
+  - upgrade migration test passes
+  - prior system, project, bSwarm, and bStart tests remain green
+```
+
+## 0.1.35-draft
+
+```yaml
+release_type: low_friction_instance_profile_migration
+scope:
+  - detect known outdated bSmart_Agent.md startup-reply sections during update
+  - print a narrow proposed replacement without silently changing instance content
+  - require one explicit operator approval before applying the instance-local patch
+verification:
+  - upgrade review test passes
+  - prior system, project, bSwarm, and bStart tests remain green
+```
+
+## 0.1.34-draft
+
+```yaml
+release_type: explicit_pull_then_update_workflow
+scope:
+  - add bsmart-update as the deterministic post-pull finalization command
+  - distinguish Git pull from instance startup integration and content repair
+  - document pull, update, restart, /new, and Hi as the standard sequence
+verification:
+  - update helper preserves instance content/state
+  - prior system, project, bSwarm, and bStart tests remain green
+```
+
+## 0.1.33-draft
+
+```yaml
+release_type: existing_instance_startup_upgrade
+scope:
+  - add an explicit instance-upgrade helper for existing workspaces
+  - back up and synchronize canonical startup hooks
+  - install workspace-root bStart.py without changing instance content/state
+  - update fresh bootstrap to install bStart.py and the current hook
+verification:
+  - isolated upgrade test passes
+  - system, project, bSwarm, and bStart tests remain green
+```
+
+## 0.1.32-draft
+
+```yaml
+release_type: final_role_project_runtime_reconciliation
+scope:
+  - make the selected role file the sole active owner of project, workstream, focus, and handoff state
+  - add /role help, /role list, /role set, and /role add through the shared runtime
+  - make /project and /project ws resolve and update the selected role
+  - preserve bSmart_State.md for explicit migration and review, including unknown legacy fields
+  - verify role-file collision locking and synchronize map, protocol, template, adapter, and tests
+verification:
+  - role/project Node tests pass
+  - Python system, bSwarm, and bStart tests pass
 ```
 
 ## 0.1.19-draft
@@ -19,6 +151,151 @@ scope:
 verification:
   - focused bProtective tests pass
   - Hermes plugin manifest and registration are validated
+```
+
+## 0.1.31-draft
+
+```yaml
+release_type: deterministic_startup_entrypoint
+scope:
+  - add bStart.py as the session entrypoint
+  - perform safe bSmart-System auto-update checks and post-update integrity verification
+  - silently recover the role selector and General role
+  - resolve one role, project, and optional workstream
+  - load selected Markdown context and emit the compact startup summary
+  - add CLAUDE.md as an identical canonical launcher hook
+verification:
+  - isolated bStart tests pass
+  - system and bSwarm tests pass
+  - launcher templates remain identical
+```
+
+## 0.1.30-draft
+
+```yaml
+release_type: map_maintenance_contract
+scope:
+  - reflect role-owned state, role files, and `.bLock` artifacts in bSmart_Map.md
+  - list the role protocol and template in the system map
+  - require same-change map updates for logical structure, ownership, loading, and state-model changes
+  - add regression coverage for map completeness and maintenance guidance
+verification:
+  - map entries resolve to existing system files
+  - system and bSwarm tests pass
+```
+
+## 0.1.29-draft
+
+```yaml
+release_type: role_owned_state_and_concurrency
+scope:
+  - define one always-available General role and one role file per operational hat
+  - make role files the active owners of project, workstream, focus, and handoff state
+  - retire bSmart_State.md as an active source and retain it only for explicit migration
+  - allow multiple roles to work on the same project without project-wide locks
+  - define narrow per-file `.bLock` collision handling with bounded retries and operator override
+verification:
+  - role and concurrency protocols exist and are indexed
+  - no remaining active protocol treats bSmart_State.md as authoritative
+  - prior system and bSwarm tests remain green
+```
+
+## 0.1.28-draft
+
+```yaml
+release_type: instance_guardrails
+scope:
+  - add the instance-editable bGuardrails template
+  - keep guardrails below bSmart_Invariants.md in authority
+  - create and route bGuardrails as instance content without modifying existing profiles automatically
+  - add communication, task-label, approval, context, and feature-preference defaults
+verification:
+  - guardrails template regression test passes
+  - setup and missing-content paths reference the template
+  - prior system and bSwarm tests remain green
+```
+
+## 0.1.27-draft
+
+```yaml
+release_type: instance_backup_policy
+scope:
+  - prompt before creating local Git for an instance without Git
+  - explain that local history can later be connected to a remote repository
+  - require operator review of dirty instance content before pre-update backup commits
+  - define separate pre-update and post-update commits and remote pushes
+verification:
+  - instance Git protocol and setup document agree
+  - no force-push or silent unrelated-content commit is allowed
+```
+
+## 0.1.26-draft
+
+```yaml
+release_type: instance_profile_structure
+scope:
+  - reduce bSmart_Agent.md to stable identity, verified access, paths, feature pointers, and ownership links
+  - move generic safety and operational guidance to invariants and protocols
+  - update the reusable bSmart_Agent template to prevent mixed policy/state profiles
+verification:
+  - existing instance facts preserved or routed to canonical system protocols
+  - profile backup created before restructuring
+  - prior system and bSwarm tests remain green
+```
+
+## 0.1.25-draft
+
+```yaml
+release_type: setup_protocol_boundary
+scope:
+  - add the compact protocol index and map it as startup metadata
+  - define ownership between setup, protocols, startup routing, invariants, instance content, and projects
+  - link setup domains to their canonical detailed protocols without removing setup prompts/defaults
+verification:
+  - all indexed protocols exist
+  - setup protocol links resolve
+  - prior system and bSwarm tests remain green
+```
+
+## 0.1.24-draft
+
+```yaml
+release_type: system_boundary_refinement
+scope:
+  - establish bSmart_Invariants.md as the absolute cross-runtime system contract
+  - separate invariants from startup routing and instance-editable guardrails
+  - update the map and startup sequence to load the invariant boundary
+verification:
+  - invariant file exists and is referenced by bSmart.md and bSmart_Map.md
+  - prior system and bSwarm tests remain green
+```
+
+## 0.1.23-draft
+
+```yaml
+release_type: deterministic_startup_and_dreaming_revision
+scope:
+  - add the generic bSmart map and feature lookup tools
+  - add compact machine-readable feature index entries
+  - include the revised Dreaming no-op and change-only reporting contract
+  - document bootstrap and setup behavior for the revision
+verification:
+  - system lookup tests pass
+  - existing system and bSwarm tests pass
+  - Dreaming protocol contains the exact no-op response contract
+```
+
+## 0.1.22-draft
+
+```yaml
+release_type: reporting_refinement
+scope:
+  - make Dreaming report only actual findings, changes, or actionable asks
+  - require the exact no-op message `bDreaming has nothing to report.`
+  - align daily and weekly Dreaming cron prompts with the concise reporting contract
+verification:
+  - canonical Dreaming protocol updated
+  - daily and weekly scheduler jobs updated and remain enabled
 ```
 
 ## 0.1.21-draft

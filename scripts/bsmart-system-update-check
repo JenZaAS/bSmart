@@ -59,7 +59,7 @@ def run(cmd: list[str], cwd: Path, timeout: int = 30) -> subprocess.CompletedPro
 
 
 def git(args: list[str], repo: Path, timeout: int = 30) -> subprocess.CompletedProcess[str]:
-    return run(["git", *args], repo, timeout=timeout)
+    return run(["git", "-c", f"safe.directory={repo}", *args], repo, timeout=timeout)
 
 
 def fail(state: Path, status: str, detail: str) -> int:
@@ -74,7 +74,7 @@ def main() -> int:
     parser.add_argument("--state", default=str(DEFAULT_STATE))
     parser.add_argument("--force", action="store_true", help="run even if already checked today")
     parser.add_argument("--auto-pull", action="store_true", help="fast-forward pull only when safe")
-    parser.add_argument("--expected-branch", default="main")
+    parser.add_argument("--expected-branch", default="", help="optional branch name; empty accepts the current checked-out branch")
     args = parser.parse_args()
 
     repo = Path(args.repo)
@@ -90,7 +90,7 @@ def main() -> int:
     if branch.returncode != 0:
         return fail(state, "unavailable", branch.stderr.strip() or "cannot determine branch")
     branch_name = branch.stdout.strip()
-    if branch_name != args.expected_branch:
+    if args.expected_branch and branch_name != args.expected_branch:
         return fail(state, "blocked", f"unexpected branch {branch_name!r}; expected {args.expected_branch!r}")
 
     status = git(["status", "--porcelain"], repo)
