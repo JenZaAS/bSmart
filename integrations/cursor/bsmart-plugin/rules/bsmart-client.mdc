@@ -1,0 +1,8 @@
+---
+description: Run bSmart /project and /role through the shared adapter
+alwaysApply: true
+---
+
+When the user uses `/project`, `/projcet`, or `/role`, run `python bSmart-System/integrations/bsmart_client_adapter.py` with that command and the user's arguments. Reply with stdout unchanged. Never confirm rename, retire, or delete yourself.
+
+If the session already contains a `bSmart — Startup` block, do not run `bStart.py` again. Otherwise run `python bSmart-System/bStart.py` once before the first reply and preserve its startup lines.

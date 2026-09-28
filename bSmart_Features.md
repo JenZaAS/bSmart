@@ -270,6 +270,7 @@ included_capabilities:
 notes:
   - Keep project-related subfeatures under Projects instead of listing them as separate top-level features.
   - Projects use the selected root: `BSMART_PROJECT_ROOT`, then `/projects`, then local `./projects`.
+  - Cursor, Codex, and Claude call the same engines through `integrations/bsmart_client_adapter.py`. The Claude plugin is not yet verified in the Claude app.
 ```
 
 ### Tasks

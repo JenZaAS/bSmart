@@ -68,3 +68,15 @@ cp integrations/hermes/bsmart-project-plugin/plugin.yaml integrations/hermes/bsm
 ```
 
 The adapter resolves context only from `BSMART_PROJECT_ROOT`, `BSMART_STATE_FILE`, `BSMART_ARCHIVE_ROOT`, and `BSMART_SYSTEM_ROOT`, with the documented defaults; chat arguments cannot supply paths. It invokes the JSON CLI without a shell. The bSmart `/new` startup check installs and enables this managed adapter when missing, then reports that a new CLI session or gateway restart is needed for discovery.
+
+## Cursor, Codex, and Claude adapters
+
+These clients do not load the Hermes plugin. They call the same engines through `integrations/bsmart_client_adapter.py`, which sets trusted path variables and reuses the Hermes adapter. Chat arguments cannot supply paths.
+
+| Client | Package | Invocation | Verification |
+|---|---|---|---|
+| Cursor | `integrations/cursor/bsmart-plugin/` | `/project`, `/projcet`, `/role` | enabled in this workspace from `.cursor/` |
+| Codex | `integrations/codex/bsmart-plugin/` | `$bsmart-project`, `$bsmart-role` | install from `.agents/plugins/marketplace.json` and trust the startup hook |
+| Claude | `integrations/claude/bsmart-plugin/` | `/project`, `/projcet`, `/role` | not yet verified in the Claude app |
+
+`python3 -m unittest tests/test_bsmart_client_plugins.py -v` checks the adapter, hook payload, manifests, and that the plugin hook script matches `integrations/client_session_start.py`.

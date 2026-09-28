@@ -1,0 +1,8 @@
+{
+  "name": "bsmart",
+  "version": "1.0.0",
+  "description": "bSmart startup, /project, and /role for Claude. Not yet verified in the Claude app.",
+  "author": {
+    "name": "bSmart-System"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${PLUGIN_ROOT}/scripts/session_start.py\" --client codex",
+            "timeout": 120,
+            "statusMessage": "Loading bSmart"
+          }
+        ]
+      }
+    ]
+  }
+}

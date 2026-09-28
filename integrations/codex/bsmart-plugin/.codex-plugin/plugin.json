@@ -1,0 +1,10 @@
+{
+  "name": "bsmart",
+  "version": "1.0.0",
+  "description": "bSmart startup, /project, and /role for Codex. Skills call the shared bSmart engine.",
+  "author": {
+    "name": "bSmart-System"
+  },
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
+}

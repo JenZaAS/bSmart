@@ -1,9 +1,22 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.41-draft
-updated: 2026-09-20 08:03 UTC
+current_version: 0.1.42-draft
+updated: 2026-09-28 12:10 UTC
 status: draft
+```
+
+## 0.1.42-draft
+
+```yaml
+release_type: client_plugins
+scope:
+  - add Cursor, Codex, and Claude plugins that call the shared /project and /role engines
+  - run bStart from client session hooks, with AGENTS.md still requiring one startup
+  - leave the Claude plugin unverified until it can be tested in the Claude app
+verification:
+  - client plugin unit tests pass
+  - isolated /project add and /role help pass through the shared adapter
 ```
 
 ## 0.1.41-draft

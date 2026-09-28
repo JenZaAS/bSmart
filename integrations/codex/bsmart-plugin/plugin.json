@@ -1,0 +1,12 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "bsmart",
+  "version": "1.0.0",
+  "description": "bSmart startup, /project, and /role for Codex. Skills call the shared bSmart engine.",
+  "license": "See the bSmart-System repository",
+  "extensions": {
+    "com.openai": {
+      "hooks": "./hooks/hooks.json"
+    }
+  }
+}

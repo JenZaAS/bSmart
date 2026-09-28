@@ -215,6 +215,20 @@ hermes_project_integration:
     state_file: /workspace/bSmart/bSmart_State.md
   desktop_rule: Use the active local Hermes home and local bSmart paths; do not copy the container-specific `/opt/data` path literally.
 
+client_plugins:
+  purpose: expose the same startup, /project, and /role behavior in Cursor, Codex, and Claude
+  shared_adapter: ./bSmart-System/integrations/bsmart_client_adapter.py
+  startup_hook: ./bSmart-System/integrations/client_session_start.py
+  packages:
+    cursor: ./bSmart-System/integrations/cursor/bsmart-plugin/
+    codex: ./bSmart-System/integrations/codex/bsmart-plugin/
+    claude: ./bSmart-System/integrations/claude/bsmart-plugin/
+  notes:
+    - Hermes keeps integrations/hermes/bsmart-project-plugin/
+    - Cursor sessionStart context can be dropped; AGENTS.md remains the startup contract
+    - Codex uses skills because custom slash commands are not reliable
+    - the Claude package is not yet verified in the Claude app
+
 bprotective_integration:
   purpose: install the optional Hermes command-protection plugin without enabling it implicitly
   protocol: /workspace/bSmart-System/bSmart_Protocols/operations.md

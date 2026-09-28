@@ -69,6 +69,12 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | `./bSmart-System/bSmart_Templates/CLAUDE.md` | Claude launcher hook; identical redirect content to AGENTS.md | low | launcher only |
 | `./bSmart-System/bSmart-Extensions/` | Optional and bundled feature implementations | low | feature use only |
 | `./bSmart-System/integrations/` | Runtime-specific adapters | low | active runtime only |
+| `./bSmart-System/integrations/bsmart_client_adapter.py` | Shared `/project` and `/role` caller for Cursor, Codex, and Claude | low | execution only |
+| `./bSmart-System/integrations/client_session_start.py` | Shared client startup hook; runs `bStart.py` and emits client context JSON | low | execution only |
+| `./bSmart-System/integrations/hermes/bsmart-project-plugin/` | Hermes slash-command adapter for `/project` and `/role` | low | Hermes only |
+| `./bSmart-System/integrations/cursor/bsmart-plugin/` | Cursor plugin for startup, `/project`, and `/role` | low | Cursor only |
+| `./bSmart-System/integrations/codex/bsmart-plugin/` | Codex plugin for startup, `/project`, and `/role` | low | Codex only |
+| `./bSmart-System/integrations/claude/bsmart-plugin/` | Claude plugin for startup, `/project`, and `/role`; not yet verified in the Claude app | low | Claude only |
 | `./bSmart-System/scripts` | Deterministic helper programs and lookup tools | low | execution only |
 | `./bSmart-System/scripts/bsmart-role-core.mjs` | Shared role command and explicit legacy migration engine | low | role commands/migration |
 | `./bSmart-System/scripts/bsmart-role.mjs` | JSON CLI transport for role commands | low | execution only |

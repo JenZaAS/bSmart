@@ -286,6 +286,11 @@ extensions:
       optional: true
       packaging: bundled_integration
       purpose: Approval-gated deterministic command protection for Hermes terminal actions.
+    bSmartClientPlugins:
+      path: /workspace/bSmart-System/integrations
+      optional: true
+      packaging: bundled_integration
+      purpose: Cursor, Codex, and Claude adapters for startup, /project, and /role. The Claude plugin is not yet verified in the Claude app.
 ```
 
 ## Agent instruction

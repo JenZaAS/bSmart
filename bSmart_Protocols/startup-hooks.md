@@ -80,3 +80,9 @@ python3 ./bSmart-System/scripts/bsmart-hooks reset
 ```
 
 Do not reset hooks merely because they differ. Inspect and ask first unless the operator explicitly requested reset.
+
+## Client plugins
+
+Cursor, Codex, and Claude do not load the Hermes slash-command plugin. Their packages live under `integrations/cursor/bsmart-plugin/`, `integrations/codex/bsmart-plugin/`, and `integrations/claude/bsmart-plugin/`. Each startup hook runs `bStart.py` through `integrations/client_session_start.py`.
+
+The workspace `AGENTS.md` contract still requires one startup run. A `bSmart — Startup` block already present in the session counts as that run. Cursor may drop `sessionStart` context, so this workspace also enables the same hook from `.cursor/hooks.json`. The Claude package is not yet verified in the Claude app.
