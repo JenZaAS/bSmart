@@ -1,9 +1,21 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.42-draft
-updated: 2026-09-28 12:10 UTC
+current_version: 0.1.43-draft
+updated: 2026-09-29 07:30 UTC
 status: draft
+```
+
+## 0.1.43-draft
+
+```yaml
+release_type: remove_project_typo_alias
+scope:
+  - remove the /projcet command from the shared engine and from Hermes, Cursor, Codex, and Claude
+  - keep /project as the only project slash command
+verification:
+  - project plugin tests no longer register projcet
+  - client plugin tests confirm the Cursor projcet command file is absent
 ```
 
 ## 0.1.42-draft

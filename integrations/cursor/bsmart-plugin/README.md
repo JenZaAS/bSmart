@@ -2,7 +2,7 @@
 
 Cursor does not load the Hermes `bsmart-project` plugin. This package gives Cursor the same startup, `/project`, and `/role` behavior by calling the shared engines.
 
-`/project`, `/projcet`, and `/role` run `integrations/bsmart_client_adapter.py`. That adapter resolves trusted workspace paths and calls the Hermes command adapter, which calls `scripts/bsmart-project.mjs` and `scripts/bsmart-role.mjs`. Chat text cannot supply paths.
+`/project` and `/role` run `integrations/bsmart_client_adapter.py`. That adapter resolves trusted workspace paths and calls the Hermes command adapter, which calls `scripts/bsmart-project.mjs` and `scripts/bsmart-role.mjs`. Chat text cannot supply paths.
 
 The `sessionStart` hook runs `bStart.py` and returns its output as `additional_context`. Cursor has a known race where that context can be dropped. The plugin rule and the workspace `AGENTS.md` hook still require one startup run, and they skip a second run when a `bSmart — Startup` block is already present.
 

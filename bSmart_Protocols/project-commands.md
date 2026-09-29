@@ -42,7 +42,7 @@ CLI: `node scripts/bsmart-project.mjs '<JSON request>'`, or pipe one JSON reques
 - `/project rename NEWNAME`: confirm, rename exact current directory and project metadata, update canonical state.
 - `/project retire`: confirm, verified full archive, remove current project, enter Free Mode.
 - `/project delete`: confirm, remove exact current project without archive, enter Free Mode.
-- `/projcet` is the explicit prefix alias. `/project yes ID` and `/project no ID` continue a pending operation across processes.
+- `/project yes ID` and `/project no ID` continue a pending operation across processes.
 
 Selection resolution: exact spelling first, then unique case/punctuation normalization, then unique edit distance <=1 for normalized input length >=4. Ties and missing names are errors. Destructive commands never resolve fuzzy targets: they read the exact current selection and accept no target argument. Unsafe, reserved, traversal, symlink and colliding names are rejected.
 
@@ -56,7 +56,7 @@ Rename/retire/delete first persist `.bsmart-project-pending.json` with mode 0600
 
 ## Verification
 
-`node --test tests/test-project.mjs` uses isolated temporary projects and state only, including cross-process CLI confirmation. `python3 -m unittest tests/test_bsmart_project_plugin.py -v` verifies the Hermes adapter, both spellings, and real cross-process Yes/No continuation with temporary state. Workstream ownership and state shape are defined by [state.md](state.md).
+`node --test tests/test-project.mjs` uses isolated temporary projects and state only, including cross-process CLI confirmation. `python3 -m unittest tests/test_bsmart_project_plugin.py -v` verifies the Hermes adapter and real cross-process Yes/No continuation with temporary state. Workstream ownership and state shape are defined by [state.md](state.md).
 
 ## Hermes chat adapter
 
@@ -75,8 +75,8 @@ These clients do not load the Hermes plugin. They call the same engines through 
 
 | Client | Package | Invocation | Verification |
 |---|---|---|---|
-| Cursor | `integrations/cursor/bsmart-plugin/` | `/project`, `/projcet`, `/role` | enabled in this workspace from `.cursor/` |
+| Cursor | `integrations/cursor/bsmart-plugin/` | `/project`, `/role` | enabled in this workspace from `.cursor/` |
 | Codex | `integrations/codex/bsmart-plugin/` | `$bsmart-project`, `$bsmart-role` | install from `.agents/plugins/marketplace.json` and trust the startup hook |
-| Claude | `integrations/claude/bsmart-plugin/` | `/project`, `/projcet`, `/role` | not yet verified in the Claude app |
+| Claude | `integrations/claude/bsmart-plugin/` | `/project`, `/role` | not yet verified in the Claude app |
 
 `python3 -m unittest tests/test_bsmart_client_plugins.py -v` checks the adapter, hook payload, manifests, and that the plugin hook script matches `integrations/client_session_start.py`.

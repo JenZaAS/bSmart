@@ -1,6 +1,6 @@
 ---
 name: bsmart-project
-description: Run bSmart /project commands. Use when the user types /project or /projcet, or asks to list, select, create, rename, retire, or delete a bSmart project or workstream.
+description: Run bSmart /project commands. Use when the user types /project, or asks to list, select, create, rename, retire, or delete a bSmart project or workstream.
 ---
 
 # bSmart project
@@ -11,6 +11,6 @@ From the workspace root, run the shared bSmart adapter. Reply with its stdout un
 python bSmart-System/integrations/bsmart_client_adapter.py project $ARGUMENTS
 ```
 
-For `/projcet`, replace `project` with `projcet`. `$ARGUMENTS` means the words the user typed after the command. If that placeholder is still literal, use those words instead. Preserve quotes around multi-word names. Do not add paths, environment variables, or flags. If `python` is unavailable, use `python3`.
+`$ARGUMENTS` means the words the user typed after the command. If that placeholder is still literal, use those words instead. Preserve quotes around multi-word names. Do not add paths, environment variables, or flags. If `python` is unavailable, use `python3`.
 
 If the output asks for confirmation, show the Yes and No lines and wait.

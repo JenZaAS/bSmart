@@ -62,7 +62,7 @@ class ClientAdapterTests(unittest.TestCase):
         created = self.run_adapter("project", ["add", "Alpha"])
         self.assertIn("Alpha", created)
         self.assertTrue((self.projects / "Alpha" / "project.md").is_file())
-        self.assertIn("- Alpha (current)", self.run_adapter("projcet", ["list"]))
+        self.assertIn("- Alpha (current)", self.run_adapter("project", ["list"]))
 
     def test_role_help_uses_the_shared_engine(self):
         self.assertIn("/role help", self.run_adapter("role", []))
@@ -117,8 +117,10 @@ class SessionHookTests(unittest.TestCase):
             self.assertEqual(data["name"], name)
         workspace = SYSTEM.parent / ".cursor" / "commands"
         plugin_commands = SYSTEM / "integrations" / "cursor" / "bsmart-plugin" / "commands"
-        for name in ("project.md", "projcet.md", "role.md"):
+        for name in ("project.md", "role.md"):
             self.assertEqual((workspace / name).read_text(encoding="utf-8"), (plugin_commands / name).read_text(encoding="utf-8"))
+        self.assertFalse((workspace / "projcet.md").exists())
+        self.assertFalse((plugin_commands / "projcet.md").exists())
 
 
 if __name__ == "__main__":

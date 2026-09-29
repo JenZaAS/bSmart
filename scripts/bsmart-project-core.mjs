@@ -55,7 +55,7 @@ function absent(root,s){name(s);const target=safePath(path.join(root,s));if(fs.e
 function generatedAbsent(root,s){const target=safePath(path.join(root,s));if(fs.existsSync(target))fail('Generated path collision');return target;}
 function tokens(command){const out=[],text=command.trimEnd(),re=/\s*(?:"([^"]*)"|'([^']*)'|([^\s"']+))/gy;let at=0;while(at<text.length){re.lastIndex=at;const m=re.exec(text);if(!m)fail('Malformed command quoting');out.push(m[1]??m[2]??m[3]);at=re.lastIndex;}return out;}
 function perform(command,c){
- const args=tokens(command.trim());if(!['/project','/projcet'].includes(args.shift()))fail('Expected /project');
+ const args=tokens(command.trim());if(args.shift()!=='/project')fail('Expected /project');
  if(args.length===1&&args[0]==='help')return {status:'ok',diagnostic:'Projects are shared work areas; the selected role owns the active project and workstream. Commands: /project help, /project list, /project NAME [WORKSTREAM], /project ws WORKSTREAM, /project add NAME, /project add ws WORKSTREAM, /project rename NAME, /project retire, /project delete.'};
  if(!args.length||(args[0]==='list'&&args.length===1)){const projects=folders(c.projectsRoot);try{return {status:'ok',projectsRoot:c.projectsRoot,projects,selection:readSelectionInner(c),diagnostic:'Projects listed'};}catch(error){return {status:'ok',projectsRoot:c.projectsRoot,projects,selection:{project:null,workstream:null,cwd:null},diagnostic:`Projects listed; stale or ambiguous active selection: ${error.message}`};}}
  if(args[0]==='add'){
@@ -78,7 +78,7 @@ function pendingFile(c){return safePath(path.join(c.home??path.dirname(c.roleFil
 function outside(root,p){const rel=path.relative(root,p);return rel==='..'||rel.startsWith('..'+path.sep)||path.isAbsolute(rel);}
 function appendWarning(result,message){return {...result,cleanupWarning:result.cleanupWarning?`${result.cleanupWarning}; ${message}`:message};}
 function destructive(command,c,confirmation){
- const args=tokens(command.trim()),prefix=args.shift();if(!['/project','/projcet'].includes(prefix))return null;const op=args[0],file=pendingFile(c);
+ const args=tokens(command.trim()),prefix=args.shift();if(prefix!=='/project')return null;const op=args[0],file=pendingFile(c);
  if(confirmation||['yes','no'].includes(op)){
   if(!['yes','no'].includes(op)||args.length>2)fail('Confirm with /project yes|no [ID]');const answer=confirmation?.answer??op,id=confirmation?.id??args[1];
   if(!['yes','no'].includes(answer)||answer!==op)fail('Confirmation answer mismatch');if(confirmation?.id&&args[1]&&confirmation.id!==args[1])fail('Confirmation ID mismatch');if(!fs.existsSync(file))fail('No pending confirmation (already used or absent)');
@@ -103,7 +103,7 @@ function readSelectionInner(c){const snapshot=parseState(c),p=field(c,'Active pr
 export function readSelection(context){return readSelectionInner(contextOf(context));}
 function executeWith(ops,{command,context,confirmation}={}){
  let c,lock,acquired=false,operationResult,operationError;
- try{c=contextOf(context,ops);const args=tokens(String(command??'').trim());const isList=['/project','/projcet'].includes(args[0])&&(args.length===1||(args.length===2&&args[1]==='list'));if(!isList)parseState(c);lock=safePath(c.roleFile+'.bLock');const fd=fs.openSync(lock,'wx',0o600);fs.closeSync(fd);acquired=true;try{operationResult=destructive(command,c,confirmation)??perform(command,c);}catch(error){operationError=error;}}
+ try{c=contextOf(context,ops);const args=tokens(String(command??'').trim());const isList=args[0]==='/project'&&(args.length===1||(args.length===2&&args[1]==='list'));if(!isList)parseState(c);lock=safePath(c.roleFile+'.bLock');const fd=fs.openSync(lock,'wx',0o600);fs.closeSync(fd);acquired=true;try{operationResult=destructive(command,c,confirmation)??perform(command,c);}catch(error){operationError=error;}}
  catch(error){operationError=error;}
  let cleanupError;if(acquired&&lock&&fs.existsSync(lock)){try{c.ops.unlinkSync(lock);}catch(error){cleanupError=error;}}
  if(operationError){const result={status:'error',diagnostic:operationError.message};if(operationError.quarantinePath)result.quarantinePath=operationError.quarantinePath;return cleanupError?appendWarning(result,`lock cleanup failed: ${cleanupError.message}`):result;}

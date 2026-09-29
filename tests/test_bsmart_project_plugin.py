@@ -38,6 +38,16 @@ class ProjectPluginTests(unittest.TestCase):
         home = Path(self.tmp.name)
         self.projects = home / "projects"
         self.projects.mkdir()
+        self.roles = home / "roles"
+        self.roles.mkdir()
+        (self.roles / "current_role.md").write_text(
+            "# bSmart current role\n\n```yaml\nrole_selection:\n  current_role: general\n```\n",
+            encoding="utf-8",
+        )
+        (self.roles / "general_role.md").write_text(
+            "# bSmart role\n\n```yaml\nstate:\n  active_project: \"none\"\n  active_workstream: \"none\"\n```\n",
+            encoding="utf-8",
+        )
         self.state = home / "bSmart_State.md"
         self.state.write_text(
             "# bSmart state\n- Mode: `Free Mode`\n- Active project (short name): `none`\n",
@@ -46,7 +56,9 @@ class ProjectPluginTests(unittest.TestCase):
         self.env = {
             "BSMART_SYSTEM_ROOT": str(SYSTEM_ROOT),
             "BSMART_PROJECT_ROOT": str(self.projects),
-            "BSMART_STATE_FILE": str(self.state),
+            "BSMART_ROLES_ROOT": str(self.roles),
+            "BSMART_ROLE_SELECTOR": str(self.roles / "current_role.md"),
+            "BSMART_LEGACY_STATE_FILE": str(self.state),
             "BSMART_ARCHIVE_ROOT": str(home / "archives"),
         }
         self.plugin = load_plugin()
@@ -60,10 +72,10 @@ class ProjectPluginTests(unittest.TestCase):
         with patch.dict(os.environ, self.env, clear=False):
             return self.ctx.commands[command]["handler"](args)
 
-    def test_registers_both_commands_and_lists(self):
-        self.assertEqual(set(self.ctx.commands), {"project", "projcet", "role"})
+    def test_registers_project_and_role_and_lists(self):
+        self.assertEqual(set(self.ctx.commands), {"project", "role"})
         self.assertIn("Projects:", self.call("project"))
-        self.assertIn("Free Mode", self.call("projcet", "list"))
+        self.assertIn("Free Mode", self.call("project", "list"))
 
     def test_real_cross_process_yes_continuation(self):
         self.assertIn("Project created", self.call("project", "add Alpha"))
@@ -76,11 +88,11 @@ class ProjectPluginTests(unittest.TestCase):
         self.assertTrue((self.projects / "Beta").is_dir())
         self.assertFalse((self.projects / "Alpha").exists())
 
-    def test_real_no_continuation_via_typo_alias(self):
+    def test_real_no_continuation(self):
         self.call("project", "add Keep")
-        prompt = self.call("projcet", "delete")
+        prompt = self.call("project", "delete")
         pending_id = next(line for line in prompt.splitlines() if line.startswith("No:")).rsplit(" ", 1)[1]
-        result = self.call("projcet", f"no {pending_id}")
+        result = self.call("project", f"no {pending_id}")
         self.assertIn("Cancelled", result)
         self.assertTrue((self.projects / "Keep").is_dir())
 

@@ -152,5 +152,4 @@ def register(ctx: Any) -> None:
     description = "List, select, create, rename, retire, or delete bSmart projects."
     args_hint = "[list|NAME|ws WS|add NAME|rename NAME|retire|delete|yes ID|no ID]"
     ctx.register_command("project", _handler("/project"), description, args_hint)
-    ctx.register_command("projcet", _handler("/projcet"), "Alias for /project.", args_hint)
     ctx.register_command("role", _role_handler, "List, select, or create bSmart roles.", "[help|list|set ROLE|add ROLE]")

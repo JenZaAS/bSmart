@@ -14,7 +14,7 @@ import re
 import sys
 from pathlib import Path
 
-_KINDS = {"project", "projcet", "role"}
+_KINDS = {"project", "role"}
 _SAFE_TOKEN = re.compile(r"^[A-Za-z0-9_./:-]+$")
 
 
@@ -87,7 +87,7 @@ def command_text(kind: str, args: list[str]) -> str:
 
 def run(kind: str, args: list[str], workspace: Path | None = None) -> str:
     if kind not in _KINDS:
-        raise ValueError("Use project, projcet, or role")
+        raise ValueError("Use project or role")
     root = workspace or workspace_from_here()
     if root is None:
         raise RuntimeError("bSmart workspace not found")
@@ -101,7 +101,7 @@ def run(kind: str, args: list[str], workspace: Path | None = None) -> str:
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if not args or args[0] not in _KINDS:
-        print("Use: bsmart_client_adapter.py project|projcet|role [arguments]", file=sys.stderr)
+        print("Use: bsmart_client_adapter.py project|role [arguments]", file=sys.stderr)
         return 2
     try:
         text = run(args[0], args[1:])
