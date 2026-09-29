@@ -84,6 +84,13 @@ class SessionHookTests(unittest.TestCase):
         self.assertEqual(claude["hookSpecificOutput"]["additionalContext"], "hello")
         self.assertEqual(self.session.payload("codex", "hello"), claude)
 
+    def test_cursor_context_asks_for_a_fence(self):
+        cursor = self.session.context_text("Hi, there!", 0, "cursor")
+        claude = self.session.context_text("Hi, there!", 0, "claude")
+        self.assertIn("fenced code block with no language tag", cursor)
+        self.assertNotIn("fenced code block", claude)
+        self.assertEqual(claude, self.session.context_text("Hi, there!", 0, "codex"))
+
     def test_missing_workspace_does_not_run_bstart(self):
         with patch.object(self.session, "workspace_from", return_value=None), \
              patch.object(self.session, "run_bstart") as run_bstart, \

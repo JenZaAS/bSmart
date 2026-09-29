@@ -6,6 +6,8 @@ Cursor does not load the Hermes `bsmart-project` plugin. This package gives Curs
 
 The `sessionStart` hook runs `bStart.py` and returns its output as `additional_context`. Cursor has a known race where that context can be dropped. The plugin rule and the workspace `AGENTS.md` hook still require one startup run, and they skip a second run when a `bSmart — Startup` block is already present.
 
+The first reply wraps the visible startup block in a fenced code block because Cursor Markdown collapses single newlines.
+
 ## Install
 
 Point Cursor at this directory:

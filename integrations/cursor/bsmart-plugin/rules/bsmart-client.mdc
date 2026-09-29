@@ -6,3 +6,5 @@ alwaysApply: true
 When the user uses `/project` or `/role`, run `python bSmart-System/integrations/bsmart_client_adapter.py` with that command and the user's arguments. Reply with stdout unchanged. Never confirm rename, retire, or delete yourself.
 
 If the session already contains a `bSmart — Startup` block, do not run `bStart.py` again. Otherwise run `python bSmart-System/bStart.py` once before the first reply and preserve its startup lines.
+
+When the first reply preserves the bStart startup block, wrap that visible block in a fenced code block: a line of three backticks, the lines unchanged, then a line of three backticks. Do not set a language tag. Cursor’s Markdown renderer collapses single newlines; the fence is what keeps each line. Include the Hi, greeting, bSmart — Startup, agent, role, project, workstream, each Use: command-help line, and the short git and update status lines. Stop before Context files:. Leave loaded context files out of the visible reply. Do not replace the block with a custom greeting or a reduced summary.

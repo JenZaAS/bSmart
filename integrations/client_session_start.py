@@ -78,13 +78,19 @@ def run_bstart(workspace: Path) -> tuple[str, int]:
     return text.strip(), completed.returncode
 
 
-def context_text(startup: str, returncode: int) -> str:
+def context_text(startup: str, returncode: int, client: str | None = None) -> str:
     status = "bStart.py finished." if returncode == 0 else "bStart.py reported a problem."
-    return (
+    text = (
         "bSmart client startup hook already ran bStart.py. Do not run it again. "
         "In the first reply, preserve the startup lines and command-help lines.\n"
         f"{status}\n\n{startup}"
     )
+    if client == "cursor":
+        text += (
+            "\n\nWrap that visible startup block in a fenced code block with no language tag "
+            "so Markdown does not collapse the line breaks."
+        )
+    return text
 
 
 def payload(client: str, text: str) -> dict:
@@ -111,13 +117,14 @@ def main(argv: list[str] | None = None) -> int:
             "bSmart startup hook could not find bSmart-System/bStart.py. "
             "Run python bSmart-System/bStart.py from the workspace root.",
             1,
+            args.client,
         )
     else:
         try:
             startup, code = run_bstart(workspace)
         except (OSError, subprocess.SubprocessError) as exc:
             startup, code = f"bStart.py could not be started: {exc}", 1
-        text = context_text(startup, code)
+        text = context_text(startup, code, args.client)
     sys.stdout.buffer.write(json.dumps(payload(args.client, text), ensure_ascii=False).encode("utf-8"))
     return 0
 
