@@ -15,8 +15,20 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 SYSTEM_ROOT = SCRIPT_DIR.parent
-WORKSPACE_ROOT = SYSTEM_ROOT.parent
-DEFAULT_CONTENT_ROOT = Path("/workspace/bSmart") if Path("/workspace/bSmart").exists() else WORKSPACE_ROOT / "bSmart"
+
+
+def default_content_root(system_root: Path) -> Path:
+    """Prefer the sibling instance next to this checkout."""
+    sibling = system_root.parent / "bSmart"
+    container = Path("/workspace/bSmart")
+    if sibling.is_dir():
+        return sibling
+    if container.is_dir():
+        return container
+    return sibling
+
+
+DEFAULT_CONTENT_ROOT = default_content_root(SYSTEM_ROOT)
 
 STANDARD_FILES = {
     "bHistory.md": "bSmart_Templates/bHistory.template.md",

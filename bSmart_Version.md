@@ -1,9 +1,29 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.43-draft
-updated: 2026-09-29 07:30 UTC
+current_version: 0.1.44-draft
+updated: 2026-10-08 22:45 UTC
 status: draft
+```
+
+## 0.1.44-draft
+
+```yaml
+release_type: harness_independent_install
+scope:
+  - skip the Hermes /project adapter when the hermes CLI and an existing Hermes profile are both absent, without creating ~/.hermes
+  - let bsmart-update and bsmart-startup-check finish on non-Hermes harnesses
+  - resolve bStart.py from both bSmart-System and the workspace-root copy
+  - prefer python3 in startup hooks, with python as the fallback
+  - add bsmart-project-storage-check --configure-internal for workspace-local ./projects storage
+  - prefer the sibling bSmart content root over a hardcoded /workspace path when both exist
+verification:
+  - integration check returns success and creates no Hermes home when hermes is absent
+  - integration check still installs and enables the adapter when a hermes CLI is present
+  - workspace-root and in-system bStart.py copies both resolve the workspace
+  - --configure-internal writes container-storage.yaml and creates ./projects and ./sandboxes
+  - findmnt absence stays a skipped host-mount inference
+  - existing unittest and node project tests pass
 ```
 
 ## 0.1.43-draft

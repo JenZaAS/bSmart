@@ -13,8 +13,20 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 SYSTEM_ROOT = SCRIPT_DIR.parent
-WORKSPACE_ROOT = SYSTEM_ROOT.parent
-DEFAULT_CONTENT_ROOT = Path("/workspace/bSmart") if Path("/workspace/bSmart").exists() else WORKSPACE_ROOT / "bSmart"
+
+
+def default_content_root(system_root: Path) -> Path:
+    """Prefer the sibling instance next to this checkout."""
+    sibling = system_root.parent / "bSmart"
+    container = Path("/workspace/bSmart")
+    if sibling.is_dir():
+        return sibling
+    if container.is_dir():
+        return container
+    return sibling
+
+
+DEFAULT_CONTENT_ROOT = default_content_root(SYSTEM_ROOT)
 
 
 def version(system_root: Path) -> str:
@@ -59,7 +71,7 @@ def main() -> int:
     print(f"bSmart update available: {current}")
     for item in release_summary(system, current):
         print(f"- {item}")
-    print("Review: /workspace/bSmart-System/bSmart_Version.md")
+    print(f"Review: {system / 'bSmart_Version.md'}")
     try:
         state.parent.mkdir(parents=True, exist_ok=True)
         state.write_text(f"last_announced_version: {current}\n", encoding="utf-8")

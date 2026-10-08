@@ -1,4 +1,4 @@
-Run `python bSmart-System/bStart.py` exactly once at the beginning of every new session, including after `/new`, before replying or taking any action. If the session context already contains a `bSmart — Startup` block from this run or from a bSmart client plugin hook, do not run it again. In the first reply, preserve the bStart startup lines and command-help lines; do not replace them with a custom greeting or reduced summary. Follow the startup result and its loaded context.
+Run `python3 bSmart-System/bStart.py` exactly once at the beginning of every new session, including after `/new`, before replying or taking any action. If `python3` is not on PATH, use `python bSmart-System/bStart.py`. If the session context already contains a `bSmart — Startup` block from this run or from a bSmart client plugin hook, do not run it again. In the first reply, preserve the bStart startup lines and command-help lines; do not replace them with a custom greeting or reduced summary. Follow the startup result and its loaded context.
 
 Hierarchy:
 - `bSmart-System/bSmart.md`: shared system rules and bStart contract.

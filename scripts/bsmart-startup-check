@@ -24,8 +24,24 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 SYSTEM_ROOT = SCRIPT_DIR.parent
-WORKSPACE_ROOT = SYSTEM_ROOT.parent
-CONTENT_ROOT = Path("/workspace/bSmart") if Path("/workspace/bSmart").exists() else WORKSPACE_ROOT / "bSmart"
+
+
+def default_content_root(system_root: Path) -> Path:
+    """Prefer the sibling instance next to this checkout.
+
+    Container installs keep bSmart at /workspace/bSmart, which is that sibling.
+    A local checkout must not jump to /workspace when its own sibling exists.
+    """
+    sibling = system_root.parent / "bSmart"
+    container = Path("/workspace/bSmart")
+    if sibling.is_dir():
+        return sibling
+    if container.is_dir():
+        return container
+    return sibling
+
+
+CONTENT_ROOT = default_content_root(SYSTEM_ROOT)
 DEFAULT_STATE = CONTENT_ROOT / "State" / "bsmart-startup-check.yaml"
 DEFAULT_STORAGE_SPEC = CONTENT_ROOT / "State" / "container-storage.yaml"
 
@@ -110,9 +126,10 @@ def main() -> int:
             proc = run_script("bsmart-project-integration-check", ["--install", "--quiet"])
             print_result("bSmart project integration check", proc)
         if args.auto_pull and not args.skip_system_update:
+            helper = SCRIPT_DIR / "bsmart-startup-check"
             print(
                 "bSmart system update: auto-pull was requested but skipped by the once-per-UTC-day throttle; "
-                "run `python3 /workspace/bSmart-System/scripts/bsmart-startup-check --force --auto-pull` "
+                f"run `python3 {helper} --force --auto-pull` "
                 "when the operator specifically wants an immediate same-day bSmart-System update."
             )
         return 0

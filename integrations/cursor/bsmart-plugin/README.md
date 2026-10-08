@@ -16,4 +16,4 @@ Point Cursor at this directory:
 
 For this SschwAdmin workspace, the same commands, rule, and startup hook are also enabled from the workspace `.cursor` directory so they work before a marketplace install. Start a new chat after enabling the hook.
 
-Node.js must be available. Use `python` on Windows and `python3` where that is the only interpreter.
+Node.js must be available. Prefer `python3`; use `python` when `python3` is not on PATH.

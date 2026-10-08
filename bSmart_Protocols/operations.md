@@ -185,9 +185,11 @@ bsmart_startup_checks:
     - bSmart-System Git freshness via bsmart-system-update-check
     - project/sandbox storage spec via bsmart-project-storage-check
     - standard instance content via bsmart-content-upgrade (quiet; every /new)
-    - Hermes /project adapter presence via bsmart-project-integration-check (quiet; every /new)
+    - Hermes /project adapter presence via bsmart-project-integration-check (quiet; every /new; skipped when Hermes is not installed)
   important_behavior:
     - missing container-storage.yaml is reported as setup_required
+    - when the hermes CLI and an existing Hermes profile are both absent, the integration check reports skipped/not applicable and does not create a Hermes home
+    - internal/local project storage is recorded with bsmart-project-storage-check --configure-internal; mounted storage remains --configure-mounted
     - before any startup helper call that may update or repair local state, use a plain-language action note naming the intended bSmart operation; do not rely on the framework's generic execute_code approval reason
     - on CIFS/SMB-backed workspaces executable bits may not be honored; run Python helpers with python3 <script> instead of executing the script path directly
     - the helper does not create the spec or change Compose/Dokploy unless an explicit configure subcommand is run

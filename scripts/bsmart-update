@@ -7,21 +7,35 @@ separately when the operator explicitly requests a pull.
 from __future__ import annotations
 
 import argparse
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 
+def default_workspace() -> Path:
+    """Use /workspace for container installs, otherwise the checkout's parent."""
+    container = Path("/workspace")
+    if (container / "bSmart-System" / "scripts" / "bsmart-update").is_file():
+        return container
+    system = Path(__file__).resolve().parent.parent
+    parent = system.parent
+    if (parent / "bSmart-System").resolve() == system.resolve():
+        return parent
+    return container
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Finalize a pulled bSmart-System update without pulling Git.")
-    parser.add_argument("--workspace", default="/workspace")
+    parser.add_argument("--workspace", default=str(default_workspace()))
     args = parser.parse_args()
     workspace = Path(args.workspace).expanduser().resolve()
     system = workspace / "bSmart-System"
     scripts = system / "scripts"
+    content = workspace / "bSmart"
     commands = [
         [sys.executable, str(scripts / "bsmart-instance-upgrade"), "--workspace", str(workspace)],
-        [sys.executable, str(scripts / "bsmart-content-upgrade"), "--create-missing"],
+        [sys.executable, str(scripts / "bsmart-content-upgrade"), "--create-missing", "--content-root", str(content)],
         [sys.executable, str(scripts / "bsmart-project-integration-check"), "--install", "--quiet"],
     ]
     print("bSmart update: finalizing pulled system; Git pull not requested")
@@ -30,7 +44,10 @@ def main() -> int:
         if result.returncode != 0:
             print(f"bSmart update: blocked at {Path(command[1]).name}")
             return result.returncode
-    print("bSmart update: complete; restart Hermes, then verify with /new and Hi")
+    if shutil.which("hermes"):
+        print("bSmart update: complete; restart Hermes, then verify with /new and Hi")
+    else:
+        print("bSmart update: complete; start a new session and verify the startup hook")
     return 0
 
 

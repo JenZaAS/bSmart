@@ -16,6 +16,9 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 SYSTEM_ROOT = SCRIPT_DIR.parent
 PLUGIN_SOURCE = SYSTEM_ROOT / "integrations" / "hermes" / "bsmart-project-plugin"
+# Files that identify an existing Hermes profile. A plugins directory created by
+# this helper is not evidence that Hermes is installed.
+HERMES_PROFILE_MARKERS = ("config.yaml", "SOUL.md")
 
 
 def hermes_home() -> Path:
@@ -23,6 +26,21 @@ def hermes_home() -> Path:
     if explicit:
         return Path(explicit).expanduser()
     return Path.home() / ".hermes"
+
+
+def hermes_cli_available() -> bool:
+    return shutil.which("hermes") is not None
+
+
+def hermes_profile_present(home: Path) -> bool:
+    if not home.is_dir():
+        return False
+    return any((home / name).is_file() for name in HERMES_PROFILE_MARKERS)
+
+
+def hermes_applicable(home: Path) -> bool:
+    """True when a Hermes CLI or an existing Hermes profile is present."""
+    return hermes_cli_available() or hermes_profile_present(home)
 
 
 def main() -> int:
@@ -33,6 +51,10 @@ def main() -> int:
     args = parser.parse_args()
 
     home = Path(args.hermes_home).expanduser()
+    if not hermes_applicable(home):
+        print("bSmart project integration: skipped — Hermes is not installed; adapter is not applicable")
+        return 0
+
     plugin_dir = home / "plugins" / "bsmart-project"
     source_ok = (PLUGIN_SOURCE / "plugin.yaml").is_file() and (PLUGIN_SOURCE / "__init__.py").is_file()
     installed_ok = (plugin_dir / "plugin.yaml").is_file() and (plugin_dir / "__init__.py").is_file()
@@ -74,16 +96,23 @@ def main() -> int:
         config_text = config.read_text(encoding="utf-8", errors="replace") if config.is_file() else ""
         enabled = any(line.strip() == "- bsmart-project" for line in config_text.splitlines())
         if not enabled:
+            if not hermes_cli_available():
+                print("bSmart project integration: setup_blocked — Hermes profile found but the hermes CLI is not on PATH")
+                return 2
             env = os.environ.copy()
             env["HERMES_HOME"] = str(home)
-            enable = subprocess.run(
-                ["hermes", "plugins", "enable", "bsmart-project"],
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=env,
-                check=False,
-            )
+            try:
+                enable = subprocess.run(
+                    ["hermes", "plugins", "enable", "bsmart-project"],
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    env=env,
+                    check=False,
+                )
+            except OSError as exc:
+                print(f"bSmart project integration: setup_blocked — could not run hermes ({exc})")
+                return 2
             if enable.returncode != 0:
                 print("bSmart project integration: setup_blocked — could not enable bsmart-project")
                 return 2

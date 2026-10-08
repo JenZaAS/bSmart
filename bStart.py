@@ -16,7 +16,27 @@ import sys
 from pathlib import Path
 
 SCRIPT_ROOT = Path(__file__).resolve().parent
-DEFAULT_WORKSPACE = SCRIPT_ROOT.parent
+
+
+def system_checkout(path: Path) -> bool:
+    return (path / "scripts" / "bsmart-system-update-check").is_file()
+
+
+def workspace_root_copy(path: Path) -> bool:
+    """True for the installed bStart.py that sits beside bSmart-System/."""
+    return (path / "bSmart-System").is_dir() and not system_checkout(path)
+
+
+def default_workspace() -> Path:
+    # The canonical file lives in bSmart-System, so the workspace is its parent.
+    # bsmart-instance-upgrade also copies this file to the workspace root; that
+    # copy must not treat the parent of the workspace as the workspace.
+    if workspace_root_copy(SCRIPT_ROOT):
+        return SCRIPT_ROOT
+    return SCRIPT_ROOT.parent
+
+
+DEFAULT_WORKSPACE = default_workspace()
 
 
 def now_utc() -> str:
@@ -50,9 +70,14 @@ def first_value(text: str, keys: tuple[str, ...]) -> str | None:
 def resolve_paths(workspace: Path) -> tuple[Path, Path]:
     system = workspace / "bSmart-System"
     content = workspace / "bSmart"
-    if not system.is_dir() and SCRIPT_ROOT.is_dir():
-        system = SCRIPT_ROOT
-        workspace = system.parent
+    if not system.is_dir():
+        if system_checkout(SCRIPT_ROOT):
+            system = SCRIPT_ROOT
+            workspace = SCRIPT_ROOT.parent
+        elif workspace_root_copy(SCRIPT_ROOT):
+            workspace = SCRIPT_ROOT
+            system = workspace / "bSmart-System"
+            content = workspace / "bSmart"
     if not content.exists() and Path("/workspace/bSmart").is_dir():
         content = Path("/workspace/bSmart")
     return system.resolve(), content.resolve()

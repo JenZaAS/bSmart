@@ -18,15 +18,29 @@ import subprocess
 import sys
 from pathlib import Path
 
-DEFAULT_CONTENT_ROOT = Path("/workspace/bSmart")
 SCRIPT_DIR = Path(__file__).resolve().parent
 SYSTEM_ROOT = SCRIPT_DIR.parent
 WORKSPACE_ROOT = SYSTEM_ROOT.parent
-CONTENT_ROOT = DEFAULT_CONTENT_ROOT if DEFAULT_CONTENT_ROOT.exists() else WORKSPACE_ROOT / "bSmart"
+
+
+def default_content_root(system_root: Path) -> Path:
+    """Prefer the sibling instance next to this checkout."""
+    sibling = system_root.parent / "bSmart"
+    container = Path("/workspace/bSmart")
+    if sibling.is_dir():
+        return sibling
+    if container.is_dir():
+        return container
+    return sibling
+
+
+CONTENT_ROOT = default_content_root(SYSTEM_ROOT)
 DEFAULT_SPEC = CONTENT_ROOT / "State" / "container-storage.yaml"
 
 
-def workspace_root() -> Path:
+def workspace_root(explicit: str | None = None) -> Path:
+    if explicit:
+        return Path(explicit).expanduser()
     env_root = os.environ.get("BSMART_WORKSPACE_ROOT")
     if env_root:
         return Path(env_root).expanduser()
@@ -58,7 +72,8 @@ def usable(path: Path) -> bool:
     return status_word(access(path)) == "usable"
 
 
-def project_root_candidates() -> list[tuple[str, Path]]:
+def project_root_candidates(workspace: Path | None = None) -> list[tuple[str, Path]]:
+    root = workspace if workspace is not None else workspace_root()
     candidates: list[tuple[str, Path]] = []
     override = os.environ.get("BSMART_PROJECT_ROOT")
     if override:
@@ -66,20 +81,21 @@ def project_root_candidates() -> list[tuple[str, Path]]:
     candidates.extend(
         [
             ("/projects", Path("/projects")),
-            ("./projects", workspace_root() / "projects"),
+            ("./projects", root / "projects"),
         ]
     )
     return candidates
 
 
-def select_project_root() -> tuple[str, Path] | None:
-    for label, path in project_root_candidates():
+def select_project_root(workspace: Path | None = None) -> tuple[str, Path] | None:
+    for label, path in project_root_candidates(workspace):
         if usable(path):
             return label, path
     return None
 
 
-def sandbox_root_candidates() -> list[tuple[str, Path]]:
+def sandbox_root_candidates(workspace: Path | None = None) -> list[tuple[str, Path]]:
+    root = workspace if workspace is not None else workspace_root()
     candidates: list[tuple[str, Path]] = []
     override = os.environ.get("BSMART_SANDBOX_ROOT")
     if override:
@@ -87,15 +103,15 @@ def sandbox_root_candidates() -> list[tuple[str, Path]]:
     candidates.extend(
         [
             ("/sandboxes", Path("/sandboxes")),
-            ("./sandboxes", workspace_root() / "sandboxes"),
-            ("./bSmart/Sandboxes", workspace_root() / "bSmart" / "Sandboxes"),
+            ("./sandboxes", root / "sandboxes"),
+            ("./bSmart/Sandboxes", root / "bSmart" / "Sandboxes"),
         ]
     )
     return candidates
 
 
-def select_sandbox_root() -> tuple[str, Path] | None:
-    for label, path in sandbox_root_candidates():
+def select_sandbox_root(workspace: Path | None = None) -> tuple[str, Path] | None:
+    for label, path in sandbox_root_candidates(workspace):
         if usable(path):
             return label, path
     return None
@@ -172,7 +188,16 @@ def print_predeploy_commands(host_project_folder: str, host_sandbox_folder: str 
     print("")
 
 
-def spec_text(mode: str, project_root: str, host_project_folder: str, sandbox_root: str, host_sandbox_folder: str | None, backing: str) -> str:
+def spec_text(
+    mode: str,
+    project_root: str,
+    host_project_folder: str,
+    sandbox_root: str,
+    host_sandbox_folder: str | None,
+    backing: str,
+    sandbox_backing: str = "vps-local",
+    sandbox_mode: str = "vps_local_preferred",
+) -> str:
     generated = dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     sandbox_host = host_sandbox_folder or "TODO: host path backing /sandboxes"
     return f"""# bSmart container storage spec
@@ -189,7 +214,7 @@ container_storage:
   sandbox_root:
     path_in_container: {sandbox_root}
     required: true
-    backing: vps-local
+    backing: {sandbox_backing}
     desired_host_path: {sandbox_host}
     mode: rw
 
@@ -199,19 +224,19 @@ project_storage:
   host_project_folder: {host_project_folder}
 
 sandbox_storage:
-  mode: vps_local_preferred
+  mode: {sandbox_mode}
   sandbox_root: {sandbox_root}
   host_sandbox_folder: {sandbox_host}
 """
 
 
-def print_status(spec_path: Path) -> int:
-    project_candidates = project_root_candidates()
-    sandbox_candidates = sandbox_root_candidates()
+def print_status(spec_path: Path, workspace: Path | None = None) -> int:
+    project_candidates = project_root_candidates(workspace)
+    sandbox_candidates = sandbox_root_candidates(workspace)
 
     spec_exists = spec_path.exists()
-    selected_project = select_project_root()
-    selected_sandbox = select_sandbox_root()
+    selected_project = select_project_root(workspace)
+    selected_sandbox = select_sandbox_root(workspace)
 
     print("bSmart project storage check:")
     print(f"  spec: {'present' if spec_exists else 'missing'} ({spec_path})")
@@ -244,25 +269,73 @@ def print_status(spec_path: Path) -> int:
     print("2) Internal bSmart (standard bSmart project folder inside the container workspace)")
     print("Some things will be stored in an internal project sandbox.")
     print("")
+    script = Path(__file__).resolve()
     print("To record the choice with this helper:")
-    print("  Mounted volume:  bsmart-project-storage-check --configure-mounted --host-project-folder <host-path>")
+    print(f"  Mounted volume:  python3 {script} --configure-mounted --host-project-folder <host-path>")
+    print(f"  Internal bSmart: python3 {script} --configure-internal")
     return 2
+
+
+def resolve_under(workspace: Path, value: str | None, default: Path) -> Path:
+    if not value:
+        return default
+    path = Path(value).expanduser()
+    if not path.is_absolute():
+        path = workspace / path
+    return path.resolve()
+
+
+def configure_internal(spec_path: Path, workspace: Path, project_root: str | None, sandbox_root: str | None) -> int:
+    project = resolve_under(workspace, project_root, (workspace / "projects").resolve())
+    sandbox = resolve_under(workspace, sandbox_root, (workspace / "sandboxes").resolve())
+    if spec_path.exists():
+        raise SystemExit(f"Refusing to overwrite existing spec: {spec_path}")
+    project.mkdir(parents=True, exist_ok=True)
+    sandbox.mkdir(parents=True, exist_ok=True)
+    write_spec(
+        spec_path,
+        spec_text(
+            mode="internal",
+            project_root=str(project),
+            host_project_folder=str(project),
+            sandbox_root=str(sandbox),
+            host_sandbox_folder=str(sandbox),
+            backing="workspace-local",
+            sandbox_backing="workspace-local",
+            sandbox_mode="workspace_local",
+        ),
+    )
+    print(f"bSmart project storage: wrote {spec_path}")
+    print("Internal/local storage selected. No host mount or Compose volume is required.")
+    print(f"  project root: {project}")
+    print(f"  sandbox root: {sandbox}")
+    return 0
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Check or create bSmart container storage spec.")
     parser.add_argument("--spec", default=str(DEFAULT_SPEC), help="storage spec path")
+    parser.add_argument("--workspace", help="workspace root for ./projects and ./sandboxes")
     parser.add_argument("--configure-mounted", action="store_true", help="create spec for a mounted /projects volume")
+    parser.add_argument("--configure-internal", action="store_true", help="create spec for workspace-local ./projects storage")
+    parser.add_argument("--project-root", help="internal project directory; defaults to <workspace>/projects")
+    parser.add_argument("--sandbox-root", help="internal sandbox directory; defaults to <workspace>/sandboxes")
 
     parser.add_argument("--host-project-folder", help="host path to mount at /projects")
     parser.add_argument("--host-sandbox-folder", help="host path to mount at /sandboxes; defaults to sibling 'sandboxes' next to the host /workspace path when inferable")
     args = parser.parse_args()
 
-    if not args.host_sandbox_folder:
-        args.host_sandbox_folder = infer_sandbox_host_path(args.host_project_folder)
+    if args.configure_mounted and args.configure_internal:
+        raise SystemExit("Choose either --configure-mounted or --configure-internal")
 
+    workspace = workspace_root(args.workspace).resolve()
     spec_path = Path(args.spec)
+    if args.configure_internal:
+        return configure_internal(spec_path, workspace, args.project_root, args.sandbox_root)
+
     if args.configure_mounted:
+        if not args.host_sandbox_folder:
+            args.host_sandbox_folder = infer_sandbox_host_path(args.host_project_folder)
         if not args.host_project_folder:
             raise SystemExit("--configure-mounted requires --host-project-folder")
         write_spec(
@@ -286,7 +359,7 @@ def main() -> int:
             print("Sandbox volume line: - <host-sandbox-folder>:/sandboxes:rw")
         return 0
 
-    return print_status(spec_path)
+    return print_status(spec_path, workspace)
 
 
 if __name__ == "__main__":

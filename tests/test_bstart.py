@@ -58,6 +58,37 @@ class BStartTests(unittest.TestCase):
         self.assertIn("Project: unavailable", output)
         self.assertIn("project mount appears to be down", output)
 
+    def test_workspace_root_and_system_copies_resolve_the_same_workspace(self):
+        workspace = self.make_workspace()
+        system = workspace / "bSmart-System"
+        helper = system / "scripts" / "bsmart-system-update-check"
+        helper.parent.mkdir(parents=True)
+        helper.write_text(
+            "#!/usr/bin/env python3\nprint('bSmart system update check: up to date')\n",
+            encoding="utf-8",
+        )
+        subprocess.run(["git", "init", "-q"], cwd=system, check=True)
+        shutil = __import__("shutil")
+        shutil.copy(START, system / "bStart.py")
+        shutil.copy(START, workspace / "bStart.py")
+        env = dict(__import__("os").environ)
+        env["BSMART_PROJECT_ROOT"] = str(workspace / "projects")
+        for script in (workspace / "bStart.py", system / "bStart.py"):
+            result = subprocess.run(
+                [sys.executable, str(script)],
+                cwd="/",
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+                env=env,
+            )
+            self.assertEqual(result.stderr, "")
+            self.assertIn("Agent: TestAgent", result.stdout)
+            self.assertNotIn("bSmart-System: no Git repository", result.stdout)
+            self.assertNotIn("update helper unavailable", result.stdout)
+            self.assertIn("bSmart system update check: up to date", result.stdout)
+
     def test_loads_selected_project_metadata(self):
         workspace = self.make_workspace()
         role_dir = workspace / "bSmart" / "Roles"

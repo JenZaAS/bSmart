@@ -17,8 +17,20 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 SYSTEM_ROOT = SCRIPT_DIR.parent
-WORKSPACE_ROOT = SYSTEM_ROOT.parent
-CONTENT_ROOT = Path("/workspace/bSmart") if Path("/workspace/bSmart").exists() else WORKSPACE_ROOT / "bSmart"
+
+
+def default_content_root(system_root: Path) -> Path:
+    """Prefer the sibling instance next to this checkout."""
+    sibling = system_root.parent / "bSmart"
+    container = Path("/workspace/bSmart")
+    if sibling.is_dir():
+        return sibling
+    if container.is_dir():
+        return container
+    return sibling
+
+
+CONTENT_ROOT = default_content_root(SYSTEM_ROOT)
 DEFAULT_REPO = SYSTEM_ROOT
 DEFAULT_STATE = CONTENT_ROOT / "State" / "bsmart-system-update.yaml"
 

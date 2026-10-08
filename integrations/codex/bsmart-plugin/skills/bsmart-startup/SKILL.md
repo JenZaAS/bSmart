@@ -10,7 +10,7 @@ If the session already contains a `bSmart — Startup` block, do not run startup
 Otherwise, from the workspace root, run:
 
 ```text
-python bSmart-System/bStart.py
+python3 bSmart-System/bStart.py
 ```
 
-Use `python3` when `python` is unavailable. In the first reply, preserve the startup lines and command-help lines.
+Use `python` when `python3` is not on PATH. In the first reply, preserve the startup lines and command-help lines.

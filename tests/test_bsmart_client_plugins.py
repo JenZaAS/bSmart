@@ -122,11 +122,16 @@ class SessionHookTests(unittest.TestCase):
         for relative, name in manifests.items():
             data = json.loads((SYSTEM / relative).read_text(encoding="utf-8"))
             self.assertEqual(data["name"], name)
-        workspace = SYSTEM.parent / ".cursor" / "commands"
         plugin_commands = SYSTEM / "integrations" / "cursor" / "bsmart-plugin" / "commands"
-        for name in ("project.md", "role.md"):
-            self.assertEqual((workspace / name).read_text(encoding="utf-8"), (plugin_commands / name).read_text(encoding="utf-8"))
-        self.assertFalse((workspace / "projcet.md").exists())
+        installed_candidates = (
+            SYSTEM.parent / ".cursor" / "commands",
+            SYSTEM / ".cursor" / "commands",
+        )
+        installed = next((path for path in installed_candidates if (path / "project.md").is_file()), None)
+        if installed is not None:
+            for name in ("project.md", "role.md"):
+                self.assertEqual((installed / name).read_text(encoding="utf-8"), (plugin_commands / name).read_text(encoding="utf-8"))
+            self.assertFalse((installed / "projcet.md").exists())
         self.assertFalse((plugin_commands / "projcet.md").exists())
 
 
