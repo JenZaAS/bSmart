@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": "python3 ./scripts/before_shell.py || python ./scripts/before_shell.py || py -3 ./scripts/before_shell.py",
+        "timeout": 15
+      }
+    ]
+  }
+}

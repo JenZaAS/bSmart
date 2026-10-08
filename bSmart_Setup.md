@@ -258,22 +258,31 @@ client_plugins:
     - the Claude package is not yet verified in the Claude app
 
 bprotective_integration:
-  purpose: install the optional Hermes command-protection plugin without enabling it implicitly
+  purpose: install optional command protection without enabling it implicitly
   protocol: /workspace/bSmart-System/bSmart_Protocols/operations.md
-  source: /workspace/bSmart-System/integrations/hermes/bprotective-plugin/
-  target: <active Hermes home>/plugins/bprotective/
-  setup:
-    - inspect the plugin files and show the operator what will be enabled
-    - copy `plugin.yaml` and `__init__.py` into the active Hermes profile plugin directory
-    - run `hermes plugins doctor <active Hermes home>/plugins/bprotective --ci`
-    - enable with `hermes plugins enable bprotective`
-    - start a new Hermes session or restart the gateway
-    - request activation with `/bprotective on`; do not activate during installation
+  core: /workspace/bSmart-System/integrations/bprotective/
+  cli: python3 /workspace/bSmart-System/scripts/bprotective; if python3 is missing or fails, use python, or py -3 on Windows
+  hermes:
+    source: /workspace/bSmart-System/integrations/hermes/bprotective-plugin/
+    target: <active Hermes home>/plugins/bprotective/
+    setup:
+      - inspect the plugin files and show the operator what will be enabled
+      - copy `plugin.yaml` and `__init__.py` into the active Hermes profile plugin directory
+      - set BSMART_SYSTEM_ROOT to the bSmart-System checkout when the plugin is copied out of that tree
+      - run `hermes plugins doctor <active Hermes home>/plugins/bprotective --ci`
+      - enable with `hermes plugins enable bprotective`
+      - start a new Hermes session or restart the gateway
+      - request activation with `/bprotective on`; do not activate during installation
+  other_assistants:
+    - use `bprotective check` before shell commands on the operator's machines; see bprotective_preflight
+    - Cursor, Claude, and Codex hook packages live under integrations/<harness>/bprotective-plugin/ and are not live-tested
+    - installing a hook package does not activate protection
   controls:
-    - `/bprotective status`
-    - `/bprotective on` followed by `/bprotective yes <ID>`
-    - `/bprotective off` followed by `/bprotective yes <ID>`
-  safety: Both activation and deactivation are confirmation-gated; invalid policy state blocks terminal commands.
+    - `/bprotective status` or `bprotective status`
+    - `/bprotective on` or `bprotective on`, followed by `yes <ID>`
+    - `/bprotective off` or `bprotective off`, followed by `yes <ID>`
+  instance_config: State/bprotective.yaml under the per-instance content root from bsmart_instance.default_content_root
+  safety: Both activation and deactivation are confirmation-gated; invalid policy state blocks terminal commands. Do not enable bProtective during setup.
 
 
 dreaming:

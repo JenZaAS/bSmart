@@ -1,10 +1,34 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.45.1-draft
-updated: 2026-10-10 08:50 UTC
+current_version: 0.1.46-draft
+updated: 2026-10-10 09:30 UTC
 status: draft
 ```
+
+## 0.1.46-draft
+
+```yaml
+release_type: harness_independent_bprotective
+scope:
+  - move bProtective policy, on/off state, and confirmation gating into one dependency-free Python core
+  - cover POSIX shells and Windows PowerShell/cmd, including protected instance paths
+  - add scripts/bprotective check, status, and confirmed on/off
+  - keep the Hermes plugin on the same decisions and confirmation text
+  - add a short pre-flight protocol for assistants that cannot hook the shell
+  - add Cursor, Claude Code, and Codex hook adapters without enabling protection by default
+  - read instance config and state from the per-instance content root via bsmart_instance.default_content_root
+  - keep Windows icacls state privacy in that shared core
+  - keep CLI and hook output encoding-safe for a cp1252 console
+  - fit the pre-flight text to the operation-tag convention and the python3, python, py -3 launcher fallback
+  - bProtective does not read role files; protection stays off until the operator confirms it
+verification:
+  - existing Hermes bProtective tests pass, including Windows commands and the Windows ACL write
+  - core and CLI tests cover Windows commands, protected paths, confirmation, hook response shapes, and the sibling content root
+  - Cursor, Claude, and Codex adapters were checked against vendor hook docs and were not live-tested
+  - python and node tests pass on Linux, Windows, and macOS for Python 3.11 and 3.12
+```
+
 
 ## 0.1.45.1-draft
 

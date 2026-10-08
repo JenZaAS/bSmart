@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${PLUGIN_ROOT}/scripts/before_shell.py\" || python \"${PLUGIN_ROOT}/scripts/before_shell.py\" || py -3 \"${PLUGIN_ROOT}/scripts/before_shell.py\"",
+            "timeout": 15,
+            "statusMessage": "Checking bProtective"
+          }
+        ]
+      }
+    ]
+  }
+}

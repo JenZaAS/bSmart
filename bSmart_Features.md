@@ -83,7 +83,7 @@ features:
     detail_lookup: python ./scripts/bFeature bPrivate
   - name: bProtective
     status: active
-    summary: Add approval-gated command protection for Hermes terminal actions.
+    summary: Optionally block catastrophic commands and escalate risky ones.
     detail_lookup: python ./scripts/bFeature bProtective
   - name: bAccountant
     status: active
@@ -157,7 +157,7 @@ commands:
 12. Extensions — Enable optional add-on packs.
 13. Features — Show available bSmart capabilities.
 14. bPrivate — Optionally encode sensitive content before online-model use and decode local results.
-15. bProtective — Add approval-gated command protection for Hermes terminal actions.
+15. bProtective — Optionally block catastrophic commands and escalate risky ones.
 16. bAccountant — Optionally turn an agent into a cautious accountant assistant.
 17. bADR — Add and maintain standardized Architecture Decision Records in projects.
 
@@ -205,7 +205,7 @@ commands:
 - Extensions — Enable optional add-on packs.
 - Features — Show available bSmart capabilities.
 - bPrivate — Optionally encode sensitive content before online-model use and decode local results.
-- bProtective — Add approval-gated command protection for Hermes terminal actions.
+- bProtective — Optionally block catastrophic commands and escalate risky ones.
 - bAccountant — Optionally turn an agent into a cautious accountant assistant.
 - bADR — Add and maintain standardized Architecture Decision Records in projects.
 
@@ -689,26 +689,39 @@ name: bProtective
 group: System
 status: prototype
 visibility: user-facing
-short_description: Add approval-gated command protection for Hermes terminal actions.
+short_description: Optionally block catastrophic commands and escalate risky ones.
 files:
+  - /workspace/bSmart-System/integrations/bprotective/
+  - /workspace/bSmart-System/scripts/bprotective
   - /workspace/bSmart-System/integrations/hermes/bprotective-plugin/
+  - /workspace/bSmart-System/integrations/cursor/bprotective-plugin/
+  - /workspace/bSmart-System/integrations/claude/bprotective-plugin/
+  - /workspace/bSmart-System/integrations/codex/bprotective-plugin/
   - /workspace/bSmart-System/bSmart_Protocols/operations.md
-description: Provides a disabled-by-default Hermes pre-tool guard that deterministically blocks catastrophic shell commands and escalates risky commands to Hermes's existing operator approval gate. Turning the guard on or off also requires an explicit confirmation.
+description: Provides one off-by-default policy core for POSIX and Windows shell commands. Hermes blocks catastrophic commands and escalates risky ones to its approval gate. Assistants without a hook run scripts/bprotective before a command. Cursor, Claude Code, and Codex packages call the same core from a pre-execution hook; those three adapters are not live-tested. Turning the guard on or off requires an explicit confirmation. Instance config may add protected paths and patterns and cannot enable the guard.
 commands:
   - /bprotective status
   - /bprotective on
   - /bprotective off
   - /bprotective yes <ID>
   - /bprotective no <ID>
+  - bprotective check --json -- "<command>"
+  - bprotective status
 included_capabilities:
+  - Shared POSIX and Windows command policy
   - Hermes CLI and gateway pre-tool interception
+  - CLI pre-flight check for assistants without a shell hook
+  - Cursor, Claude Code, and Codex hook adapters
   - Catastrophic command blocking
   - Risky command approval escalation
   - Approval-gated enable/disable state
+  - Optional instance protected paths and extra patterns
   - Fail-closed handling for invalid policy state
 notes:
-  - Install and enable the Hermes plugin explicitly; it does not activate merely because the files are present.
-  - The initial implementation protects Hermes terminal tools; adapters for other clients are a later compatibility layer over the same policy model.
+  - Do not enable bProtective during setup or startup.
+  - Install and enable a harness plugin explicitly; files on disk do not activate the guard.
+  - Cursor, Claude, and Codex hook adapters are unverified in those products. See integrations/bprotective/README.md.
+  - Optional config belongs in State/bprotective.yaml under the per-instance content root from scripts/bsmart_instance.py, not in bSmart-System.
   - This is defense in depth, not a replacement for OS, container, or host access boundaries.
 ```
 

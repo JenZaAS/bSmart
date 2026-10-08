@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/before_shell.py\" || python \"${CLAUDE_PLUGIN_ROOT}/scripts/before_shell.py\" || py -3 \"${CLAUDE_PLUGIN_ROOT}/scripts/before_shell.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
