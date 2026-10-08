@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.45.3-draft
-updated: 2026-10-10 11:15 UTC
+current_version: 0.1.46-draft
+updated: 2026-10-11 08:32 UTC
 status: draft
 ```
 
@@ -26,6 +26,29 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.46-draft
+
+```yaml
+release_type: harness_independent_bprotective
+scope:
+  - move bProtective policy, on/off state, and confirmation gating into one dependency-free Python core
+  - cover POSIX shells and Windows PowerShell/cmd, including protected instance paths
+  - add scripts/bprotective check, status, and confirmed on/off
+  - keep the Hermes plugin on the same decisions and confirmation text
+  - add a short pre-flight protocol for assistants that cannot hook the shell
+  - add Cursor, Claude Code, and Codex hook adapters without enabling protection by default
+  - read instance config and state from the per-instance content root via bsmart_instance.default_content_root
+  - keep Windows icacls state privacy in that shared core
+  - keep CLI and hook output encoding-safe for a cp1252 console
+  - fit the pre-flight text to the operation-tag convention and the python3, python, py -3 launcher fallback
+  - bProtective does not read role files; protection stays off until the operator confirms it
+verification:
+  - existing Hermes bProtective tests pass, including Windows commands and the Windows ACL write
+  - core and CLI tests cover Windows commands, protected paths, confirmation, hook response shapes, and the sibling content root
+  - Cursor, Claude, and Codex adapters were checked against vendor hook docs and were not live-tested
+  - python and node tests pass on Linux, Windows, and macOS for Python 3.11 and 3.12
+```
 
 ## 0.1.45.3-draft
 

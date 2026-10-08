@@ -135,8 +135,10 @@ tool_approval_model:
   setup_note: During init, ask the operator whether to keep manual framework approvals, use smart/low-friction approvals, or disable framework approvals only in explicitly trusted environments.
 
 bprotective:
-  purpose: Add a deterministic Hermes terminal-command guard as defense in depth.
+  purpose: Deterministic command guard for Hermes and for other shell-capable assistants.
   default: disabled
+  core: integrations/bprotective/
+  cli: scripts/bprotective
   hermes_integration: integrations/hermes/bprotective-plugin/
   commands:
     status: /bprotective status
@@ -144,16 +146,46 @@ bprotective:
     disable_request: /bprotective off
     approve: /bprotective yes <ID>
     reject: /bprotective no <ID>
+    cli_status: bprotective status
+    cli_check: bprotective check --json -- "<command>"
   approval_rules:
     - turning bProtective on requires explicit confirmation
     - turning bProtective off requires explicit confirmation
-    - risky commands escalate to Hermes's existing human approval gate
+    - risky commands escalate to the harness approval gate, or to the operator in chat when no gate exists
     - catastrophic commands are blocked deterministically
+    - setup and startup must not turn the guard on
   state:
     default: off
-    local_file: ~/.hermes/bprotective.json
+    resolution: BPROTECTIVE_STATE_FILE, else State/bprotective.json under the per-instance content root from bsmart_instance.default_content_root, else an existing ~/.hermes/bprotective.json
     confirmation_expiry_seconds: 300
+  instance_config: State/bprotective.yaml under that same content root
+  instance_config_rule: Optional protected paths and extra patterns only. The file cannot enable the guard. The directory is the per-instance content root from bsmart_instance.default_content_root.
   boundary: This guard does not replace OS, container, Docker, or host-level security controls.
+
+bprotective_preflight:
+  purpose: Apply the same guard when the assistant has a shell and no pre-execution hook.
+  when: Before any shell command on the operator's machines, and before any destructive command.
+  check: python3 bSmart-System/scripts/bprotective check --json -- "<exact command>"
+  launcher: If python3 is missing or fails, use python, or py -3 on Windows.
+  do_not_enable: Do not run bprotective on unless the operator asks. Off is the default.
+  operation_tag: A pre-flight check is not tagged. Tag only work that already happened, as "bSmart [<scope>]: <ops> - <note of at most 5 words>". Inside a project report the read, write, and delete that happened. Outside a project report write and delete only. A blocked or not-run command is not a write or delete. Do not tag log or history writes, pure chat, web lookups, or the check itself.
+  results:
+    allow:
+      exit: 0
+      action: The guard is off or the command is allowed. Follow the normal bSmart approval rules.
+    escalate:
+      exit: 1
+      action: Do not run the command. Quote the reason and ask the operator in chat. After they explicitly approve that exact command, run it. Do not treat a later check as a veto of that approval.
+    block:
+      exit: 2
+      action: Refuse. Do not run the command and do not ask for an override.
+  controls:
+    status: bprotective status
+    enable: bprotective on, then the operator runs bprotective yes <ID>
+    disable: bprotective off, then the operator runs bprotective yes <ID>
+    cancel: bprotective no <ID>
+  hooks: A Cursor, Claude, or Codex bProtective hook enforces the same core when it is installed and trusted. Installation still leaves the guard off. Codex cannot ask in the hook, so an escalation there waits for bprotective yes <ID>.
+
 ```
 
 ```yaml
