@@ -21,6 +21,8 @@ scope:
   - choose the checkout sibling workspace in bsmart-update before falling back to /workspace
   - share default_content_root across the checkout scripts that write instance state
   - skip copying the Hermes plugin when a profile exists but the hermes CLI is not available
+  - write bProtective state without os.fchmod, and launch a Windows hermes .cmd shim through cmd.exe
+  - allow a system path-prefix symlink such as macOS /var, and still reject a symlink inside the caller tree
   - keep update and startup state in the instance that was started when several instances share a machine, including a symlinked bSmart-System
 verification:
   - integration check returns success and creates no Hermes home when hermes is absent

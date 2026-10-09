@@ -8,8 +8,16 @@ const yamlKeys={'Mode':'mode','Active project (short name)':'active_project','Ac
 const nativeOps=Object.freeze({renameSync:fs.renameSync.bind(fs),writeFileSync:fs.writeFileSync.bind(fs),rmSync:fs.rmSync.bind(fs),unlinkSync:fs.unlinkSync.bind(fs)});
 
 function safePath(p) {
- p=path.resolve(p);let at=path.parse(p).root;
- for(const part of p.slice(at.length).split(path.sep).filter(Boolean)){at=path.join(at,part);if(fs.existsSync(at)&&fs.lstatSync(at).isSymbolicLink())fail('Symlinks are not allowed');}
+ // Reject a symlink inside the caller path. A symlink before the first real
+ // directory is a system prefix (/var and /tmp on macOS) and is followed.
+ p=path.resolve(p);let at=path.parse(p).root;let inCallerTree=false;
+ for(const part of p.slice(at.length).split(path.sep).filter(Boolean)){
+  at=path.join(at,part);
+  if(!fs.existsSync(at)){inCallerTree=true;continue;}
+  if(!fs.lstatSync(at).isSymbolicLink()){inCallerTree=true;continue;}
+  if(inCallerTree)fail('Symlinks are not allowed');
+  at=fs.realpathSync(at);
+ }
  return p;
 }
 function name(s) {

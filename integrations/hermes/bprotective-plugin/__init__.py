@@ -47,21 +47,37 @@ def _read_state() -> dict[str, Any]:
     return value if isinstance(value, dict) else {"enabled": False, "pending": None, "error": "state file is invalid"}
 
 
+def _restrict_private(fd: int, temp_name: str) -> None:
+    """Owner-only mode. Windows has no os.fchmod; chmod the path instead."""
+    if hasattr(os, "fchmod"):
+        os.fchmod(fd, 0o600)
+        return
+    os.chmod(temp_name, 0o600)
+
+
 def _write_state(value: dict[str, Any]) -> None:
     path = _state_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    opened = False
     try:
-        os.fchmod(fd, 0o600)
+        _restrict_private(fd, temp_name)
         with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            opened = True
             json.dump(value, stream, sort_keys=True)
             stream.write("\n")
         os.replace(temp_name, path)
-    finally:
+    except Exception:
+        if not opened:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
         try:
             os.unlink(temp_name)
-        except FileNotFoundError:
+        except OSError:
             pass
+        raise
 
 
 def _confirmation(operation: str) -> str:

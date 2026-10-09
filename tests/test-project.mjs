@@ -45,6 +45,25 @@ test('file-level bLock collision stops a competing writer and leaves the lock in
  fs.rmSync(lock); assert.equal(run('/project add Beta').status,'ok');
 });
 
+test('a symlink inside the caller tree is rejected', t=>{
+ const base=fs.mkdtempSync(path.join(os.tmpdir(),'bsmart-symlink-'));
+ t.after(()=>fs.rmSync(base,{recursive:true,force:true}));
+ const home=path.join(base,'home'), projects=path.join(base,'projects'), linked=path.join(base,'linked-projects');
+ fs.mkdirSync(home); fs.mkdirSync(projects);
+ const rolesRoot=path.join(home,'Roles'); fs.mkdirSync(rolesRoot);
+ const selectorFile=path.join(rolesRoot,'current_role.md'), roleFile=path.join(rolesRoot,'general_role.md');
+ fs.writeFileSync(selectorFile,'```yaml\nrole_selection:\n  current_role: general\n```\n');
+ fs.writeFileSync(roleFile,'```yaml\nstate:\n  active_project: "none"\n  active_workstream: "none"\n```\n');
+ let skipped=false;
+ try { fs.symlinkSync(projects, linked, 'dir'); }
+ catch { skipped=true; }
+ if (skipped) { t.skip('symlinks are unavailable'); return; }
+ const context={home,projectsRoot:linked,rolesRoot,selectorFile,roleFile,archiveRoot:path.join(home,'archives')};
+ const result=execute({command:'/project help',context});
+ assert.equal(result.status,'error');
+ assert.match(result.diagnostic,/Symlinks are not allowed/);
+});
+
 test('project rename and delete use selected role state, not legacy state', t=>{
  const {context,run}=fixture(t); run('/project add Alpha');
  const pending=run('/project rename Beta'); assert.equal(pending.status,'pending');
