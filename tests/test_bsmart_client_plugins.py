@@ -4,6 +4,9 @@ import importlib.util
 import io
 import json
 import os
+import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -147,6 +150,42 @@ class SessionHookTests(unittest.TestCase):
             for name in ("project.md", "role.md"):
                 self.assertEqual((installed / name).read_text(encoding="utf-8"), (plugin_commands / name).read_text(encoding="utf-8"))
             self.assertFalse((installed / "projcet.md").exists())
+
+    def test_session_hook_preserves_characters_outside_cp1252(self):
+        workspace = Path(tempfile.mkdtemp(prefix="bsmart-hook-encoding-"))
+        self.addCleanup(lambda: shutil.rmtree(workspace, ignore_errors=True))
+        system = workspace / "bSmart-System"
+        system.mkdir()
+        shutil.copy(SYSTEM / "bStart.py", system / "bStart.py")
+        content = workspace / "bSmart"
+        content.mkdir()
+        marker = "\u2610"
+        (content / "bSmart_Agent.md").write_text(
+            "# Agent\n\n```yaml\nagent:\n  name: TestAgent\n  operator: Test User\n```\n\n" + marker + " open item\n",
+            encoding="utf-8",
+        )
+        projects = workspace / "projects"
+        projects.mkdir()
+        env = dict(os.environ)
+        env["PYTHONUTF8"] = "0"
+        env["PYTHONIOENCODING"] = "cp1252:strict"
+        env["BSMART_PROJECT_ROOT"] = str(projects)
+        result = subprocess.run(
+            [sys.executable, str(SYSTEM / "integrations" / "client_session_start.py"), "--client", "cursor"],
+            input=json.dumps({"cwd": str(workspace)}).encode("utf-8"),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+            cwd=str(workspace),
+            check=False,
+        )
+        stderr = result.stderr.decode("utf-8", "replace")
+        self.assertEqual(result.returncode, 0, stderr)
+        payload = json.loads(result.stdout.decode("utf-8"))
+        text = payload["additional_context"]
+        self.assertIn("bStart.py finished.", text)
+        self.assertIn(marker + " open item", text)
+        self.assertNotIn("UnicodeEncodeError", text)
 
     def test_session_hooks_fall_back_when_python3_fails(self):
         for relative in (

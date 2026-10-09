@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -136,6 +138,36 @@ class BStartTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("# From spec", result.stdout)
         self.assertNotIn("# Stale local", result.stdout)
+
+    def test_cp1252_stdout_prints_characters_outside_that_code_page(self):
+        workspace = self.make_workspace()
+        marker = "\u2610"
+        agent = workspace / "bSmart" / "bSmart_Agent.md"
+        agent.write_text(agent.read_text(encoding="utf-8") + f"\n{marker} open item\n", encoding="utf-8")
+        system = workspace / "bSmart-System"
+        system.mkdir()
+        shutil.copy(START, system / "bStart.py")
+        shutil.copy(START, workspace / "bStart.py")
+        env = dict(os.environ)
+        env.pop("PYTHONUTF8", None)
+        env["PYTHONUTF8"] = "0"
+        env["PYTHONIOENCODING"] = "cp1252:strict"
+        env["BSMART_PROJECT_ROOT"] = str(workspace / "projects")
+        for script in (START, system / "bStart.py", workspace / "bStart.py"):
+            result = subprocess.run(
+                [sys.executable, str(script), "--root", str(workspace), "--skip-update", "--skip-integrity"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env,
+                cwd=str(workspace),
+                check=False,
+            )
+            stderr = result.stderr.decode("utf-8", "replace")
+            self.assertEqual(result.returncode, 0, stderr)
+            self.assertNotIn("UnicodeEncodeError", stderr)
+            stdout = result.stdout.decode("utf-8")
+            self.assertIn(marker, stdout)
+            self.assertIn(f"{marker} open item", stdout)
 
 
 if __name__ == "__main__":

@@ -28,7 +28,14 @@ def find_workspace(start: Path) -> Path | None:
 
 
 def read_payload() -> dict:
-    raw = sys.stdin.read()
+    # The client pipe is UTF-8. Reading the text wrapper would use the ANSI
+    # code page on Windows and can raise before bStart runs.
+    stream = sys.stdin
+    buffer = getattr(stream, "buffer", None)
+    if buffer is not None:
+        raw = buffer.read().decode("utf-8", errors="replace")
+    else:
+        raw = stream.read()
     if not raw.strip():
         return {}
     try:
@@ -63,9 +70,16 @@ def workspace_from(data: dict) -> Path | None:
 
 def run_bstart(workspace: Path) -> tuple[str, int]:
     script = workspace / "bSmart-System" / "bStart.py"
+    env = os.environ.copy()
+    # Decode below is UTF-8. Ask bStart for UTF-8 bytes even when this hook
+    # was started on a legacy code page. bStart also reconfigures its own
+    # stdio, so a direct run survives the same pipe.
+    env["PYTHONIOENCODING"] = "utf-8"
+    env["PYTHONUTF8"] = "1"
     completed = subprocess.run(
         [sys.executable, str(script), "--root", str(workspace)],
         cwd=workspace,
+        env=env,
         text=True,
         encoding="utf-8",
         errors="replace",
