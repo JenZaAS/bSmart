@@ -2,7 +2,7 @@
 
 ```yaml
 current_version: 0.1.45-draft
-updated: 2026-10-09 13:20 UTC
+updated: 2026-10-09 13:56 UTC
 status: draft
 ```
 
@@ -21,7 +21,10 @@ scope:
   - tag real work as "bSmart [<scope>]: <ops> - <note>"
   - back up Roles/ and bSmart_State.md, then merge unambiguous handoffs without overwriting existing text
   - write the migration manifest before changing a handoff, skip non-UTF-8 handoffs, and keep later notes unless the file still matches what migration wrote
-  - run role migration once per instance; a marker stops later bsmart-update runs from appending again
+  - run role migration once per instance; the marker is written even when questions remain, and deleting it is how a skipped handoff is retried
+  - restore removes the migration marker, so the next update migrates again unless the system copy is downgraded
+  - remove a retired or deleted project from the session only when that session was on it
+  - refuse bsmart-instance-upgrade's /workspace default unless the process is already inside it, and name that workspace before changing it
   - keep unrecognised role fields in the instance review file and the backup, not in the project handoff
   - remember the project for Hermes, Cursor, Claude, Codex, and the shell adapter, and accept an exact /project delete|retire|rename NAME plus handoff: text
 migration:
@@ -36,7 +39,7 @@ verification:
   - a missing index is created and a present index is not rewritten by startup
   - switching projects appends a handoff and leaves existing handoff text in place
   - migration backs up Roles/ and restores those bytes
-  - python and node tests pass on Linux, Windows, and macOS
+  - python and node tests pass on Linux, Windows, and macOS for Python 3.11 and 3.12
 ```
 
 ## 0.1.44.1-draft

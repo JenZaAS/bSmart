@@ -136,6 +136,13 @@ class SessionHookTests(unittest.TestCase):
         self.assertEqual(claude["hookSpecificOutput"]["hookEventName"], "SessionStart")
         self.assertEqual(claude["hookSpecificOutput"]["additionalContext"], "hello")
         self.assertEqual(self.session.payload("codex", "hello"), claude)
+        self.assertNotIn("env", cursor)
+        cursor_id = self.session.payload("cursor", "hello", "conv-1")
+        self.assertEqual(cursor_id["env"], {"BSMART_SESSION_ID": "conv-1"})
+        codex_id = self.session.payload("codex", "hello", "thread-1")
+        self.assertEqual(codex_id["hookSpecificOutput"]["env"], {"BSMART_SESSION_ID": "thread-1"})
+        self.assertNotIn("CODEX_THREAD_ID", json.dumps(codex_id))
+        self.assertEqual(self.session.session_id_from_payload({"conversation_id": "conv 1"}), "conv-1")
 
     def test_cursor_context_asks_for_a_fence(self):
         cursor = self.session.context_text("Hi, there!", 0, "cursor")

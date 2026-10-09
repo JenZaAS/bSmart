@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -75,10 +76,11 @@ _HARNESS_SESSION_KEYS = (
     "HERMES_SESSION_KEY",
     "HERMES_SESSION_ID",
     "CLAUDE_SESSION_ID",
+    # Observed on a Cursor machine. Cursor's published env table does not list it;
+    # the hook stdin field is session_id / conversation_id. CURSOR_SESSION_ID is not a documented name.
     "CURSOR_CONVERSATION_ID",
-    "CURSOR_SESSION_ID",
+    # Codex injects this into hooks and local shell commands. CODEX_SESSION_ID is not a documented name.
     "CODEX_THREAD_ID",
-    "CODEX_SESSION_ID",
 )
 
 
@@ -99,11 +101,11 @@ def _hermes_context_value(name: str) -> str:
 
 
 def _channel_session_id() -> str:
-    """Stable id for this conversation. Fallback is one channel per instance home.
+    """Stable id for this conversation.
 
-    A harness that exposes a session id gets its own file. Parallel chats on a
-    harness that exposes none share channel-client; /project delete NAME does
-    not depend on that file.
+    A harness id gets its own file. With no id, every such conversation on
+    this instance shares channel-client. /project delete NAME does not depend
+    on that shared file.
     """
     explicit = os.environ.get("BSMART_SESSION_ID", "").strip()
     if explicit:
@@ -125,6 +127,28 @@ def _channel_session_id() -> str:
         if cleaned:
             return cleaned
     return "channel-client"
+
+
+_default_notice_sent = False
+
+
+def _announce_default_workspace() -> None:
+    """Name the /workspace default before a command changes anything.
+
+    The container default is correct for Hermes. A hand run with no env still
+    prints the paths so it is obvious which instance would be touched.
+    """
+    global _default_notice_sent
+    if _default_notice_sent:
+        return
+    if any(os.environ.get(key) for key in ("BSMART_SYSTEM_ROOT", "BSMART_INSTANCE_HOME", "BSMART_PROJECT_ROOT")):
+        return
+    _default_notice_sent = True
+    print(
+        "bSmart project adapter: no BSMART_SYSTEM_ROOT, BSMART_INSTANCE_HOME, or BSMART_PROJECT_ROOT; "
+        f"using system {_DEFAULT_SYSTEM_ROOT} and home {_DEFAULT_HOME}",
+        file=sys.stderr,
+    )
 
 
 def _context() -> dict[str, str]:
@@ -171,6 +195,7 @@ def _execute(command: str) -> dict[str, Any]:
     node = shutil.which("node")
     if not node:
         return {"status": "error", "diagnostic": "Node.js executable not found"}
+    _announce_default_workspace()
     try:
         request: dict[str, Any] = {"command": command, "context": _context()}
         session = _session_from_env()

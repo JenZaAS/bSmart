@@ -26,4 +26,6 @@ When you find an old role file in instance content:
 - `current_role.md` only named which role file the old selector pointed at. It is not a project.
 - `/role` does not change state. Use `/project`.
 
-The pre-migration copy is in `.bsmart-upgrade-backups/<stamp>/roles-migration/`. Restoring that backup puts `Roles/` back and restores a handoff only when the file still matches what migration wrote. A handoff edited after migration is kept. Migration runs once; the marker is `bSmart/State/role-migration.json`.
+The pre-migration copy is in `.bsmart-upgrade-backups/<stamp>/roles-migration/`. Restoring that backup puts `Roles/` back and restores a handoff only when the file still matches what migration wrote. A handoff edited after migration is kept.
+
+`bSmart/State/role-migration.json` is written at the end of a migration even when questions remain. A skipped non-UTF-8 handoff is not retried on the next `bsmart-update`. Delete that marker and run `bsmart-instance-upgrade` again to retry those questions. Restore deletes the marker, so the next `bsmart-update` migrates again unless the system copy is also downgraded.

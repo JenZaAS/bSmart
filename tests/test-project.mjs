@@ -189,6 +189,32 @@ test('named delete works without a session and handoff text can travel in the co
   assert.equal(fs.existsSync(path.join(projectsRoot, 'Alpha')), true);
 });
 
+test('deleting or retiring another project leaves this session in place', t => {
+  const { context, projectsRoot } = fixture(t);
+  assert.equal(run(context, '/project add Alpha').status, 'ok');
+  assert.equal(run(context, '/project add Beta', { session: { project: null, workstream: null } }).status, 'ok');
+  const here = { project: 'Alpha', workstream: null };
+  const renamedPending = run(context, '/project rename Beta BetaRenamed', { session: here });
+  assert.equal(renamedPending.status, 'pending');
+  const renamed = run(context, '/project yes', { session: here, confirmation: { id: renamedPending.pending.id, answer: 'yes' } });
+  assert.equal(renamed.status, 'ok');
+  assert.equal(renamed.session.project, 'Alpha');
+  assert.equal(fs.existsSync(path.join(projectsRoot, 'BetaRenamed')), true);
+  const pending = run(context, '/project delete BetaRenamed', { session: here });
+  assert.equal(pending.status, 'pending');
+  const removed = run(context, '/project yes', { session: here, confirmation: { id: pending.pending.id, answer: 'yes' } });
+  assert.equal(removed.status, 'ok');
+  assert.equal(removed.session.project, 'Alpha');
+  assert.equal(fs.existsSync(path.join(projectsRoot, 'Beta')), false);
+  assert.equal(run(context, '/project add Gamma', { session: { project: null, workstream: null } }).status, 'ok');
+  const retire = run(context, '/project retire Gamma', { session: here });
+  const retired = run(context, '/project yes', { session: here, confirmation: { id: retire.pending.id, answer: 'yes' } });
+  assert.equal(retired.session.project, 'Alpha');
+  const own = run(context, '/project delete', { session: here });
+  const cleared = run(context, '/project yes', { session: here, confirmation: { id: own.pending.id, answer: 'yes' } });
+  assert.equal(cleared.session.project, null);
+});
+
 test('project rename and delete use the session, not a role file', t => {
   const { context, home, projectsRoot } = fixture(t);
   const created = run(context, '/project add Alpha');

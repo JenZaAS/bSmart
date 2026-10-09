@@ -70,4 +70,4 @@ Rules:
 
 ## Migration
 
-`bsmart-update` and `bsmart-instance-upgrade` back up `Roles/` and legacy `bSmart_State.md` before merging unambiguous focus and handoff text into the matching project handoff. Existing handoff text is kept. Unknown fields are appended for review. Ambiguous cases are asked and are not guessed.
+`bsmart-update` and `bsmart-instance-upgrade` back up `Roles/` and legacy `bSmart_State.md` before merging unambiguous focus and handoff text into the matching project handoff. Existing handoff text is kept. Unknown fields stay in the review file, not the handoff. Ambiguous cases are asked and are not guessed. The migration marker is written even when questions remain; delete `bSmart/State/role-migration.json` and run `bsmart-instance-upgrade` again to retry a skipped handoff. Restore removes that marker.

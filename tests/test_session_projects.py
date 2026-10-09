@@ -93,6 +93,10 @@ class MigrationTests(unittest.TestCase):
             self.assertIn("migrated review -> Alpha/workstreams/Build/handoff.md", text)
             self.assertIn("question:", text)
             self.assertIn("Missing", text)
+            marker = content / "State" / "role-migration.json"
+            self.assertTrue(marker.is_file())
+            saved = json.loads(marker.read_text(encoding="utf-8"))
+            self.assertTrue(any("question:" in line for line in saved["questions"]))
             self.assertFalse((projects / "Missing").exists())
             handoff = original_handoff.read_text(encoding="utf-8")
             self.assertTrue(handoff.startswith("# Handoff\n\nORIGINAL"))
@@ -110,7 +114,10 @@ class MigrationTests(unittest.TestCase):
             role.write_text("changed after migration\n", encoding="utf-8")
             role.chmod(0o444)
             restored = session["restore_workspace"](workspace, backup, projects)
-            self.assertIn("restore complete", "\n".join(restored))
+            restored_text = "\n".join(restored)
+            self.assertIn("restore complete", restored_text)
+            self.assertIn("removed marker", restored_text)
+            self.assertFalse(marker.exists())
             self.assertEqual(role.read_bytes(), role_bytes)
             self.assertEqual(legacy.read_bytes(), legacy_bytes)
             self.assertEqual((roles / "current_role.md").read_bytes(), selector_bytes)
@@ -247,6 +254,27 @@ class MigrationTests(unittest.TestCase):
             self.assertEqual(code, 1)
             self.assertIn("role_migration: blocked", output.getvalue())
             self.assertNotIn("Traceback", output.getvalue())
+
+    def test_remove_tree_uses_onerror_on_python_3_11(self):
+        self.assertEqual(set(session["_rmtree_error_kwargs"]((3, 11, 9))), {"onerror"})
+        self.assertEqual(set(session["_rmtree_error_kwargs"]((3, 12, 0))), {"onexc"})
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "locked"
+            root.mkdir()
+            locked = root / "locked.txt"
+            locked.write_text("x", encoding="utf-8")
+            locked.chmod(0o444)
+            # 3.12 still accepts onerror. Call it directly so this suite exercises the 3.11 path.
+            session["shutil"].rmtree(root, onerror=session["_on_remove_error"])
+            self.assertFalse(root.exists())
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "locked"
+            root.mkdir()
+            locked = root / "locked.txt"
+            locked.write_text("x", encoding="utf-8")
+            locked.chmod(0o444)
+            session["_remove_tree"](root)
+            self.assertFalse(root.exists())
 
 
 if __name__ == "__main__":

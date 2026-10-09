@@ -60,6 +60,8 @@ python3 /workspace/bSmart-System/scripts/bsmart-content-upgrade --create-missing
 python3 ./bSmart-System/scripts/bsmart-content-upgrade --create-missing
 ```
 
+`bsmart-instance-upgrade` prints `workspace:` before it changes anything. With no `--workspace`, it uses `/workspace` only when the process is already inside that directory. From anywhere else, pass `--workspace`.
+
 For an existing instance, `bsmart-update` is the standard post-pull finalization command. It deliberately does not pull Git: it backs up differing startup hooks, installs the workspace `bStart.py`, synchronizes the canonical hooks, creates only missing standard content, refreshes or installs the managed `/project` integration, and reports when Hermes must restart. It automatically applies only known exact instance-profile compatibility migrations with a backup and clear report; ambiguous or broader changes still require a question. `bsmart-instance-upgrade` and `bsmart-content-upgrade` remain available as focused helpers.
 
 ## Required operator inputs

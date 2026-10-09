@@ -34,9 +34,10 @@ legacy_state_file:
 1. `bsmart-instance-upgrade` backs up `Roles/` and `bSmart_State.md` under `.bsmart-upgrade-backups/<stamp>/roles-migration/` before it changes a handoff.
 2. For each role file and for `bSmart_State.md`, copy project, workstream, focus, and handoff into that project's `handoff.md`, or the workstream handoff when the workstream folder exists.
 3. Append. Never replace existing handoff text.
-4. Preserve unknown fields in the appended section. If the project or workstream folder is missing, or the file names no project but still has notes, ask. Do not create a project to make the migration fit.
+4. Keep unknown fields in `bSmart/State/role-migration-review.md` and the backup `review.md`. They are not copied into the project handoff. If the project or workstream folder is missing, or the file names no project but still has notes, ask. Do not create a project to make the migration fit.
 5. Leave the original files in place as history. They are not a selector.
-6. Restore with `bsmart-instance-upgrade --restore-session-projects <backup>` to put those bytes back.
+6. Write `bSmart/State/role-migration.json` even when questions remain. A skipped non-UTF-8 handoff is not retried automatically. Delete that marker and run `bsmart-instance-upgrade` again to retry it.
+7. Restore with `bsmart-instance-upgrade --restore-session-projects <backup>` to put those bytes back. Restore deletes the marker, so the next `bsmart-update` migrates again unless the system copy is also downgraded.
 
 ## Compatibility rule
 

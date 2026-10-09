@@ -577,7 +577,9 @@ function destructive(command, c, session, confirmation) {
         const row = findRow(rows, pending.project);
         if (row) row.name = pending.newName;
         saveIndex(c, rows);
-        const next = { project: pending.newName, workstream: pending.workstream || null };
+        const next = session.project === pending.project
+          ? { project: pending.newName, workstream: pending.workstream || null }
+          : { project: session.project, workstream: session.workstream };
         return { status: 'ok', session: next, selection: selectionOf(c, next), startup: startupBlock(c, next, rows), diagnostic: 'Project renamed' };
       } catch (error) {
         const failures = [];
@@ -615,7 +617,9 @@ function destructive(command, c, session, confirmation) {
         rows.push(...kept);
       }
       saveIndex(c, rows);
-      next = { project: null, workstream: null };
+      next = session.project === pending.project
+        ? { project: null, workstream: null }
+        : { project: session.project, workstream: session.workstream };
     } catch (error) {
       try { c.ops.renameSync(quarantine, target); }
       catch (rollback) {

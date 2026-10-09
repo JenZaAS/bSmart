@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import os
 import shutil
@@ -109,6 +110,49 @@ class ProjectPluginTests(unittest.TestCase):
         self.assertIn("- Beta (current)", listed_b)
         self.assertNotIn("- Alpha (current)", listed_b)
         self.assertFalse((Path(self.tmp.name) / "Roles" / "current_role.md").exists())
+
+    def test_documented_session_env_names_and_the_shared_fallback(self):
+        keys = (
+            "BSMART_SESSION_ID",
+            "HERMES_SESSION_KEY",
+            "HERMES_SESSION_ID",
+            "CLAUDE_SESSION_ID",
+            "CURSOR_CONVERSATION_ID",
+            "CURSOR_SESSION_ID",
+            "CODEX_THREAD_ID",
+            "CODEX_SESSION_ID",
+        )
+        with patch.dict(os.environ, {"CURSOR_SESSION_ID": "not-a-cursor-id", "CODEX_SESSION_ID": "not-a-codex-id"}, clear=False):
+            for key in keys:
+                if key not in {"CURSOR_SESSION_ID", "CODEX_SESSION_ID"}:
+                    os.environ.pop(key, None)
+            self.assertEqual(self.plugin._channel_session_id(), "channel-client")
+        with patch.dict(os.environ, {"CURSOR_CONVERSATION_ID": "conv-9"}, clear=False):
+            for key in keys:
+                if key != "CURSOR_CONVERSATION_ID":
+                    os.environ.pop(key, None)
+            self.assertEqual(self.plugin._channel_session_id(), "cursor-conversation-id-conv-9")
+        with patch.dict(os.environ, {"CODEX_THREAD_ID": "thread-9"}, clear=False):
+            for key in keys:
+                if key != "CODEX_THREAD_ID":
+                    os.environ.pop(key, None)
+            self.assertEqual(self.plugin._channel_session_id(), "codex-thread-id-thread-9")
+
+    def test_default_workspace_is_named_before_a_hand_run(self):
+        plugin = load_plugin()
+        plugin._default_notice_sent = False
+        stderr = io.StringIO()
+        with patch.dict(os.environ, {}, clear=False):
+            for key in ("BSMART_SYSTEM_ROOT", "BSMART_INSTANCE_HOME", "BSMART_PROJECT_ROOT"):
+                os.environ.pop(key, None)
+            with patch.object(plugin.sys, "stderr", stderr):
+                plugin._announce_default_workspace()
+                second = io.StringIO()
+                plugin.sys.stderr = second
+                plugin._announce_default_workspace()
+        self.assertIn("/workspace/bSmart-System", stderr.getvalue())
+        self.assertIn("/workspace/bSmart", stderr.getvalue())
+        self.assertEqual(second.getvalue(), "")
 
     def test_select_then_delete_without_a_session_env(self):
         self.assertIn("Current: Gamma", self.call("project", "add Gamma"))

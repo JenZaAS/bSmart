@@ -331,6 +331,14 @@ def _on_remove_error(func, path, _exc) -> None:
     func(path)
 
 
+def _rmtree_error_kwargs(version: tuple[int, ...] | None = None) -> dict:
+    """3.12+ uses onexc. 3.11 and older only accept onerror."""
+    current = sys.version_info if version is None else version
+    if current >= (3, 12):
+        return {"onexc": _on_remove_error}
+    return {"onerror": _on_remove_error}
+
+
 def _remove_tree(path: Path) -> None:
     if path.is_symlink() or path.is_file():
         _chmod_writable(path)
@@ -338,7 +346,7 @@ def _remove_tree(path: Path) -> None:
         return
     if not path.exists():
         return
-    shutil.rmtree(path, onexc=_on_remove_error)
+    shutil.rmtree(path, **_rmtree_error_kwargs())
 
 
 def _swap_tree(source: Path, dest: Path) -> None:

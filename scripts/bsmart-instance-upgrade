@@ -32,7 +32,21 @@ PROFILE_RECOMMENDED = """## Startup reply behavior
 
 
 def resolve_workspace(value: str | None) -> Path:
-    return Path(value).expanduser().resolve() if value else Path("/workspace").resolve()
+    """Use an explicit workspace, or /workspace only when this process is already inside it."""
+    if value:
+        return Path(value).expanduser().resolve()
+    default = Path("/workspace").resolve()
+    cwd = Path.cwd().resolve()
+    inside = cwd == default
+    if not inside:
+        try:
+            cwd.relative_to(default)
+            inside = True
+        except ValueError:
+            inside = False
+    if not inside:
+        raise ValueError("Refusing to use /workspace because this process is not inside it. Pass --workspace.")
+    return default
 
 
 def sha256(path: Path) -> str:
@@ -78,12 +92,17 @@ def configure_output_streams() -> None:
 def main() -> int:
     configure_output_streams()
     parser = argparse.ArgumentParser(description="Repair bSmart startup integration after a system upgrade.")
-    parser.add_argument("--workspace", help="Workspace root; defaults to /workspace")
+    parser.add_argument("--workspace", help="Workspace root. /workspace is used only when this process is already inside it.")
     parser.add_argument("--backup-root", help="Optional backup directory")
     parser.add_argument("--restore-session-projects", help="Restore Roles, legacy state, and touched handoffs from a backup directory")
     parser.add_argument("--projects-root", help="Projects root for role migration and restore")
     args = parser.parse_args()
-    workspace = resolve_workspace(args.workspace)
+    try:
+        workspace = resolve_workspace(args.workspace)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    print(f"workspace: {workspace}")
     if args.restore_session_projects:
         backup = Path(args.restore_session_projects).expanduser().resolve()
         projects = Path(args.projects_root).expanduser().resolve() if args.projects_root else None
