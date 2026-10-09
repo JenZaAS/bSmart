@@ -2,7 +2,7 @@
 
 ```yaml
 current_version: 0.1.44-draft
-updated: 2026-10-09 12:10 UTC
+updated: 2026-10-09 12:40 UTC
 status: draft
 ```
 
@@ -20,9 +20,11 @@ scope:
   - prefer the sibling bSmart content root over a hardcoded /workspace path when both exist
   - choose the checkout sibling workspace in bsmart-update before falling back to /workspace
   - share default_content_root across the checkout scripts that write instance state
-  - skip copying the Hermes plugin when a profile exists but the hermes CLI is not available
-  - write bProtective state without os.fchmod, and launch a Windows hermes .cmd shim through cmd.exe
-  - allow a system path-prefix symlink such as macOS /var, and still reject a symlink inside the caller tree
+  - require the hermes CLI only when the adapter still needs to be enabled; an already current and enabled adapter stays successful without the CLI
+  - launch a Windows hermes .cmd shim as one ComSpec /d /s /c command so paths with spaces are not re-quoted
+  - realpath a configured projects root once, then reject symlinks and junctions below it, including a broken link
+  - resolve the instance project root from BSMART_PROJECT_ROOT, then container-storage.yaml, then /projects and ./projects, in bStart, the client adapter, and the Hermes /project plugin
+  - write bProtective state with POSIX mode 0o600, and on Windows also try an owner-only icacls grant because chmod there is only the read-only bit
   - keep update and startup state in the instance that was started when several instances share a machine, including a symlinked bSmart-System
 verification:
   - integration check returns success and creates no Hermes home when hermes is absent
@@ -34,6 +36,9 @@ verification:
   - existing unittest and node project tests pass
   - two instances on one filesystem keep bsmart-system-update.yaml and startup state in the instance that was started
   - python and node tests pass on Linux, Windows, and macOS
+  - an enabled current Hermes adapter returns success when hermes is not on PATH
+  - a symlinked projects root can create a project, and a symlinked or broken project directory is rejected
+  - startup, the client adapter, and the Hermes plugin follow container-storage.yaml when BSMART_PROJECT_ROOT is unset
 ```
 
 ## 0.1.43-draft

@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -95,6 +96,26 @@ class ProjectPluginTests(unittest.TestCase):
         result = self.call("project", f"no {pending_id}")
         self.assertIn("Cancelled", result)
         self.assertTrue((self.projects / "Keep").is_dir())
+
+    def test_storage_spec_selects_the_project_root_when_env_is_unset(self):
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            system = workspace / "bSmart-System" / "scripts"
+            system.mkdir(parents=True)
+            shutil.copy2(SYSTEM_ROOT / "scripts" / "bsmart_instance.py", system / "bsmart_instance.py")
+            spec_root = workspace / "from-spec"
+            spec_root.mkdir()
+            (workspace / "projects").mkdir()
+            spec = workspace / "bSmart" / "State" / "container-storage.yaml"
+            spec.parent.mkdir(parents=True)
+            spec.write_text("project_storage:\n  project_root: ./from-spec\n", encoding="utf-8")
+            env = dict(self.env)
+            env.pop("BSMART_PROJECT_ROOT", None)
+            env["BSMART_SYSTEM_ROOT"] = str(workspace / "bSmart-System")
+            with patch.dict(os.environ, env, clear=False):
+                os.environ.pop("BSMART_PROJECT_ROOT", None)
+                selected = Path(self.plugin._context()["projectsRoot"]).resolve()
+            self.assertEqual(selected, spec_root.resolve())
 
     def test_chat_arguments_cannot_override_context(self):
         other = Path(self.tmp.name) / "other"

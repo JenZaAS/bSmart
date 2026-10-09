@@ -106,6 +106,37 @@ class BStartTests(unittest.TestCase):
         self.assertIn("project.md", output)
         self.assertIn("# Demo", output)
 
+    def test_startup_uses_the_storage_spec_when_env_is_unset(self):
+        workspace = self.make_workspace()
+        spec_root = workspace / "from-spec"
+        (spec_root / "Demo").mkdir(parents=True)
+        (spec_root / "Demo" / "project.md").write_text("# From spec\n", encoding="utf-8")
+        (workspace / "projects" / "Demo" / "project.md").write_text("# Stale local\n", encoding="utf-8")
+        spec = workspace / "bSmart" / "State" / "container-storage.yaml"
+        spec.parent.mkdir(parents=True)
+        spec.write_text("project_storage:\n  project_root: ./from-spec\n", encoding="utf-8")
+        role_dir = workspace / "bSmart" / "Roles"
+        role_dir.mkdir()
+        (role_dir / "current_role.md").write_text(
+            "```yaml\nrole_selection:\n  current_role: developer\n```\n", encoding="utf-8"
+        )
+        (role_dir / "developer_role.md").write_text(
+            "```yaml\nstate:\n  active_project: Demo\n  active_workstream: none\n```\n", encoding="utf-8"
+        )
+        env = dict(__import__("os").environ)
+        env.pop("BSMART_PROJECT_ROOT", None)
+        result = subprocess.run(
+            [sys.executable, str(START), "--root", str(workspace), "--skip-update", "--skip-integrity"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            env=env,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("# From spec", result.stdout)
+        self.assertNotIn("# Stale local", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

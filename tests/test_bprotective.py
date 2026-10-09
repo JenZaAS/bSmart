@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import stat
 import tempfile
 import unittest
 from pathlib import Path
@@ -102,6 +103,13 @@ class BProtectiveTests(unittest.TestCase):
         decision = self.hook(args={"command": "printf safe"})
         self.assertEqual(decision["action"], "block")
         self.assertIsNone(self.hook(tool_name="read_file", args={"path": "/etc/shadow"}))
+
+    def test_private_state_write_succeeds(self):
+        self.call("on")
+        self.assertTrue(self.state.is_file())
+        if os.name != "nt":
+            mode = stat.S_IMODE(self.state.stat().st_mode)
+            self.assertEqual(mode & 0o077, 0)
 
     def test_non_terminal_tools_are_ignored(self):
         prompt = self.call("on")

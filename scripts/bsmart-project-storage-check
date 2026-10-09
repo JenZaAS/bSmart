@@ -22,7 +22,7 @@ SCRIPT_DIR = Path(__file__).absolute().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from bsmart_instance import default_content_root
+from bsmart_instance import default_content_root, resolve_recorded_path, spec_block_value
 SYSTEM_ROOT = SCRIPT_DIR.parent
 WORKSPACE_ROOT = SYSTEM_ROOT.parent
 
@@ -63,39 +63,6 @@ def status_word(info: dict[str, object]) -> str:
 
 def usable(path: Path) -> bool:
     return status_word(access(path)) == "usable"
-
-
-def spec_block_value(text: str, block: str, key: str) -> str | None:
-    """Read one scalar from a top-level yamlish block."""
-    in_block = False
-    for line in text.splitlines():
-        if not line.startswith((" ", "\t")):
-            in_block = line.strip() == f"{block}:"
-            continue
-        if not in_block:
-            continue
-        stripped = line.strip()
-        if not stripped.startswith(f"{key}:"):
-            continue
-        value = stripped.split(":", 1)[1].strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
-            value = value[1:-1].replace('\\"', '"').replace("\\\\", "\\")
-        if value:
-            return value
-    return None
-
-
-def resolve_recorded_path(workspace: Path, raw: str | None) -> Path | None:
-    """Resolve a spec path against the workspace unless it is already absolute."""
-    if raw is None:
-        return None
-    value = raw.strip()
-    if not value or value.startswith("TODO") or value.startswith("<"):
-        return None
-    path = Path(value).expanduser()
-    if path.is_absolute():
-        return path.absolute()
-    return (workspace / path).absolute()
 
 
 def recorded_roots(spec_path: Path, workspace: Path) -> tuple[Path | None, Path | None]:

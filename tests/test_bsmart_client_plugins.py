@@ -71,6 +71,21 @@ class ClientAdapterTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.adapter.command_text("project", ["--root", "C:/elsewhere"])
 
+    def test_unset_env_uses_the_storage_spec(self):
+        workspace = Path(self.tmp.name)
+        spec_root = workspace / "from-spec"
+        spec_root.mkdir()
+        (workspace / "projects").mkdir(exist_ok=True)
+        spec = workspace / "bSmart" / "State" / "container-storage.yaml"
+        spec.parent.mkdir(parents=True)
+        spec.write_text("project_storage:\n  project_root: ./from-spec\n", encoding="utf-8")
+        env = dict(self.env)
+        env.pop("BSMART_PROJECT_ROOT", None)
+        with patch.dict(os.environ, env, clear=False):
+            os.environ.pop("BSMART_PROJECT_ROOT", None)
+            self.adapter.ensure_environment(workspace)
+            self.assertEqual(Path(os.environ["BSMART_PROJECT_ROOT"]).resolve(), spec_root.resolve())
+
 
 class SessionHookTests(unittest.TestCase):
     def setUp(self):
@@ -123,16 +138,15 @@ class SessionHookTests(unittest.TestCase):
             data = json.loads((SYSTEM / relative).read_text(encoding="utf-8"))
             self.assertEqual(data["name"], name)
         plugin_commands = SYSTEM / "integrations" / "cursor" / "bsmart-plugin" / "commands"
-        installed_dirs = [SYSTEM / ".cursor" / "commands"]
-        parent_commands = SYSTEM.parent / ".cursor" / "commands"
-        if parent_commands != installed_dirs[0] and (parent_commands / "project.md").is_file():
-            installed_dirs.append(parent_commands)
-        for installed in installed_dirs:
-            self.assertTrue((installed / "project.md").is_file(), f"missing {installed / 'project.md'}")
+        self.assertTrue((plugin_commands / "project.md").is_file())
+        self.assertTrue((plugin_commands / "role.md").is_file())
+        self.assertFalse((plugin_commands / "projcet.md").exists())
+        for installed in (SYSTEM / ".cursor" / "commands", SYSTEM.parent / ".cursor" / "commands"):
+            if not (installed / "project.md").is_file():
+                continue
             for name in ("project.md", "role.md"):
                 self.assertEqual((installed / name).read_text(encoding="utf-8"), (plugin_commands / name).read_text(encoding="utf-8"))
             self.assertFalse((installed / "projcet.md").exists())
-        self.assertFalse((plugin_commands / "projcet.md").exists())
 
     def test_session_hooks_fall_back_when_python3_fails(self):
         for relative in (

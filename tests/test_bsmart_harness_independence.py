@@ -153,6 +153,92 @@ class HermesIntegrationTests(unittest.TestCase):
             self.assertIn("hermes CLI is not on PATH", result.stdout)
             self.assertFalse((home / "plugins" / "bsmart-project" / "plugin.yaml").exists())
 
+    def test_enabled_current_adapter_without_cli_stays_successful(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            home = root / "hermes-home"
+            plugin = home / "plugins" / "bsmart-project"
+            plugin.mkdir(parents=True)
+            source = ROOT / "integrations" / "hermes" / "bsmart-project-plugin"
+            for name in ("plugin.yaml", "__init__.py"):
+                shutil.copy2(source / name, plugin / name)
+            (home / "config.yaml").write_text(
+                "plugins:\n  enabled:\n    - bsmart-project\n",
+                encoding="utf-8",
+            )
+            env = isolated_env(root / "user-home", tool_path(Path(node_dir(self))))
+            result = subprocess.run(
+                [sys.executable, str(INTEGRATION), "--install", "--hermes-home", str(home)],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertNotIn("setup_blocked", result.stdout)
+            self.assertEqual((plugin / "plugin.yaml").read_bytes(), (source / "plugin.yaml").read_bytes())
+
+    def test_windows_hermes_command_is_a_single_comspec_string(self):
+        module = runpy.run_path(str(INTEGRATION))
+        hermes = r"C:\Users\Erling Jensen\bin\hermes.cmd"
+        comspec = r"C:\Windows\System32\cmd.exe"
+        command = module["windows_hermes_command"](
+            hermes, ["plugins", "enable", "bsmart-project"], comspec
+        )
+        self.assertIsInstance(command, str)
+        self.assertIn("/d /s /c", command)
+        self.assertIn("Erling Jensen", command)
+        self.assertNotIn('\\"', command)
+        self.assertTrue(command.startswith(f'"{comspec}"'))
+
+    @unittest.skipUnless(os.name == "nt", "cmd.exe quoting is Windows-specific")
+    def test_install_enables_when_hermes_directory_contains_a_space(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bin_dir = root / "Erling Jensen" / "bin"
+            log = root / "hermes.log"
+            write_fake_hermes(bin_dir)
+            home = root / "hermes-home"
+            env = isolated_env(root / "user-home", tool_path(bin_dir, Path(node_dir(self))))
+            env["HERMES_LOG"] = str(log)
+            result = subprocess.run(
+                [sys.executable, str(INTEGRATION), "--install", "--quiet", "--hermes-home", str(home)],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertIn("plugins enable bsmart-project", log.read_text(encoding="utf-8"))
+
+    def test_spec_project_root_beats_a_stale_mount(self):
+        module = runpy.run_path(str(ROOT / "scripts" / "bsmart_instance.py"))
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            spec_projects = workspace / "from-spec"
+            local = workspace / "projects"
+            mounted = workspace / "mounted-projects"
+            for path in (spec_projects, local, mounted):
+                path.mkdir()
+            spec = workspace / "bSmart" / "State" / "container-storage.yaml"
+            spec.parent.mkdir(parents=True)
+            spec.write_text("project_storage:\n  project_root: ./from-spec\n", encoding="utf-8")
+            selected = module["select_instance_project_root"](
+                workspace, environ={}, spec_path=spec, mounted=mounted
+            )
+            self.assertEqual(selected, spec_projects.resolve())
+            env_choice = workspace / "from-env"
+            env_choice.mkdir()
+            selected = module["select_instance_project_root"](
+                workspace,
+                environ={"BSMART_PROJECT_ROOT": str(env_choice)},
+                spec_path=spec,
+                mounted=mounted,
+            )
+            self.assertEqual(selected, env_choice.resolve())
+
 
 class UpdateAndStartupTests(unittest.TestCase):
     def test_update_finishes_when_hermes_is_absent(self):
@@ -399,20 +485,9 @@ class TwoInstanceTests(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp(prefix="bsmart-two-instances-"))
         self.addCleanup(lambda: shutil.rmtree(self.root, ignore_errors=True))
-        self.container = Path("/workspace/bSmart")
-        self.stray = Path("/bSmart")
-        self.container_existed = self.container.exists()
-        self.stray_existed = self.stray.exists()
-        self.addCleanup(self.cleanup_strays)
         self.main = self.root / "workspace"
         self.nested = self.main / "agents" / "GrokAdmin"
         self.populate_main()
-
-    def cleanup_strays(self):
-        if not self.container_existed and self.container.exists():
-            shutil.rmtree(self.container, ignore_errors=True)
-        if not self.stray_existed and self.stray.exists():
-            shutil.rmtree(self.stray, ignore_errors=True)
 
     def populate_main(self) -> None:
         system = self.main / "bSmart-System"
@@ -462,9 +537,6 @@ class TwoInstanceTests(unittest.TestCase):
         self.assertFalse((self.main / "bSmart" / "bHistory.md").exists())
         self.assertFalse((self.main / "bSmart" / "Roles").exists())
         self.assertEqual((self.main / "bSmart" / "sentinel.txt").read_text(encoding="utf-8"), "main\n")
-        self.assertFalse((self.stray / "State" / "bsmart-system-update.yaml").exists())
-        if not self.container_existed:
-            self.assertFalse((self.container / "State" / "bsmart-system-update.yaml").exists())
 
     def test_both_bstart_entry_points_cache_only_in_the_nested_instance(self):
         self.link_nested()

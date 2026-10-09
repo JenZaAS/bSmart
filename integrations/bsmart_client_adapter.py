@@ -39,12 +39,41 @@ def workspace_from_here() -> Path | None:
     return find_workspace(Path.cwd())
 
 
+def load_instance_helper(workspace: Path):
+    """Shared project-root resolver. Loaded by path so a copied adapter still finds it."""
+    candidates = (
+        Path(__file__).resolve().parents[1] / "scripts" / "bsmart_instance.py",
+        workspace / "bSmart-System" / "scripts" / "bsmart_instance.py",
+    )
+    for path in candidates:
+        if not path.is_file():
+            continue
+        name = "bsmart_instance_" + str(abs(hash(str(path.absolute()))))
+        spec = importlib.util.spec_from_file_location(name, path)
+        if spec is None or spec.loader is None:
+            continue
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    return None
+
+
+def instance_project_root(workspace: Path) -> Path:
+    helper = load_instance_helper(workspace)
+    if helper is not None:
+        selected = helper.select_instance_project_root(workspace)
+        if selected is not None:
+            return selected
+    mounted = Path("/projects")
+    return mounted if mounted.is_dir() else workspace / "projects"
+
+
 def ensure_environment(workspace: Path) -> None:
     """Fill only unset bSmart path variables. Chat arguments never set these."""
     content = workspace / "bSmart"
     container_roles = Path("/workspace/bSmart/Roles")
     roles = container_roles if container_roles.is_dir() else content / "Roles"
-    projects = Path("/projects") if Path("/projects").is_dir() else workspace / "projects"
+    projects = instance_project_root(workspace)
     values = {
         "BSMART_SYSTEM_ROOT": workspace / "bSmart-System",
         "BSMART_PROJECT_ROOT": projects,

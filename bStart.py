@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import importlib.util
 import os
 import re
 import subprocess
@@ -219,7 +220,34 @@ def ensure_role_bootstrap(system: Path, content: Path) -> tuple[str, Path, list[
     return selected, selected_file, notes
 
 
+def load_instance_module():
+    """Load the shared path helper.
+
+    The workspace-root copy of this file does not sit beside the helper, so
+    the import is by path. A unique module name keeps one process from
+    reusing another checkout's copy.
+    """
+    candidates = (
+        SCRIPT_ROOT / "scripts" / "bsmart_instance.py",
+        SCRIPT_ROOT / "bSmart-System" / "scripts" / "bsmart_instance.py",
+    )
+    for path in candidates:
+        if not path.is_file():
+            continue
+        name = "bsmart_instance_" + str(abs(hash(str(path.absolute()))))
+        spec = importlib.util.spec_from_file_location(name, path)
+        if spec is None or spec.loader is None:
+            continue
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    return None
+
+
 def project_root(content: Path) -> Path | None:
+    module = load_instance_module()
+    if module is not None:
+        return module.select_instance_project_root(content.parent)
     override = os.environ.get("BSMART_PROJECT_ROOT")
     if override:
         candidate = Path(override).expanduser()
@@ -318,7 +346,8 @@ def main() -> int:
     for path in context_files:
         print(f"  - {path}")
     scoped_paths = {agent_file, content / "bGuardrails.md", role_file}
-    scoped_paths.update(path for path in context_files if "projects" in path.parts)
+    if root is not None:
+        scoped_paths.update(path for path in context_files if path == root or root in path.parents)
     for path, text in loaded_context:
         if path in scoped_paths:
             print(f"--- {path} ---")
