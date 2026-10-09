@@ -1,10 +1,10 @@
 ---
-description: Run bSmart /project and /role through the shared adapter
+description: Run bSmart /project through the shared adapter. /role is deprecated.
 alwaysApply: true
 ---
 
-When the user uses `/project` or `/role`, run `python3 bSmart-System/integrations/bsmart_client_adapter.py` with that command and the user's arguments. Reply with stdout unchanged. Never confirm rename, retire, or delete yourself. If `python3` is missing or fails, use `python` (or `py -3` on Windows).
+When the user uses `/project`, run `python3 bSmart-System/integrations/bsmart_client_adapter.py` with that command and the user's arguments. If this conversation has selected a project, set `BSMART_SESSION_PROJECT` and, when set, `BSMART_SESSION_WORKSTREAM` for that process only. When leaving a project, set `BSMART_SESSION_HANDOFF` to the short wrap-up. Do not write a shared selector file. Reply with stdout unchanged. Never confirm rename, retire, or delete yourself. If `python3` is missing or fails, use `python` (or `py -3` on Windows). `/role` only prints a deprecation notice; run it the same way and do not create a role.
 
 If the session already contains a `bSmart — Startup` block, do not run `bStart.py` again. Otherwise run `python3 bSmart-System/bStart.py` once before the first reply and preserve its startup lines. If `python3` is missing or fails, use `python bSmart-System/bStart.py` (or `py -3 bSmart-System/bStart.py` on Windows).
 
-When the first reply preserves the bStart startup block, wrap that visible block in a fenced code block: a line of three backticks, the lines unchanged, then a line of three backticks. Do not set a language tag. Cursor’s Markdown renderer collapses single newlines; the fence is what keeps each line. Include the Hi, greeting, bSmart — Startup, agent, role, project, workstream, each Use: command-help line, and the short git and update status lines. Stop before Context files:. Leave loaded context files out of the visible reply. Do not replace the block with a custom greeting or a reduced summary.
+When the first reply preserves the bStart startup block, wrap that visible block in a fenced code block: a line of three backticks, the lines unchanged, then a line of three backticks. Do not set a language tag. Cursor’s Markdown renderer collapses single newlines; the fence is what keeps each line. Include the Hi, greeting, bSmart — Startup, agent, project, workstream, active projects, each Use: command-help line, and the short git and update status lines. Stop before Context files:. Leave loaded context files out of the visible reply. Do not replace the block with a custom greeting or a reduced summary.

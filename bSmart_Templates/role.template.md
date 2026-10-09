@@ -1,23 +1,13 @@
-# bSmart role
+# bSmart role (deprecated)
+
+Roles are deprecated. Do not create a new role file from this template.
+
+A historical role file looked like this:
 
 ```yaml
 role:
   name: <role-name>
-  file: ./bSmart/Roles/<role-id>_role.md
-  status: active | inactive
-  startup_selection: exactly one role is loaded at startup
-  default_role: general
-```
-
-## Role scope
-
-A role is a session-scoped operational hat, not a replacement identity for the AI instance and not a project lock.
-
-```yaml
-identity:
-  instance_identity_source: ../bSmart_Agent.md
-  role_focus: <short operational focus>
-
+  id: <role-id>
 state:
   active_project: <project-slug> | none
   active_workstream: <workstream-name> | none
@@ -26,21 +16,4 @@ state:
   task_handoff: <short resume point>
 ```
 
-The role file owns the active project, workstream, focus, and role-specific handoff. It may contain role-specific preferences and pointers, but not secrets or generic system procedures.
-
-## Startup behavior
-
-- A General role always exists as the fallback role.
-- Exactly one role file is selected and loaded during startup.
-- If General is the only available role, do not announce the role unless useful for clarity.
-- An explicitly selected role takes precedence over defaults or legacy state.
-- Role selection changes which role file is read; it does not require a log-off procedure.
-- A role may work with any project permitted by the operator.
-
-## Shared projects
-
-Multiple roles may work with the same project. bSmart does not lock an entire project to one role. The operator is responsible for avoiding conflicting simultaneous edits; bSmart provides file-level collision protection through the role/concurrency protocol.
-
-## Legacy state
-
-`bSmart_State.md` is not active role state. During explicit migration, copy the last known project/workstream/focus into the selected role file and append unknown legacy material under a clearly marked review section. Verify the migration, but do not delete or retire the legacy file without explicit approval.
+Those fields were the old instance-wide selector's project, workstream, focus, and handoff. They are not active state. The replacement is a session project plus `projects/<project>/handoff.md`. See `bSmart_Docs/roles-deprecated.md`.

@@ -12,10 +12,8 @@ from typing import Any
 
 _DEFAULT_SYSTEM_ROOT = "/workspace/bSmart-System"
 _DEFAULT_PROJECTS_ROOT = "/projects"
-_DEFAULT_ROLES_ROOT = "/workspace/bSmart/Roles"
-_DEFAULT_SELECTOR_FILE = "/workspace/bSmart/Roles/current_role.md"
-_DEFAULT_LEGACY_STATE_FILE = "/workspace/bSmart/bSmart_State.md"
 _DEFAULT_ARCHIVE_ROOT = "/workspace/bSmart/.project-archives"
+_DEFAULT_HOME = "/workspace/bSmart"
 
 
 def _system_roots() -> list[Path]:
@@ -73,17 +71,36 @@ def _projects_root() -> str:
 
 
 def _context() -> dict[str, str]:
-    """Resolve trusted process configuration, never paths from chat arguments."""
-    roles_root = Path(os.environ.get("BSMART_ROLES_ROOT", _DEFAULT_ROLES_ROOT)).resolve()
-    selector_file = Path(os.environ.get("BSMART_ROLE_SELECTOR", _DEFAULT_SELECTOR_FILE)).resolve()
-    return {
+    """Resolve trusted process configuration, never paths from chat arguments.
+
+    Session selection is not read from a shared file. A harness may pass
+    BSMART_SESSION_PROJECT for this process only, or BSMART_SESSION_ID when it
+    has a stable id for this conversation. Neither value is an instance-wide selector.
+    """
+    archive = Path(os.environ.get("BSMART_ARCHIVE_ROOT", _DEFAULT_ARCHIVE_ROOT)).resolve()
+    home = Path(os.environ.get("BSMART_INSTANCE_HOME", "")).expanduser().resolve() if os.environ.get("BSMART_INSTANCE_HOME") else archive.parent
+    context = {
         "projectsRoot": _projects_root(),
-        "rolesRoot": str(roles_root),
-        "selectorFile": str(selector_file),
-        "legacyStateFile": str(Path(os.environ.get("BSMART_LEGACY_STATE_FILE", _DEFAULT_LEGACY_STATE_FILE)).resolve()),
-        "archiveRoot": str(Path(os.environ.get("BSMART_ARCHIVE_ROOT", _DEFAULT_ARCHIVE_ROOT)).resolve()),
-        "home": str(roles_root.parent),
+        "archiveRoot": str(archive),
+        "home": str(home),
     }
+    session_id = os.environ.get("BSMART_SESSION_ID", "").strip()
+    if session_id:
+        context["sessionId"] = session_id
+    return context
+
+
+def _session_from_env() -> dict[str, str | None] | None:
+    """Return this process's session only when the caller set it. Do not invent one."""
+    if "BSMART_SESSION_PROJECT" not in os.environ and "BSMART_SESSION_WORKSTREAM" not in os.environ:
+        return None
+    project = os.environ.get("BSMART_SESSION_PROJECT", "").strip()
+    workstream = os.environ.get("BSMART_SESSION_WORKSTREAM", "").strip()
+    if project.lower() in {"", "none", "free"}:
+        project = ""
+    if workstream.lower() in {"", "none"}:
+        workstream = ""
+    return {"project": project or None, "workstream": workstream or None}
 
 
 def _cli_path() -> Path:
@@ -107,14 +124,23 @@ def _execute(command: str) -> dict[str, Any]:
     if not node:
         return {"status": "error", "diagnostic": "Node.js executable not found"}
     try:
+        request: dict[str, Any] = {"command": command, "context": _context()}
+        session = _session_from_env()
+        if session is not None:
+            request["session"] = session
+        handoff = os.environ.get("BSMART_SESSION_HANDOFF", "").strip()
+        if handoff:
+            request["handoff"] = handoff
         completed = subprocess.run(
             [node, str(_cli_path())],
-            input=json.dumps({"command": command, "context": _context()}),
+            input=json.dumps(request),
             text=True,
             capture_output=True,
             timeout=120,
             check=False,
             shell=False,
+            encoding="utf-8",
+            errors="replace",
         )
     except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
         return {"status": "error", "diagnostic": str(exc)}
@@ -133,7 +159,17 @@ def _execute_role(command: str) -> dict[str, Any]:
     if not node:
         return {"status": "error", "diagnostic": "Node.js executable not found"}
     try:
-        completed = subprocess.run([node, str(_role_cli_path())], input=json.dumps({"command": command, "context": _context()}), text=True, capture_output=True, timeout=120, check=False, shell=False)
+        completed = subprocess.run(
+            [node, str(_role_cli_path())],
+            input=json.dumps({"command": command, "context": _context()}),
+            text=True,
+            capture_output=True,
+            timeout=120,
+            check=False,
+            shell=False,
+            encoding="utf-8",
+            errors="replace",
+        )
         result = json.loads(completed.stdout)
         return result if isinstance(result, dict) else {"status": "error", "diagnostic": "Invalid bSmart role CLI response shape"}
     except (OSError, subprocess.SubprocessError, RuntimeError, json.JSONDecodeError) as exc:
@@ -145,6 +181,8 @@ def _format(result: dict[str, Any]) -> str:
     diagnostic = str(result.get("diagnostic") or "Project command completed")
     if status == "error":
         return f"Project command failed: {diagnostic}"
+    if status == "handoff_required":
+        return diagnostic
     if status == "cancelled":
         return diagnostic
     if status == "pending":
@@ -177,12 +215,17 @@ def _format(result: dict[str, Any]) -> str:
         return "\n".join(lines)
     if status == "ok" and "selection" in result:
         project = selection.get("project")
+        startup = result.get("startup")
         if not project:
-            return f"{diagnostic}. Current: Free Mode."
-        current = project
-        if selection.get("workstream"):
-            current += f" / {selection['workstream']}"
-        return f"{diagnostic}. Current: {current}."
+            text = f"{diagnostic}. Current: Free Mode."
+        else:
+            current = project
+            if selection.get("workstream"):
+                current += f" / {selection['workstream']}"
+            text = f"{diagnostic}. Current: {current}."
+        if startup:
+            text += "\n" + str(startup)
+        return text
     return diagnostic
 
 
@@ -198,13 +241,11 @@ def _role_handler(raw_args: str) -> str:
     result = _execute_role("/role" + (f" {raw_args.strip()}" if raw_args and raw_args.strip() else " help"))
     if result.get("status") == "error":
         return f"Role command failed: {result.get('diagnostic', 'unknown error')}"
-    if isinstance(result.get("roles"), list):
-        return "Roles:\n" + "\n".join(f"- {r}{' (current)' if r == result.get('current') else ''}" for r in result["roles"])
-    return str(result.get("diagnostic", "Role command completed")) + (f" Current: {result['role']}." if result.get("role") else "")
+    return str(result.get("diagnostic", "Roles are deprecated. Use /project."))
 
 
 def register(ctx: Any) -> None:
     description = "List, select, create, rename, retire, or delete bSmart projects."
     args_hint = "[list|NAME|ws WS|add NAME|rename NAME|retire|delete|yes ID|no ID]"
     ctx.register_command("project", _handler("/project"), description, args_hint)
-    ctx.register_command("role", _role_handler, "List, select, or create bSmart roles.", "[help|list|set ROLE|add ROLE]")
+    ctx.register_command("role", _role_handler, "Roles are deprecated. Use /project.", "[any arguments]")

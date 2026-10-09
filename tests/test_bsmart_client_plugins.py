@@ -23,31 +23,17 @@ def load(name: str, path: Path):
     return module
 
 
-SELECTOR = "# bSmart current role\n\n```yaml\nrole_selection:\n  current_role: general\n```\n"
-ROLE = (
-    "# bSmart role\n\n```yaml\nstate:\n"
-    "  active_project: \"none\"\n"
-    "  active_workstream: \"none\"\n```\n"
-)
-
-
 class ClientAdapterTests(unittest.TestCase):
     def setUp(self):
         self.adapter = load("bsmart_client_adapter", SYSTEM / "integrations" / "bsmart_client_adapter.py")
         self.tmp = tempfile.TemporaryDirectory(prefix="bsmart-client-adapter-")
         home = Path(self.tmp.name)
         self.projects = home / "projects"
-        self.roles = home / "roles"
         self.projects.mkdir()
-        self.roles.mkdir()
-        (self.roles / "current_role.md").write_text(SELECTOR, encoding="utf-8")
-        (self.roles / "general_role.md").write_text(ROLE, encoding="utf-8")
         self.env = {
             "BSMART_SYSTEM_ROOT": str(SYSTEM),
             "BSMART_PROJECT_ROOT": str(self.projects),
-            "BSMART_ROLES_ROOT": str(self.roles),
-            "BSMART_ROLE_SELECTOR": str(self.roles / "current_role.md"),
-            "BSMART_LEGACY_STATE_FILE": str(home / "bSmart_State.md"),
+            "BSMART_INSTANCE_HOME": str(home),
             "BSMART_ARCHIVE_ROOT": str(home / "archives"),
         }
 
@@ -65,10 +51,18 @@ class ClientAdapterTests(unittest.TestCase):
         created = self.run_adapter("project", ["add", "Alpha"])
         self.assertIn("Alpha", created)
         self.assertTrue((self.projects / "Alpha" / "project.md").is_file())
+        self.assertFalse((Path(self.tmp.name) / "Roles" / "current_role.md").exists())
+        self.env["BSMART_SESSION_PROJECT"] = "Alpha"
         self.assertIn("- Alpha (current)", self.run_adapter("project", ["list"]))
+        self.env["BSMART_SESSION_PROJECT"] = "Beta"
+        other = self.run_adapter("project", ["list"])
+        self.assertNotIn("- Alpha (current)", other)
+        self.assertIn("Current: Beta", other)
 
-    def test_role_help_uses_the_shared_engine(self):
-        self.assertIn("/role help", self.run_adapter("role", []))
+    def test_role_command_is_deprecated(self):
+        text = self.run_adapter("role", [])
+        self.assertIn("deprecated", text.lower())
+        self.assertIn("/project", text)
 
     def test_flags_are_rejected(self):
         with self.assertRaises(ValueError):

@@ -1,9 +1,38 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.44.1-draft
-updated: 2026-10-09 13:10 UTC
+current_version: 0.1.45-draft
+updated: 2026-10-09 13:20 UTC
 status: draft
+```
+
+## 0.1.45-draft
+
+```yaml
+release_type: session_scoped_projects
+scope:
+  - remove the instance-wide role selector; projects are the unit
+  - keep the active project and workstream in the session, starting in Free mode, and never guess
+  - store durable focus and handoff in the project, with a separate handoff per workstream
+  - write the old project's handoff before switching, then print a compact startup block
+  - keep a central projects/INDEX.md updated only by project commands
+  - have bStart read that index, list active projects, generate a missing index, and flag mismatches
+  - deprecate /role with a short pointer to /project
+  - tag real work as "bSmart [<scope>]: <ops> - <note>"
+  - back up Roles/ and bSmart_State.md, then merge unambiguous handoffs without overwriting existing text
+migration:
+  - bsmart-update and bsmart-instance-upgrade run the migration and print questions for ambiguous roles
+  - restore with bsmart-instance-upgrade --restore-session-projects <backup-directory>
+  - before merging this change, tag the current main commit: git tag -a pre-session-projects -m "bSmart before session-scoped projects"
+  - after the merge commit, tag the release: git tag -a 0.1.45 -m "bSmart 0.1.45 session-scoped projects"
+  - do not push those tags unless the operator wants them on the remote; this repo records versions in bSmart_Version.md
+verification:
+  - session selection does not write Roles/current_role.md
+  - two sessions can select different projects without changing each other
+  - a missing index is created and a present index is not rewritten by startup
+  - switching projects appends a handoff and leaves existing handoff text in place
+  - migration backs up Roles/ and restores those bytes
+  - python and node tests pass on Linux, Windows, and macOS
 ```
 
 ## 0.1.44.1-draft

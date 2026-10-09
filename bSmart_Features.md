@@ -243,10 +243,11 @@ visibility: user-facing
 short_description: Manage project context and project folders.
 files:
   - /projects/ (canonical container root; BSMART_PROJECT_ROOT and local ./projects are supported overrides)
-  - /workspace/bSmart/bSmart_State.md
+  - /projects/INDEX.md
   - /workspace/bSmart-System/bSmart_Protocols/projects.md
+  - /workspace/bSmart-System/bSmart_Docs/roles-deprecated.md
   - /workspace/bSmart-System/bSmart_Templates/project.template.md
-description: Creates, lists, opens, and manages bSmart projects. Includes active project selection, project folders, project metadata, project status, and project-specific agent focus.
+description: Creates, lists, opens, and manages bSmart projects. The active project is session-scoped. Durable focus lives in the project handoff. The project index lists name, label, aliases, description, and status.
 commands:
   - /project
   - /project list
@@ -257,6 +258,8 @@ commands:
   - /project rename <new-name>
   - /project retire
   - /project delete
+  - /project label <label>
+  - /project list --all
   - list projects
   - show active project
   - open project <name>
@@ -271,6 +274,7 @@ notes:
   - Keep project-related subfeatures under Projects instead of listing them as separate top-level features.
   - Projects use the selected root: `BSMART_PROJECT_ROOT`, then `/projects`, then local `./projects`.
   - Cursor, Codex, and Claude call the same engines through `integrations/bsmart_client_adapter.py`. The Claude plugin is not yet verified in the Claude app.
+  - Roles are deprecated as of 0.1.45. `/role` points at `/project`. Old `Roles/` files are historical; see `bSmart_Docs/roles-deprecated.md`.
 ```
 
 ### Tasks
@@ -344,6 +348,7 @@ included_capabilities:
   - Archived completed outputs
 notes:
   - Library is top-level because exposing it encourages active user interaction and curation.
+  - `bSmart_Docs/roles-deprecated.md` is a library-style note: roles are deprecated, project handoffs replaced them, and old role files are historical.
   - Project-local bKnowledge is stored under the active project's `knowledge/general/` or `knowledge/code/`; it is not placed in the global Library by default.
   - Archive is an action or state within Projects, Workdocs, and Library, not a separate top-level feature.
 ```
@@ -522,6 +527,7 @@ included_capabilities:
   - Operator guardrails
   - Smart approval mode
   - Visible action notes
+  - Operation tags for work that already happened
   - Shared group permissions
   - Secret-safe handling
 notes:

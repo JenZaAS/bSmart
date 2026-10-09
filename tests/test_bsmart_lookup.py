@@ -63,18 +63,19 @@ class BSmartLookupTests(unittest.TestCase):
         self.assertIn("never leave `N` as a placeholder", template)
         self.assertNotIn("secret values", template)
 
-    def test_role_and_lock_design_is_present(self):
-        role = (ROOT / "bSmart_Templates" / "role.template.md").read_text(encoding="utf-8")
+    def test_role_deprecation_and_lock_design_are_present(self):
+        note = (ROOT / "bSmart_Docs" / "roles-deprecated.md").read_text(encoding="utf-8")
         protocol = (ROOT / "bSmart_Protocols" / "roles-and-concurrency.md").read_text(encoding="utf-8")
-        self.assertIn("default_role: general", role)
-        self.assertIn("exactly one role is loaded", role)
+        self.assertIn("deprecated", note.lower())
+        self.assertIn("handoff.md", note)
         self.assertIn("suffix: .bLock", protocol)
-        self.assertIn("Multiple roles may work with the same project.", protocol)
-        self.assertIn("migration_only: true", protocol)
+        self.assertIn("session-scoped", protocol)
+        self.assertIn("current_role.md", protocol)
 
-    def test_map_tracks_role_state_and_requires_same_change_update(self):
+    def test_map_tracks_session_projects_and_requires_same_change_update(self):
         map_text = (ROOT / "bSmart_Map.md").read_text(encoding="utf-8")
-        self.assertIn("<role-id>_role.md", map_text)
+        self.assertIn("projects/INDEX.md", map_text)
+        self.assertIn("handoff.md", map_text)
         self.assertIn("<file>.bLock", map_text)
         self.assertIn("same change/commit", map_text)
         self.assertIn("roles-and-concurrency.md", map_text)

@@ -386,7 +386,8 @@ class ProjectStorageTests(unittest.TestCase):
         def missing(cmd: list[str]):
             raise FileNotFoundError(cmd[0])
 
-        module["run"] = missing
+        # runpy returns a copy of the module dict, so patch the function globals.
+        module["infer_workspace_host_path"].__globals__["run"] = missing
         self.assertIsNone(module["infer_workspace_host_path"]())
         self.assertIsNone(module["infer_sandbox_host_path"]())
 

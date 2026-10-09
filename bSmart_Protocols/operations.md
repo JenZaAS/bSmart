@@ -59,6 +59,26 @@ visible_action_notes:
       - repeated long explanations for routine reads/checks
     example: "bSmart — Preparing GitHub SSH setup: this adds GitHub to SSH known_hosts and tests login. It may be flagged because it edits an SSH dotfile; if prompted, prefer Allow Once."
 
+operation_tags:
+  when: final replies, and progress notes where the harness shows them, only after actual work
+  format: "bSmart [<scope>]: <ops> — <optional note, max 5 words>"
+  startup_reminder: bStart prints this shape with an ASCII hyphen so a redirected Windows console can print the reminder
+  placement: one line per scope touched, at the start of the message
+  scope:
+    project: the project's short index label, for example DSW
+    library: the instance Library
+    instance: this agent's bSmart instance content
+    system: bSmart-System; this should essentially never happen and is a red flag
+  ops:
+    inside_a_project: read, write, delete, in the combination that happened
+    outside_a_project: write and delete only; never report reads
+  never_report:
+    - log writes
+    - history writes
+    - pure chat
+    - web lookups with no bSmart file change
+  rule: Ops must reflect what already happened, not what was planned. This extends the bSmart action-note convention.
+
 approval_events_to_log:
   - destructive_change
   - host_or_runtime_change

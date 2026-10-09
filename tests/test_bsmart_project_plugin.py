@@ -39,28 +39,11 @@ class ProjectPluginTests(unittest.TestCase):
         home = Path(self.tmp.name)
         self.projects = home / "projects"
         self.projects.mkdir()
-        self.roles = home / "roles"
-        self.roles.mkdir()
-        (self.roles / "current_role.md").write_text(
-            "# bSmart current role\n\n```yaml\nrole_selection:\n  current_role: general\n```\n",
-            encoding="utf-8",
-        )
-        (self.roles / "general_role.md").write_text(
-            "# bSmart role\n\n```yaml\nstate:\n  active_project: \"none\"\n  active_workstream: \"none\"\n```\n",
-            encoding="utf-8",
-        )
-        self.state = home / "bSmart_State.md"
-        self.state.write_text(
-            "# bSmart state\n- Mode: `Free Mode`\n- Active project (short name): `none`\n",
-            encoding="utf-8",
-        )
         self.env = {
             "BSMART_SYSTEM_ROOT": str(SYSTEM_ROOT),
             "BSMART_PROJECT_ROOT": str(self.projects),
-            "BSMART_ROLES_ROOT": str(self.roles),
-            "BSMART_ROLE_SELECTOR": str(self.roles / "current_role.md"),
-            "BSMART_LEGACY_STATE_FILE": str(self.state),
             "BSMART_ARCHIVE_ROOT": str(home / "archives"),
+            "BSMART_INSTANCE_HOME": str(home),
         }
         self.plugin = load_plugin()
         self.ctx = FakeContext()
@@ -73,13 +56,16 @@ class ProjectPluginTests(unittest.TestCase):
         with patch.dict(os.environ, self.env, clear=False):
             return self.ctx.commands[command]["handler"](args)
 
-    def test_registers_project_and_role_and_lists(self):
+    def test_registers_project_and_deprecated_role_and_lists(self):
         self.assertEqual(set(self.ctx.commands), {"project", "role"})
         self.assertIn("Projects:", self.call("project"))
         self.assertIn("Free Mode", self.call("project", "list"))
+        self.assertIn("deprecated", self.call("role", "list").lower())
+        self.assertIn("/project", self.call("role"))
 
     def test_real_cross_process_yes_continuation(self):
         self.assertIn("Project created", self.call("project", "add Alpha"))
+        self.env["BSMART_SESSION_PROJECT"] = "Alpha"
         prompt = self.call("project", "rename Beta")
         self.assertIn("Confirmation required: rename exact target", prompt)
         yes_line = next(line for line in prompt.splitlines() if line.startswith("Yes:"))
@@ -89,8 +75,27 @@ class ProjectPluginTests(unittest.TestCase):
         self.assertTrue((self.projects / "Beta").is_dir())
         self.assertFalse((self.projects / "Alpha").exists())
 
+    def test_two_sessions_do_not_share_a_selector(self):
+        self.call("project", "add Alpha")
+        self.call("project", "add Beta")
+        self.assertFalse((Path(self.tmp.name) / "Roles" / "current_role.md").exists())
+        env_a = dict(self.env)
+        env_b = dict(self.env)
+        env_a["BSMART_SESSION_PROJECT"] = "Alpha"
+        env_b["BSMART_SESSION_PROJECT"] = "Beta"
+        with patch.dict(os.environ, env_a, clear=False):
+            listed_a = self.ctx.commands["project"]["handler"]("list")
+        with patch.dict(os.environ, env_b, clear=False):
+            listed_b = self.ctx.commands["project"]["handler"]("list")
+        self.assertIn("- Alpha (current)", listed_a)
+        self.assertNotIn("- Beta (current)", listed_a)
+        self.assertIn("- Beta (current)", listed_b)
+        self.assertNotIn("- Alpha (current)", listed_b)
+        self.assertFalse((Path(self.tmp.name) / "State" / "sessions").exists())
+
     def test_real_no_continuation(self):
         self.call("project", "add Keep")
+        self.env["BSMART_SESSION_PROJECT"] = "Keep"
         prompt = self.call("project", "delete")
         pending_id = next(line for line in prompt.splitlines() if line.startswith("No:")).rsplit(" ", 1)[1]
         result = self.call("project", f"no {pending_id}")

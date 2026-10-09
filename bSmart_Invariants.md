@@ -40,7 +40,7 @@ This file defines the rules that must remain true across bSmart instances, proje
 ## Context and loading
 
 - Load the smallest context needed for the current task.
-- Startup loads compact system guidance, instance identity/state required for routing, enabled-feature summaries, and one selected role/project orientation.
+- Startup loads compact system guidance, instance identity required for routing, enabled-feature summaries, and the active project index. The session starts in Free mode unless the conversation selects a project.
 - Detailed protocols, maps, feature cards, knowledge, workdocs, and history load only when relevant or explicitly requested.
 - Deterministic lookup tools are preferred over recursive workspace searching.
 - Project mode is scoped to the selected project; cross-project inspection requires an explicit request or a task that clearly requires comparison.

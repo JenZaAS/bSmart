@@ -54,7 +54,7 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | Path | Purpose | Volatility | Loading |
 |---|---|---:|---|
 | `./bSmart-System/bSmart.md` | Short conceptual definition of bSmart and its major boxes | low | startup |
-| `./bSmart-System/bStart.py` | Deterministic session entrypoint: update, integrity, role recovery, context loading, and startup summary | low | every session |
+| `./bSmart-System/bStart.py` | Deterministic session entrypoint: update, integrity, project index, and startup summary. A session starts in Free mode | low | every session |
 | `./bSmart-System/bSmart_Invariants.md` | Absolute cross-runtime bSmart rules | low | startup |
 | `./bSmart-System/bSmart_Map.md` | This logical system map | low | bStart routing |
 | `./bSmart-System/bSmart_Features.md` | Compact feature summaries and detail lookup metadata | low | compact startup |
@@ -62,22 +62,24 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | `./bSmart-System/bSmart_Setup.md` | Setup and repair procedure | low | setup only |
 | `./bSmart-System/bSmart_Protocols/` | Detailed operational protocols | low | need to know |
 | `./bSmart-System/bSmart_Protocols/protocols.md` | Compact protocol index and ownership map | low | compact startup |
-| `./bSmart-System/bSmart_Protocols/roles-and-concurrency.md` | Role-owned state, shared projects, and `.bLock` file concurrency | low | role/concurrency use |
+| `./bSmart-System/bSmart_Protocols/roles-and-concurrency.md` | Deprecated roles, session-scoped projects, and `.bLock` file concurrency | low | concurrency or old role files |
 | `./bSmart-System/bSmart_Templates/` | Templates for instance and project files | low | generation only |
-| `./bSmart-System/bSmart_Templates/role.template.md` | One-file role structure and role-owned state template | low | role setup/migration |
-| `./bSmart-System/bSmart_Templates/current-role.template.md` | Current-role selector template with General fallback | low | role setup/migration |
+| `./bSmart-System/bSmart_Templates/role.template.md` | Historical role-file shape. Roles are deprecated | low | reading old instance data |
+| `./bSmart-System/bSmart_Templates/current-role.template.md` | Historical current-role selector. Not a session project | low | reading old instance data |
+| `./bSmart-System/bSmart_Docs/roles-deprecated.md` | Library-style note: what replaced roles and how to read old role files | low | old role files |
 | `./bSmart-System/bSmart_Templates/CLAUDE.md` | Claude launcher hook; identical redirect content to AGENTS.md | low | launcher only |
 | `./bSmart-System/bSmart-Extensions/` | Optional and bundled feature implementations | low | feature use only |
 | `./bSmart-System/integrations/` | Runtime-specific adapters | low | active runtime only |
-| `./bSmart-System/integrations/bsmart_client_adapter.py` | Shared `/project` and `/role` caller for Cursor, Codex, and Claude | low | execution only |
+| `./bSmart-System/integrations/bsmart_client_adapter.py` | Shared `/project` caller for Cursor, Codex, and Claude. `/role` is a deprecation notice | low | execution only |
 | `./bSmart-System/integrations/client_session_start.py` | Shared client startup hook; runs `bStart.py` and emits client context JSON | low | execution only |
-| `./bSmart-System/integrations/hermes/bsmart-project-plugin/` | Hermes slash-command adapter for `/project` and `/role` | low | Hermes only |
-| `./bSmart-System/integrations/cursor/bsmart-plugin/` | Cursor plugin for startup, `/project`, and `/role` | low | Cursor only |
-| `./bSmart-System/integrations/codex/bsmart-plugin/` | Codex plugin for startup, `/project`, and `/role` | low | Codex only |
-| `./bSmart-System/integrations/claude/bsmart-plugin/` | Claude plugin for startup, `/project`, and `/role`; not yet verified in the Claude app | low | Claude only |
+| `./bSmart-System/integrations/hermes/bsmart-project-plugin/` | Hermes slash-command adapter for `/project`. `/role` prints a deprecation notice | low | Hermes only |
+| `./bSmart-System/integrations/cursor/bsmart-plugin/` | Cursor plugin for startup and `/project`. `/role` prints a deprecation notice | low | Cursor only |
+| `./bSmart-System/integrations/codex/bsmart-plugin/` | Codex plugin for startup and `/project`. `/role` prints a deprecation notice | low | Codex only |
+| `./bSmart-System/integrations/claude/bsmart-plugin/` | Claude plugin for startup and `/project`; not yet verified in the Claude app. `/role` prints a deprecation notice | low | Claude only |
 | `./bSmart-System/scripts` | Deterministic helper programs and lookup tools | low | execution only |
-| `./bSmart-System/scripts/bsmart-role-core.mjs` | Shared role command and explicit legacy migration engine | low | role commands/migration |
-| `./bSmart-System/scripts/bsmart-role.mjs` | JSON CLI transport for role commands | low | execution only |
+| `./bSmart-System/scripts/bsmart-role-core.mjs` | Deprecation notice for `/role`. Does not select a project | low | old `/role` commands |
+| `./bSmart-System/scripts/bsmart-role.mjs` | JSON CLI transport for the role deprecation notice | low | execution only |
+| `./bSmart-System/scripts/bsmart_session_projects.py` | Project index, startup self-check, and role-to-handoff migration with backup and restore | low | startup and upgrade |
 | `./bSmart-System/scripts/bsmart-instance-upgrade` | Explicit existing-instance startup repair with backups | low | system upgrade/setup |
 | `./bSmart-System/scripts/bsmart-update` | Finalize an already-pulled system update without pulling Git | low | explicit update |
 | `./bSmart-System/tests/` | System validation | low | explicit testing only |
@@ -97,7 +99,8 @@ It should describe only this instance’s mapping of:
 
 - `bSmart_Agent.md`;
 - `bGuardrails.md`;
-- roles and role state;
+- project index and session handoffs;
+- historical Roles/ files, when still present;
 - instance tasks, logs, history, and workdocs;
 - instance configuration and runtime integration;
 - actual project and sandbox mappings;
@@ -127,7 +130,10 @@ It should describe only that project’s:
 
 | Path | Purpose | Loading |
 |---|---|---|
+| `./projects/INDEX.md` | One line per project: name, label, aliases, description, status. bStart reads this list | startup |
 | `./projects/<project>/project.md` | Project identity, objective, status, and agent focus | selected project |
+| `./projects/<project>/handoff.md` | Project focus and handoff that survive sessions | selected project |
+| `./projects/<project>/workstreams/<workstream>/handoff.md` | Workstream handoff, separate from the project handoff | selected workstream |
 | `./projects/<project>/bSmart_ProjectMap.md` | Detailed project map | map lookup or focused project-map task |
 | `./projects/<project>/AGENTS.md` | Project/client-specific instructions | selected project |
 | `./projects/<project>/knowledge/` | Project-specific reusable knowledge | relevant task only |
@@ -142,12 +148,12 @@ It should describe only that project’s:
 |---|---|---:|---|
 | `./bSmart/bSmart_Agent.md` | Stable instance identity and access model | low | startup summary |
 | `./bSmart/bGuardrails.md` | Editable instance-level behavior and preferences | medium | startup |
-| `./bSmart/Roles/` | Named role files containing active project, workstream, focus, and handoff state | high | selected role |
-| `./bSmart/Roles/current_role.md` | Selector for the one role loaded at startup; defaults to General | high | startup |
-| `./bSmart/Roles/<role-id>_role.md` | One role's complete active state and operational focus | high | selected role |
-| `./bSmart/<file>.bLock` | Temporary file-level write lock used by concurrent roles | transient | never automatic |
+| `./bSmart/Roles/` | Deprecated historical role files. Not a session selector | high | explicit review only |
+| `./bSmart/Roles/current_role.md` | Deprecated instance-wide role selector. Do not treat it as the active project | high | explicit review only |
+| `./bSmart/Roles/<role-id>_role.md` | Deprecated role file. Focus and handoff migrate into the project handoff | high | explicit review only |
+| `./bSmart/<file>.bLock` | Temporary file-level write lock used by concurrent sessions | transient | never automatic |
 | `./bSmart/bSmart_State.md` | Preserved legacy compatibility state; never an active source | high | explicit migration only |
-| `./bSmart/bSmart_TODO.md` | Instance-level current/open tasks | high | general role only or request |
+| `./bSmart/bSmart_TODO.md` | Instance-level current/open tasks | high | request or instance task review |
 | `./bSmart/bSmart_Log.md` | Instance decision/action log | high | explicit request only |
 | `./bSmart/bHistory.md` | Concise completed-work history | medium | explicit request or handoff |
 | `./bSmart/Workdocs/` | Instance-level larger work | high | relevant task only |
@@ -159,8 +165,7 @@ It should describe only that project’s:
 ```text
 startup              required for every new session
 compact_startup      summary or metadata only
-selected_role        only the active role
-selected_project     only the active project
+selected_project     only the project selected in this session
 feature_on_demand    only when the feature is relevant
 need_to_know         only when the task requires it
 explicit_request     only when the user asks

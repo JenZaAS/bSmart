@@ -38,8 +38,7 @@ steps:
   - create_content_readme_if_missing
   - create_bSmart_Agent_from_template
   - create_bGuardrails_from_template
-  - create_role_directory_and_general_role_from_templates
-  - create_current_role_selector_from_template
+  - do_not_create_a_role_selector
   - create_bSmart_TODO_from_template
   - create_bHistory_from_template
   - create_bSmart_Log_from_template
@@ -227,7 +226,7 @@ hermes_project_integration:
     - non-Hermes harnesses use the Cursor, Codex, Claude, or direct bStart.py paths instead of the Hermes plugin
 
 client_plugins:
-  purpose: expose the same startup, /project, and /role behavior in Cursor, Codex, and Claude
+  purpose: expose the same startup and /project behavior in Cursor, Codex, and Claude; /role is a deprecation notice
   shared_adapter: ./bSmart-System/integrations/bsmart_client_adapter.py
   startup_hook: ./bSmart-System/integrations/client_session_start.py
   packages:
