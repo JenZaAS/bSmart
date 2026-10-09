@@ -116,7 +116,7 @@ def main(argv: list[str] | None = None) -> int:
         text = context_text(
             "bSmart startup hook could not find bSmart-System/bStart.py. "
             "Run python3 bSmart-System/bStart.py from the workspace root. "
-            "If python3 is not on PATH, use python bSmart-System/bStart.py.",
+            "If python3 is missing or fails, use python bSmart-System/bStart.py (or py -3 bSmart-System/bStart.py on Windows).",
             1,
             args.client,
         )

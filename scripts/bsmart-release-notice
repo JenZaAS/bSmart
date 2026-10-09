@@ -8,26 +8,16 @@ and the notice state lives in instance content rather than the system repo.
 from __future__ import annotations
 
 import argparse
-import os
 import re
+import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).absolute().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from bsmart_instance import default_content_root
 SYSTEM_ROOT = SCRIPT_DIR.parent
-
-
-def default_content_root(system_root: Path) -> Path:
-    """Sibling bSmart next to this checkout.
-
-    /workspace/bSmart is only the fallback for the container checkout itself.
-    """
-    sibling = system_root.parent / "bSmart"
-    container = Path("/workspace/bSmart")
-    if sibling.is_dir():
-        return sibling
-    if os.path.normpath(str(system_root.parent.absolute())) == os.path.normpath("/workspace") and container.is_dir():
-        return container
-    return sibling
 
 
 DEFAULT_CONTENT_ROOT = default_content_root(SYSTEM_ROOT)

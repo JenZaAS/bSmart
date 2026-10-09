@@ -93,8 +93,10 @@ internal_bsmart_flow:
   default_sandbox_root: ./sandboxes
   save:
     mode: internal
-    project_root: <workspace>/projects
-    sandbox_root: <workspace>/sandboxes
+    project_root: ./projects
+    sandbox_root: ./sandboxes
+    path_form: workspace-relative; resolved against the instance workspace at read time
+    absolute_specs: older specs that already store an absolute path keep that path
     backing: workspace-local
   helper_command: python3 ./bSmart-System/scripts/bsmart-project-storage-check --configure-internal
   helper_command_container: python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check --configure-internal

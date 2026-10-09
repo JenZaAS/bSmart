@@ -123,16 +123,27 @@ class SessionHookTests(unittest.TestCase):
             data = json.loads((SYSTEM / relative).read_text(encoding="utf-8"))
             self.assertEqual(data["name"], name)
         plugin_commands = SYSTEM / "integrations" / "cursor" / "bsmart-plugin" / "commands"
-        installed_candidates = (
-            SYSTEM.parent / ".cursor" / "commands",
-            SYSTEM / ".cursor" / "commands",
-        )
-        installed = next((path for path in installed_candidates if (path / "project.md").is_file()), None)
-        if installed is not None:
+        installed_dirs = [SYSTEM / ".cursor" / "commands"]
+        parent_commands = SYSTEM.parent / ".cursor" / "commands"
+        if parent_commands != installed_dirs[0] and (parent_commands / "project.md").is_file():
+            installed_dirs.append(parent_commands)
+        for installed in installed_dirs:
+            self.assertTrue((installed / "project.md").is_file(), f"missing {installed / 'project.md'}")
             for name in ("project.md", "role.md"):
                 self.assertEqual((installed / name).read_text(encoding="utf-8"), (plugin_commands / name).read_text(encoding="utf-8"))
             self.assertFalse((installed / "projcet.md").exists())
         self.assertFalse((plugin_commands / "projcet.md").exists())
+
+    def test_session_hooks_fall_back_when_python3_fails(self):
+        for relative in (
+            "integrations/cursor/bsmart-plugin/hooks/hooks.json",
+            "integrations/codex/bsmart-plugin/hooks/hooks.json",
+            "integrations/claude/bsmart-plugin/hooks/hooks.json",
+        ):
+            text = (SYSTEM / relative).read_text(encoding="utf-8")
+            self.assertIn("python3", text)
+            self.assertIn("|| python ", text)
+            self.assertIn("py -3", text)
 
 
 if __name__ == "__main__":

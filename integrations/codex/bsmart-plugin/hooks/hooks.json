@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${PLUGIN_ROOT}/scripts/session_start.py\" --client codex",
+            "command": "python3 \"${PLUGIN_ROOT}/scripts/session_start.py\" --client codex || python \"${PLUGIN_ROOT}/scripts/session_start.py\" --client codex || py -3 \"${PLUGIN_ROOT}/scripts/session_start.py\" --client codex",
             "timeout": 120,
             "statusMessage": "Loading bSmart"
           }

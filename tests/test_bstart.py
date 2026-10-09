@@ -76,7 +76,7 @@ class BStartTests(unittest.TestCase):
         for script in (workspace / "bStart.py", system / "bStart.py"):
             result = subprocess.run(
                 [sys.executable, str(script)],
-                cwd="/",
+                cwd=str(workspace.parent),
                 text=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,

@@ -13,4 +13,4 @@ Otherwise, from the workspace root, run:
 python3 bSmart-System/bStart.py
 ```
 
-Use `python` when `python3` is not on PATH. In the first reply, preserve the startup lines and command-help lines.
+If `python3` is missing or fails, use `python` (or `py -3` on Windows). In the first reply, preserve the startup lines and command-help lines.

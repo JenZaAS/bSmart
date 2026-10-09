@@ -53,8 +53,13 @@ def run(command: list[str], cwd: Path, timeout: int = 60) -> subprocess.Complete
         return subprocess.CompletedProcess(command, 1, "", str(exc))
 
 
+def git_safe_directory(repo: Path) -> str:
+    """Forward slashes, so Git's safe.directory match works on Windows."""
+    return os.path.normpath(str(repo)).replace("\\", "/")
+
+
 def git_run(repo: Path, args: list[str], timeout: int = 20) -> subprocess.CompletedProcess[str]:
-    return run(["git", "-c", f"safe.directory={repo}", *args], repo, timeout)
+    return run(["git", "-c", f"safe.directory={git_safe_directory(repo)}", *args], repo, timeout)
 
 
 def first_value(text: str, keys: tuple[str, ...]) -> str | None:
@@ -70,7 +75,11 @@ def first_value(text: str, keys: tuple[str, ...]) -> str | None:
 
 
 def content_root_for(workspace: Path) -> Path:
-    """Content root for this instance: sibling bSmart, not another instance's."""
+    """Content root for this instance: sibling bSmart, not another instance's.
+
+    Same rule as scripts/bsmart_instance.default_content_root. This file is
+    also copied to the workspace root, so it does not import that module.
+    """
     sibling = workspace / "bSmart"
     container = Path("/workspace/bSmart")
     if sibling.is_dir():
@@ -309,7 +318,7 @@ def main() -> int:
     for path in context_files:
         print(f"  - {path}")
     scoped_paths = {agent_file, content / "bGuardrails.md", role_file}
-    scoped_paths.update(path for path in context_files if "/projects/" in str(path) or "/projects" in str(path.parent))
+    scoped_paths.update(path for path in context_files if "projects" in path.parts)
     for path, text in loaded_context:
         if path in scoped_paths:
             print(f"--- {path} ---")

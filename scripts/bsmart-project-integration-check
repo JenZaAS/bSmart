@@ -75,6 +75,9 @@ def main() -> int:
     if not source_ok:
         print("bSmart project integration: setup_blocked — adapter source is missing")
         return 2
+    if args.install and not hermes_cli_available():
+        print("bSmart project integration: setup_blocked — Hermes profile found but the hermes CLI is not on PATH")
+        return 2
     if not installed_ok or stale:
         if args.install and source_ok and node_ok:
             plugin_dir.mkdir(parents=True, exist_ok=True)

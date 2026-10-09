@@ -12,17 +12,17 @@ import subprocess
 import sys
 from pathlib import Path
 
+_SCRIPT_DIR = Path(__file__).absolute().parent
+if str(_SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPT_DIR))
+
+from bsmart_instance import workspace_for_system
+
 
 def default_workspace() -> Path:
-    """Use /workspace for container installs, otherwise the checkout's parent."""
-    container = Path("/workspace")
-    if (container / "bSmart-System" / "scripts" / "bsmart-update").is_file():
-        return container
-    system = Path(__file__).resolve().parent.parent
-    parent = system.parent
-    if (parent / "bSmart-System").resolve() == system.resolve():
-        return parent
-    return container
+    """Sibling of this checkout first, then the container /workspace."""
+    system = Path(__file__).absolute().parent.parent
+    return workspace_for_system(system)
 
 
 def main() -> int:

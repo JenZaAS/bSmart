@@ -2,7 +2,7 @@
 
 ```yaml
 current_version: 0.1.44-draft
-updated: 2026-10-09 11:20 UTC
+updated: 2026-10-09 12:10 UTC
 status: draft
 ```
 
@@ -14,18 +14,24 @@ scope:
   - skip the Hermes /project adapter when the hermes CLI and an existing Hermes profile are both absent, without creating ~/.hermes
   - let bsmart-update and bsmart-startup-check finish on non-Hermes harnesses
   - resolve bStart.py from both bSmart-System and the workspace-root copy
-  - prefer python3 in startup hooks, with python as the fallback
+  - prefer python3 in startup hooks; if python3 is missing or fails, use python or py -3 on Windows
   - add bsmart-project-storage-check --configure-internal for workspace-local ./projects storage
+  - store internal storage paths as workspace-relative ./projects and ./sandboxes, and still honor absolute paths already in a spec
   - prefer the sibling bSmart content root over a hardcoded /workspace path when both exist
+  - choose the checkout sibling workspace in bsmart-update before falling back to /workspace
+  - share default_content_root across the checkout scripts that write instance state
+  - skip copying the Hermes plugin when a profile exists but the hermes CLI is not available
   - keep update and startup state in the instance that was started when several instances share a machine, including a symlinked bSmart-System
 verification:
   - integration check returns success and creates no Hermes home when hermes is absent
   - integration check still installs and enables the adapter when a hermes CLI is present
   - workspace-root and in-system bStart.py copies both resolve the workspace
-  - --configure-internal writes container-storage.yaml and creates ./projects and ./sandboxes
+  - --configure-internal writes container-storage.yaml with ./projects and ./sandboxes and creates those directories
+  - an existing absolute storage spec still resolves to that absolute path
   - findmnt absence stays a skipped host-mount inference
   - existing unittest and node project tests pass
   - two instances on one filesystem keep bsmart-system-update.yaml and startup state in the instance that was started
+  - python and node tests pass on Linux, Windows, and macOS
 ```
 
 ## 0.1.43-draft

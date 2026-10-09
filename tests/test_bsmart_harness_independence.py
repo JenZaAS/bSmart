@@ -24,6 +24,17 @@ CONTENT_ROOT_SCRIPTS = (
 )
 
 
+COPIED_WITH_INSTANCE = (
+    "bsmart_instance.py",
+    "bsmart-startup-check",
+    "bsmart-system-update-check",
+    "bsmart-content-upgrade",
+    "bsmart-release-notice",
+    "bsmart-project-integration-check",
+    "bsmart-project-storage-check",
+)
+
+
 def isolated_env(home: Path, path: str) -> dict[str, str]:
     env = os.environ.copy()
     env["HOME"] = str(home)
@@ -35,12 +46,56 @@ def isolated_env(home: Path, path: str) -> dict[str, str]:
     return env
 
 
+def tool_path(*front: Path) -> str:
+    """Keep git and the system tools, and leave a real hermes binary out."""
+    parts = [str(path) for path in front]
+    for directory in os.environ.get("PATH", "").split(os.pathsep):
+        if not directory:
+            continue
+        folder = Path(directory)
+        if any((folder / name).exists() for name in ("hermes", "hermes.exe", "hermes.cmd", "hermes.bat")):
+            continue
+        parts.append(directory)
+    return os.pathsep.join(parts)
+
+
+def write_fake_hermes(bin_dir: Path) -> None:
+    """Hermes stand-in: a Python script, plus a cmd shim on Windows."""
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    body = (
+        "import os, sys\n"
+        "from pathlib import Path\n"
+        "log = os.environ.get('HERMES_LOG')\n"
+        "if log:\n"
+        "    with Path(log).open('a', encoding='utf-8') as handle:\n"
+        "        handle.write(' '.join(sys.argv[1:]) + '\\n')\n"
+        "raise SystemExit(0)\n"
+    )
+    if os.name == "nt":
+        (bin_dir / "hermes.py").write_text(body, encoding="utf-8")
+        (bin_dir / "hermes.cmd").write_text(
+            f'@echo off\r\n"{sys.executable}" "%~dp0hermes.py" %*\r\n',
+            encoding="utf-8",
+        )
+        return
+    launcher = bin_dir / "hermes"
+    launcher.write_text("#!/usr/bin/env python3\n" + body, encoding="utf-8")
+    launcher.chmod(launcher.stat().st_mode | stat.S_IEXEC)
+
+
+def node_dir(test: unittest.TestCase) -> str:
+    node = shutil.which("node")
+    if not node:
+        test.skipTest("node is not installed")
+    return str(Path(node).resolve().parent)
+
+
 class HermesIntegrationTests(unittest.TestCase):
     def test_absent_hermes_is_skipped_without_creating_a_home(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             home = root / "hermes-home"
-            env = isolated_env(root / "user-home", "/usr/bin:/bin")
+            env = isolated_env(root / "user-home", tool_path())
             result = subprocess.run(
                 [sys.executable, str(INTEGRATION), "--install", "--hermes-home", str(home)],
                 text=True,
@@ -60,19 +115,10 @@ class HermesIntegrationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             bin_dir = root / "bin"
-            bin_dir.mkdir()
             log = root / "hermes.log"
-            hermes = bin_dir / "hermes"
-            hermes.write_text(
-                "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$HERMES_LOG\"\nexit 0\n",
-                encoding="utf-8",
-            )
-            hermes.chmod(hermes.stat().st_mode | stat.S_IEXEC)
-            node = shutil.which("node")
-            self.assertIsNotNone(node)
-            node_dir = str(Path(node).resolve().parent)
+            write_fake_hermes(bin_dir)
             home = root / "hermes-home"
-            env = isolated_env(root / "user-home", f"{bin_dir}:{node_dir}:/usr/bin:/bin")
+            env = isolated_env(root / "user-home", tool_path(bin_dir, Path(node_dir(self))))
             env["HERMES_LOG"] = str(log)
             result = subprocess.run(
                 [sys.executable, str(INTEGRATION), "--install", "--quiet", "--hermes-home", str(home)],
@@ -93,10 +139,7 @@ class HermesIntegrationTests(unittest.TestCase):
             home = root / "hermes-home"
             home.mkdir()
             (home / "config.yaml").write_text("model: local\n", encoding="utf-8")
-            node = shutil.which("node")
-            self.assertIsNotNone(node)
-            node_dir = str(Path(node).resolve().parent)
-            env = isolated_env(root / "user-home", f"{node_dir}:/usr/bin:/bin")
+            env = isolated_env(root / "user-home", tool_path())
             result = subprocess.run(
                 [sys.executable, str(INTEGRATION), "--install", "--hermes-home", str(home)],
                 text=True,
@@ -108,6 +151,7 @@ class HermesIntegrationTests(unittest.TestCase):
             self.assertEqual(result.returncode, 2, result.stdout)
             self.assertNotIn("Traceback", result.stderr)
             self.assertIn("hermes CLI is not on PATH", result.stdout)
+            self.assertFalse((home / "plugins" / "bsmart-project" / "plugin.yaml").exists())
 
 
 class UpdateAndStartupTests(unittest.TestCase):
@@ -116,8 +160,12 @@ class UpdateAndStartupTests(unittest.TestCase):
             root = Path(directory)
             workspace = root / "workspace"
             workspace.mkdir()
-            os.symlink(ROOT, workspace / "bSmart-System")
-            env = isolated_env(root / "home", "/usr/bin:/bin")
+            link = workspace / "bSmart-System"
+            try:
+                os.symlink(ROOT, link, target_is_directory=True)
+            except OSError:
+                shutil.copytree(ROOT, link, symlinks=True)
+            env = isolated_env(root / "home", tool_path())
             result = subprocess.run(
                 [sys.executable, str(UPDATE), "--workspace", str(workspace)],
                 text=True,
@@ -130,7 +178,10 @@ class UpdateAndStartupTests(unittest.TestCase):
             self.assertIn("bSmart update: complete", result.stdout)
             self.assertNotIn("blocked", result.stdout)
             self.assertNotIn("restart Hermes", result.stdout)
-            self.assertIn("python3 bSmart-System/bStart.py", (workspace / "AGENTS.md").read_text(encoding="utf-8"))
+            hook = (workspace / "AGENTS.md").read_text(encoding="utf-8")
+            self.assertIn("python3 bSmart-System/bStart.py", hook)
+            self.assertIn("py -3 bSmart-System/bStart.py", hook)
+            self.assertNotIn("not on PATH", hook)
             self.assertFalse((root / "home" / ".hermes").exists())
             self.assertTrue((workspace / "bSmart" / "bHistory.md").is_file())
 
@@ -141,6 +192,7 @@ class UpdateAndStartupTests(unittest.TestCase):
             scripts = system / "scripts"
             scripts.mkdir(parents=True)
             for name in (
+                "bsmart_instance.py",
                 "bsmart-startup-check",
                 "bsmart-content-upgrade",
                 "bsmart-release-notice",
@@ -152,7 +204,7 @@ class UpdateAndStartupTests(unittest.TestCase):
             shutil.copy2(ROOT / "bSmart_Templates" / "bHistory.template.md", templates / "bHistory.template.md")
             shutil.copy2(ROOT / "bSmart_Version.md", system / "bSmart_Version.md")
             (root / "bSmart").mkdir()
-            env = isolated_env(root / "home", "/usr/bin:/bin")
+            env = isolated_env(root / "home", tool_path())
             result = subprocess.run(
                 [
                     sys.executable,
@@ -179,7 +231,7 @@ class ProjectStorageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             spec = root / "bSmart" / "State" / "container-storage.yaml"
-            env = isolated_env(root / "home", "/usr/bin:/bin")
+            env = isolated_env(root / "home", tool_path())
             result = subprocess.run(
                 [
                     sys.executable,
@@ -202,7 +254,9 @@ class ProjectStorageTests(unittest.TestCase):
             text = spec.read_text(encoding="utf-8")
             self.assertIn("mode: internal", text)
             self.assertIn("backing: workspace-local", text)
-            self.assertIn(str((root / "projects").resolve()), text)
+            self.assertIn("path_in_container: ./projects", text)
+            self.assertIn("path_in_container: ./sandboxes", text)
+            self.assertNotIn(str((root / "projects").resolve()), text)
             self.assertTrue((root / "projects").is_dir())
             self.assertTrue((root / "sandboxes").is_dir())
             status = subprocess.run(
@@ -250,6 +304,45 @@ class ProjectStorageTests(unittest.TestCase):
         self.assertIsNone(module["infer_workspace_host_path"]())
         self.assertIsNone(module["infer_sandbox_host_path"]())
 
+    def test_relative_spec_resolves_against_the_workspace_at_read_time(self):
+        module = runpy.run_path(str(STORAGE))
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "instance"
+            recorded = module["resolve_recorded_path"](workspace, "./projects")
+            self.assertEqual(recorded, (workspace / "projects").absolute())
+            absolute = (Path(directory) / "fixed-projects").absolute()
+            self.assertEqual(module["resolve_recorded_path"](workspace, str(absolute)), absolute)
+
+    def test_absolute_spec_is_selected_when_relative_projects_are_absent(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            workspace = root / "workspace"
+            workspace.mkdir()
+            projects = root / "fixed-projects"
+            sandboxes = root / "fixed-sandboxes"
+            projects.mkdir()
+            sandboxes.mkdir()
+            spec = workspace / "bSmart" / "State" / "container-storage.yaml"
+            spec.parent.mkdir(parents=True)
+            spec.write_text(
+                "project_storage:\n"
+                f"  project_root: {projects.as_posix()}\n"
+                "sandbox_storage:\n"
+                f"  sandbox_root: {sandboxes.as_posix()}\n",
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                [sys.executable, str(STORAGE), "--workspace", str(workspace), "--spec", str(spec)],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=isolated_env(root / "home", tool_path()),
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn(str(projects.absolute()), result.stdout)
+            self.assertIn(str(sandboxes.absolute()), result.stdout)
+
 
 class ContentRootTests(unittest.TestCase):
     def test_sibling_content_root_wins_over_container_path(self):
@@ -269,6 +362,36 @@ class ContentRootTests(unittest.TestCase):
                 # sibling path even when that directory does not exist yet.
                 self.assertEqual(module["default_content_root"](missing_system), missing_parent / "bSmart")
 
+    def test_update_workspace_prefers_the_checkout_over_another_container(self):
+        module = runpy.run_path(str(ROOT / "scripts" / "bsmart_instance.py"))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            container = root / "container"
+            (container / "bSmart-System" / "scripts").mkdir(parents=True)
+            checkout = root / "agents" / "GrokAdmin"
+            system = checkout / "bSmart-System"
+            system.mkdir(parents=True)
+            self.assertEqual(module["workspace_for_system"](system, container), checkout)
+            orphan = root / "loose"
+            orphan.mkdir()
+            self.assertEqual(module["workspace_for_system"](orphan, container), container)
+
+    def test_update_workspace_keeps_a_symlinked_checkout_with_its_instance(self):
+        module = runpy.run_path(str(ROOT / "scripts" / "bsmart_instance.py"))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            container = root / "container"
+            (container / "bSmart-System").mkdir(parents=True)
+            system = root / "real" / "bSmart-System"
+            system.mkdir(parents=True)
+            launched = root / "instance" / "bSmart-System"
+            launched.parent.mkdir()
+            try:
+                os.symlink(system, launched, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlinks are unavailable: {exc}")
+            self.assertEqual(module["workspace_for_system"](launched, container), launched.parent)
+
 
 class TwoInstanceTests(unittest.TestCase):
     """A main instance and /agents/GrokAdmin must not share state files."""
@@ -283,7 +406,7 @@ class TwoInstanceTests(unittest.TestCase):
         self.addCleanup(self.cleanup_strays)
         self.main = self.root / "workspace"
         self.nested = self.main / "agents" / "GrokAdmin"
-        self.populate(symlink_system=True)
+        self.populate_main()
 
     def cleanup_strays(self):
         if not self.container_existed and self.container.exists():
@@ -291,18 +414,11 @@ class TwoInstanceTests(unittest.TestCase):
         if not self.stray_existed and self.stray.exists():
             shutil.rmtree(self.stray, ignore_errors=True)
 
-    def populate(self, symlink_system: bool) -> None:
+    def populate_main(self) -> None:
         system = self.main / "bSmart-System"
         scripts = system / "scripts"
         scripts.mkdir(parents=True)
-        for name in (
-            "bsmart-system-update-check",
-            "bsmart-startup-check",
-            "bsmart-content-upgrade",
-            "bsmart-release-notice",
-            "bsmart-project-integration-check",
-            "bsmart-project-storage-check",
-        ):
+        for name in COPIED_WITH_INSTANCE:
             shutil.copy2(ROOT / "scripts" / name, scripts / name)
         templates = system / "bSmart_Templates"
         templates.mkdir()
@@ -312,11 +428,13 @@ class TwoInstanceTests(unittest.TestCase):
         shutil.copy2(ROOT / "bStart.py", self.main / "bStart.py")
         self.write_agent(self.main / "bSmart", "MainAgent", "Main User")
         (self.main / "bSmart" / "sentinel.txt").write_text("main\n", encoding="utf-8")
+
+    def link_nested(self) -> None:
         self.nested.mkdir(parents=True)
-        if symlink_system:
-            os.symlink(system, self.nested / "bSmart-System")
-        else:
-            shutil.copytree(system, self.nested / "bSmart-System")
+        try:
+            os.symlink(self.main / "bSmart-System", self.nested / "bSmart-System", target_is_directory=True)
+        except OSError as exc:
+            self.skipTest(f"symlinks are unavailable: {exc}")
         shutil.copy2(ROOT / "bStart.py", self.nested / "bStart.py")
         self.write_agent(self.nested / "bSmart", "GrokAdmin", "Nested User")
 
@@ -332,7 +450,7 @@ class TwoInstanceTests(unittest.TestCase):
         home.mkdir(exist_ok=True)
         env = os.environ.copy()
         env["HOME"] = str(home)
-        env["PATH"] = "/usr/bin:/bin"
+        env["PATH"] = tool_path()
         env.pop("HERMES_HOME", None)
         return env
 
@@ -349,6 +467,7 @@ class TwoInstanceTests(unittest.TestCase):
             self.assertFalse((self.container / "State" / "bsmart-system-update.yaml").exists())
 
     def test_both_bstart_entry_points_cache_only_in_the_nested_instance(self):
+        self.link_nested()
         env = self.env()
         for script in (self.nested / "bStart.py", self.nested / "bSmart-System" / "bStart.py"):
             result = subprocess.run(
@@ -367,6 +486,7 @@ class TwoInstanceTests(unittest.TestCase):
             self.assert_main_untouched()
 
     def test_direct_update_check_through_system_symlink_uses_nested_content(self):
+        self.link_nested()
         result = subprocess.run(
             [sys.executable, str(self.nested / "bSmart-System" / "scripts" / "bsmart-system-update-check")],
             cwd=self.nested,
@@ -383,6 +503,7 @@ class TwoInstanceTests(unittest.TestCase):
         self.assert_main_untouched()
 
     def test_startup_check_through_system_symlink_writes_only_nested_state(self):
+        self.link_nested()
         result = subprocess.run(
             [
                 sys.executable,
@@ -404,7 +525,8 @@ class TwoInstanceTests(unittest.TestCase):
         self.assert_main_untouched()
 
     def test_separate_system_checkout_does_not_write_the_main_instance(self):
-        shutil.rmtree(self.nested)
+        if self.nested.exists():
+            shutil.rmtree(self.nested)
         self.nested.mkdir(parents=True)
         shutil.copytree(self.main / "bSmart-System", self.nested / "bSmart-System")
         shutil.copy2(ROOT / "bStart.py", self.nested / "bStart.py")

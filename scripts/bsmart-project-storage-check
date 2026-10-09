@@ -19,22 +19,12 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).absolute().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from bsmart_instance import default_content_root
 SYSTEM_ROOT = SCRIPT_DIR.parent
 WORKSPACE_ROOT = SYSTEM_ROOT.parent
-
-
-def default_content_root(system_root: Path) -> Path:
-    """Sibling bSmart next to this checkout.
-
-    /workspace/bSmart is only the fallback for the container checkout itself.
-    """
-    sibling = system_root.parent / "bSmart"
-    container = Path("/workspace/bSmart")
-    if sibling.is_dir():
-        return sibling
-    if os.path.normpath(str(system_root.parent.absolute())) == os.path.normpath("/workspace") and container.is_dir():
-        return container
-    return sibling
 
 
 CONTENT_ROOT = default_content_root(SYSTEM_ROOT)
@@ -75,12 +65,58 @@ def usable(path: Path) -> bool:
     return status_word(access(path)) == "usable"
 
 
-def project_root_candidates(workspace: Path | None = None) -> list[tuple[str, Path]]:
+def spec_block_value(text: str, block: str, key: str) -> str | None:
+    """Read one scalar from a top-level yamlish block."""
+    in_block = False
+    for line in text.splitlines():
+        if not line.startswith((" ", "\t")):
+            in_block = line.strip() == f"{block}:"
+            continue
+        if not in_block:
+            continue
+        stripped = line.strip()
+        if not stripped.startswith(f"{key}:"):
+            continue
+        value = stripped.split(":", 1)[1].strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+            value = value[1:-1].replace('\\"', '"').replace("\\\\", "\\")
+        if value:
+            return value
+    return None
+
+
+def resolve_recorded_path(workspace: Path, raw: str | None) -> Path | None:
+    """Resolve a spec path against the workspace unless it is already absolute."""
+    if raw is None:
+        return None
+    value = raw.strip()
+    if not value or value.startswith("TODO") or value.startswith("<"):
+        return None
+    path = Path(value).expanduser()
+    if path.is_absolute():
+        return path.absolute()
+    return (workspace / path).absolute()
+
+
+def recorded_roots(spec_path: Path, workspace: Path) -> tuple[Path | None, Path | None]:
+    if not spec_path.is_file():
+        return None, None
+    text = spec_path.read_text(encoding="utf-8", errors="replace")
+    project = resolve_recorded_path(workspace, spec_block_value(text, "project_storage", "project_root"))
+    sandbox = resolve_recorded_path(workspace, spec_block_value(text, "sandbox_storage", "sandbox_root"))
+    return project, sandbox
+
+
+def project_root_candidates(workspace: Path | None = None, spec_path: Path | None = None) -> list[tuple[str, Path]]:
     root = workspace if workspace is not None else workspace_root()
     candidates: list[tuple[str, Path]] = []
     override = os.environ.get("BSMART_PROJECT_ROOT")
     if override:
         candidates.append(("BSMART_PROJECT_ROOT", Path(override).expanduser()))
+    if spec_path is not None:
+        recorded, _sandbox = recorded_roots(spec_path, root)
+        if recorded is not None:
+            candidates.append(("spec", recorded))
     candidates.extend(
         [
             ("/projects", Path("/projects")),
@@ -90,19 +126,23 @@ def project_root_candidates(workspace: Path | None = None) -> list[tuple[str, Pa
     return candidates
 
 
-def select_project_root(workspace: Path | None = None) -> tuple[str, Path] | None:
-    for label, path in project_root_candidates(workspace):
+def select_project_root(workspace: Path | None = None, spec_path: Path | None = None) -> tuple[str, Path] | None:
+    for label, path in project_root_candidates(workspace, spec_path):
         if usable(path):
             return label, path
     return None
 
 
-def sandbox_root_candidates(workspace: Path | None = None) -> list[tuple[str, Path]]:
+def sandbox_root_candidates(workspace: Path | None = None, spec_path: Path | None = None) -> list[tuple[str, Path]]:
     root = workspace if workspace is not None else workspace_root()
     candidates: list[tuple[str, Path]] = []
     override = os.environ.get("BSMART_SANDBOX_ROOT")
     if override:
         candidates.append(("BSMART_SANDBOX_ROOT", Path(override).expanduser()))
+    if spec_path is not None:
+        _project, recorded = recorded_roots(spec_path, root)
+        if recorded is not None:
+            candidates.append(("spec", recorded))
     candidates.extend(
         [
             ("/sandboxes", Path("/sandboxes")),
@@ -113,8 +153,8 @@ def sandbox_root_candidates(workspace: Path | None = None) -> list[tuple[str, Pa
     return candidates
 
 
-def select_sandbox_root(workspace: Path | None = None) -> tuple[str, Path] | None:
-    for label, path in sandbox_root_candidates(workspace):
+def select_sandbox_root(workspace: Path | None = None, spec_path: Path | None = None) -> tuple[str, Path] | None:
+    for label, path in sandbox_root_candidates(workspace, spec_path):
         if usable(path):
             return label, path
     return None
@@ -191,6 +231,14 @@ def print_predeploy_commands(host_project_folder: str, host_sandbox_folder: str 
     print("")
 
 
+def yaml_scalar(value: str) -> str:
+    """Quote values that a line-oriented reader would split on ':'."""
+    if any(character in value for character in ":{}[]&*!#|>%@`,'\" \t"):
+        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{escaped}"'
+    return value
+
+
 def spec_text(
     mode: str,
     project_root: str,
@@ -203,43 +251,47 @@ def spec_text(
 ) -> str:
     generated = dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     sandbox_host = host_sandbox_folder or "TODO: host path backing /sandboxes"
+    project_root_text = yaml_scalar(project_root)
+    host_project_text = yaml_scalar(host_project_folder)
+    sandbox_root_text = yaml_scalar(sandbox_root)
+    sandbox_host_text = yaml_scalar(sandbox_host)
     return f"""# bSmart container storage spec
 # Local instance state. Do not put this file inside the project volume.
 generated_at: {generated}
 
 container_storage:
   project_root:
-    path_in_container: {project_root}
+    path_in_container: {project_root_text}
     required: true
     backing: {backing}
-    desired_host_path: {host_project_folder}
+    desired_host_path: {host_project_text}
     mode: rw
   sandbox_root:
-    path_in_container: {sandbox_root}
+    path_in_container: {sandbox_root_text}
     required: true
     backing: {sandbox_backing}
-    desired_host_path: {sandbox_host}
+    desired_host_path: {sandbox_host_text}
     mode: rw
 
 project_storage:
   mode: {mode}
-  project_root: {project_root}
-  host_project_folder: {host_project_folder}
+  project_root: {project_root_text}
+  host_project_folder: {host_project_text}
 
 sandbox_storage:
   mode: {sandbox_mode}
-  sandbox_root: {sandbox_root}
-  host_sandbox_folder: {sandbox_host}
+  sandbox_root: {sandbox_root_text}
+  host_sandbox_folder: {sandbox_host_text}
 """
 
 
 def print_status(spec_path: Path, workspace: Path | None = None) -> int:
-    project_candidates = project_root_candidates(workspace)
-    sandbox_candidates = sandbox_root_candidates(workspace)
+    project_candidates = project_root_candidates(workspace, spec_path)
+    sandbox_candidates = sandbox_root_candidates(workspace, spec_path)
 
     spec_exists = spec_path.exists()
-    selected_project = select_project_root(workspace)
-    selected_sandbox = select_sandbox_root(workspace)
+    selected_project = select_project_root(workspace, spec_path)
+    selected_sandbox = select_sandbox_root(workspace, spec_path)
 
     print("bSmart project storage check:")
     print(f"  spec: {'present' if spec_exists else 'missing'} ({spec_path})")
@@ -279,18 +331,30 @@ def print_status(spec_path: Path, workspace: Path | None = None) -> int:
     return 2
 
 
-def resolve_under(workspace: Path, value: str | None, default: Path) -> Path:
+def recorded_storage_path(workspace: Path, value: str | None, default_relative: str) -> tuple[str, Path]:
+    """Spec text plus the directory to create.
+
+    Defaults stay workspace-relative (./projects, ./sandboxes) so the same
+    spec can be read from another checkout of this instance. Absolute values
+    are stored absolute. Relative values are stored relative and resolved
+    against the workspace at read time.
+    """
     if not value:
-        return default
+        recorded = default_relative.replace("\\", "/")
+        return recorded, (workspace / recorded).absolute()
     path = Path(value).expanduser()
-    if not path.is_absolute():
-        path = workspace / path
-    return path.resolve()
+    if path.is_absolute():
+        absolute = path.absolute()
+        return absolute.as_posix(), absolute
+    recorded = value.replace("\\", "/")
+    if not recorded.startswith("./") and not recorded.startswith("../"):
+        recorded = "./" + recorded.lstrip("/")
+    return recorded, (workspace / path).absolute()
 
 
 def configure_internal(spec_path: Path, workspace: Path, project_root: str | None, sandbox_root: str | None) -> int:
-    project = resolve_under(workspace, project_root, (workspace / "projects").resolve())
-    sandbox = resolve_under(workspace, sandbox_root, (workspace / "sandboxes").resolve())
+    project_text, project = recorded_storage_path(workspace, project_root, "./projects")
+    sandbox_text, sandbox = recorded_storage_path(workspace, sandbox_root, "./sandboxes")
     if spec_path.exists():
         raise SystemExit(f"Refusing to overwrite existing spec: {spec_path}")
     project.mkdir(parents=True, exist_ok=True)
@@ -299,10 +363,10 @@ def configure_internal(spec_path: Path, workspace: Path, project_root: str | Non
         spec_path,
         spec_text(
             mode="internal",
-            project_root=str(project),
-            host_project_folder=str(project),
-            sandbox_root=str(sandbox),
-            host_sandbox_folder=str(sandbox),
+            project_root=project_text,
+            host_project_folder=project_text,
+            sandbox_root=sandbox_text,
+            host_sandbox_folder=sandbox_text,
             backing="workspace-local",
             sandbox_backing="workspace-local",
             sandbox_mode="workspace_local",

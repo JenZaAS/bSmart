@@ -11,7 +11,7 @@ protocol:
 
 ## Hook files
 
-Use the same content from `bSmart_Templates/AGENTS.md` for every supported startup hook. The template runs `python3 bSmart-System/bStart.py` and uses `python` only when `python3` is not on PATH:
+Use the same content from `bSmart_Templates/AGENTS.md` for every supported startup hook. The template runs `python3 bSmart-System/bStart.py`. If `python3` is missing or fails, it uses `python` (or `py -3` on Windows):
 
 - `AGENTS.md`
 - `HERMES.md`
