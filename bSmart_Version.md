@@ -2,7 +2,7 @@
 
 ```yaml
 current_version: 0.1.44-draft
-updated: 2026-10-08 22:45 UTC
+updated: 2026-10-09 11:20 UTC
 status: draft
 ```
 
@@ -17,6 +17,7 @@ scope:
   - prefer python3 in startup hooks, with python as the fallback
   - add bsmart-project-storage-check --configure-internal for workspace-local ./projects storage
   - prefer the sibling bSmart content root over a hardcoded /workspace path when both exist
+  - keep update and startup state in the instance that was started when several instances share a machine, including a symlinked bSmart-System
 verification:
   - integration check returns success and creates no Hermes home when hermes is absent
   - integration check still installs and enables the adapter when a hermes CLI is present
@@ -24,6 +25,7 @@ verification:
   - --configure-internal writes container-storage.yaml and creates ./projects and ./sandboxes
   - findmnt absence stays a skipped host-mount inference
   - existing unittest and node project tests pass
+  - two instances on one filesystem keep bsmart-system-update.yaml and startup state in the instance that was started
 ```
 
 ## 0.1.43-draft

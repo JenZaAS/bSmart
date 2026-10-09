@@ -15,7 +15,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-SCRIPT_ROOT = Path(__file__).resolve().parent
+# absolute() keeps a symlinked bSmart-System attached to the instance that
+# launched it. resolve() would follow that link into another instance.
+SCRIPT_ROOT = Path(__file__).absolute().parent
 
 
 def system_checkout(path: Path) -> bool:
@@ -67,20 +69,31 @@ def first_value(text: str, keys: tuple[str, ...]) -> str | None:
     return None
 
 
+def content_root_for(workspace: Path) -> Path:
+    """Content root for this instance: sibling bSmart, not another instance's."""
+    sibling = workspace / "bSmart"
+    container = Path("/workspace/bSmart")
+    if sibling.is_dir():
+        return sibling
+    if os.path.normpath(str(workspace.absolute())) == os.path.normpath("/workspace") and container.is_dir():
+        return container
+    return sibling
+
+
 def resolve_paths(workspace: Path) -> tuple[Path, Path]:
     system = workspace / "bSmart-System"
-    content = workspace / "bSmart"
-    if not system.is_dir():
-        if system_checkout(SCRIPT_ROOT):
-            system = SCRIPT_ROOT
-            workspace = SCRIPT_ROOT.parent
-        elif workspace_root_copy(SCRIPT_ROOT):
-            workspace = SCRIPT_ROOT
-            system = workspace / "bSmart-System"
-            content = workspace / "bSmart"
-    if not content.exists() and Path("/workspace/bSmart").is_dir():
-        content = Path("/workspace/bSmart")
-    return system.resolve(), content.resolve()
+    if system.is_dir():
+        # Keep the launched path. Resolving a symlinked bSmart-System jumps to
+        # the checkout it points at and would cache state in that other instance.
+        return system, content_root_for(workspace)
+    if system_checkout(SCRIPT_ROOT):
+        if (workspace / "bSmart").is_dir():
+            return SCRIPT_ROOT, workspace / "bSmart"
+        return SCRIPT_ROOT, content_root_for(SCRIPT_ROOT.parent)
+    if workspace_root_copy(SCRIPT_ROOT):
+        workspace = SCRIPT_ROOT
+        return workspace / "bSmart-System", content_root_for(workspace)
+    return system, content_root_for(workspace)
 
 
 def git_status(repo: Path, label: str) -> str:
@@ -120,7 +133,12 @@ def safe_system_update(system: Path, content: Path, skip: bool) -> tuple[bool, s
     helper = system / "scripts" / "bsmart-system-update-check"
     if not helper.is_file():
         return False, "bSmart-System: update helper unavailable"
-    proc = run([sys.executable, str(helper), "--auto-pull"], system, 90)
+    state = content / "State" / "bsmart-system-update.yaml"
+    proc = run(
+        [sys.executable, str(helper), "--auto-pull", "--repo", str(system), "--state", str(state)],
+        system,
+        90,
+    )
     output = " ".join((proc.stdout + " " + proc.stderr).split())
     updated = "updated" in output.lower() and "skipped" not in output.lower()
     if not output:
@@ -214,7 +232,7 @@ def main() -> int:
     parser.add_argument("--skip-update", action="store_true")
     parser.add_argument("--skip-integrity", action="store_true")
     args = parser.parse_args()
-    workspace = Path(args.root).expanduser().resolve()
+    workspace = Path(args.root).expanduser().absolute()
     system, content = resolve_paths(workspace)
     warnings: list[str] = []
     updated, update_line = safe_system_update(system, content, args.skip_update)

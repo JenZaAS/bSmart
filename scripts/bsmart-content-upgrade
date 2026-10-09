@@ -13,17 +13,20 @@ import os
 import sys
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPT_DIR = Path(__file__).absolute().parent
 SYSTEM_ROOT = SCRIPT_DIR.parent
 
 
 def default_content_root(system_root: Path) -> Path:
-    """Prefer the sibling instance next to this checkout."""
+    """Sibling bSmart next to this checkout.
+
+    /workspace/bSmart is only the fallback for the container checkout itself.
+    """
     sibling = system_root.parent / "bSmart"
     container = Path("/workspace/bSmart")
     if sibling.is_dir():
         return sibling
-    if container.is_dir():
+    if os.path.normpath(str(system_root.parent.absolute())) == os.path.normpath("/workspace") and container.is_dir():
         return container
     return sibling
 

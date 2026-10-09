@@ -18,25 +18,25 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import os
 import subprocess
 import sys
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPT_DIR = Path(__file__).absolute().parent
 SYSTEM_ROOT = SCRIPT_DIR.parent
 
 
 def default_content_root(system_root: Path) -> Path:
-    """Prefer the sibling instance next to this checkout.
+    """Sibling bSmart next to this checkout.
 
-    Container installs keep bSmart at /workspace/bSmart, which is that sibling.
-    A local checkout must not jump to /workspace when its own sibling exists.
+    /workspace/bSmart is only the fallback for the container checkout itself.
     """
     sibling = system_root.parent / "bSmart"
     container = Path("/workspace/bSmart")
     if sibling.is_dir():
         return sibling
-    if container.is_dir():
+    if os.path.normpath(str(system_root.parent.absolute())) == os.path.normpath("/workspace") and container.is_dir():
         return container
     return sibling
 
@@ -80,8 +80,25 @@ def write_state(path: Path, project_storage_checked: bool, system_update_checked
         return False
 
 
+def instance_args(script: str) -> list[str]:
+    """Pin child helpers to this instance, even if their file resolves elsewhere."""
+    content = default_content_root(SYSTEM_ROOT)
+    if script == "bsmart-system-update-check":
+        return ["--repo", str(SYSTEM_ROOT), "--state", str(content / "State" / "bsmart-system-update.yaml")]
+    if script in {"bsmart-content-upgrade", "bsmart-release-notice"}:
+        return ["--content-root", str(content), "--system-root", str(SYSTEM_ROOT)]
+    if script == "bsmart-project-storage-check":
+        return ["--workspace", str(SYSTEM_ROOT.parent), "--spec", str(content / "State" / "container-storage.yaml")]
+    return []
+
+
 def run_script(script: str, args: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run([sys.executable, str(SCRIPT_DIR / script), *args], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return subprocess.run(
+        [sys.executable, str(SCRIPT_DIR / script), *instance_args(script), *args],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
 
 
 def print_result(title: str, proc: subprocess.CompletedProcess[str]) -> None:

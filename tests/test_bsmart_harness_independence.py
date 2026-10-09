@@ -265,12 +265,163 @@ class ContentRootTests(unittest.TestCase):
             for name in CONTENT_ROOT_SCRIPTS:
                 module = runpy.run_path(str(ROOT / "scripts" / name))
                 self.assertEqual(module["default_content_root"](system), sibling)
-                resolved = module["default_content_root"](missing_system)
-                container = Path("/workspace/bSmart")
-                if container.is_dir():
-                    self.assertEqual(resolved, container)
-                else:
-                    self.assertEqual(resolved, missing_parent / "bSmart")
+                # A checkout that is not the /workspace container keeps its own
+                # sibling path even when that directory does not exist yet.
+                self.assertEqual(module["default_content_root"](missing_system), missing_parent / "bSmart")
+
+
+class TwoInstanceTests(unittest.TestCase):
+    """A main instance and /agents/GrokAdmin must not share state files."""
+
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp(prefix="bsmart-two-instances-"))
+        self.addCleanup(lambda: shutil.rmtree(self.root, ignore_errors=True))
+        self.container = Path("/workspace/bSmart")
+        self.stray = Path("/bSmart")
+        self.container_existed = self.container.exists()
+        self.stray_existed = self.stray.exists()
+        self.addCleanup(self.cleanup_strays)
+        self.main = self.root / "workspace"
+        self.nested = self.main / "agents" / "GrokAdmin"
+        self.populate(symlink_system=True)
+
+    def cleanup_strays(self):
+        if not self.container_existed and self.container.exists():
+            shutil.rmtree(self.container, ignore_errors=True)
+        if not self.stray_existed and self.stray.exists():
+            shutil.rmtree(self.stray, ignore_errors=True)
+
+    def populate(self, symlink_system: bool) -> None:
+        system = self.main / "bSmart-System"
+        scripts = system / "scripts"
+        scripts.mkdir(parents=True)
+        for name in (
+            "bsmart-system-update-check",
+            "bsmart-startup-check",
+            "bsmart-content-upgrade",
+            "bsmart-release-notice",
+            "bsmart-project-integration-check",
+            "bsmart-project-storage-check",
+        ):
+            shutil.copy2(ROOT / "scripts" / name, scripts / name)
+        templates = system / "bSmart_Templates"
+        templates.mkdir()
+        shutil.copy2(ROOT / "bSmart_Templates" / "bHistory.template.md", templates / "bHistory.template.md")
+        shutil.copy2(ROOT / "bSmart_Version.md", system / "bSmart_Version.md")
+        shutil.copy2(ROOT / "bStart.py", system / "bStart.py")
+        shutil.copy2(ROOT / "bStart.py", self.main / "bStart.py")
+        self.write_agent(self.main / "bSmart", "MainAgent", "Main User")
+        (self.main / "bSmart" / "sentinel.txt").write_text("main\n", encoding="utf-8")
+        self.nested.mkdir(parents=True)
+        if symlink_system:
+            os.symlink(system, self.nested / "bSmart-System")
+        else:
+            shutil.copytree(system, self.nested / "bSmart-System")
+        shutil.copy2(ROOT / "bStart.py", self.nested / "bStart.py")
+        self.write_agent(self.nested / "bSmart", "GrokAdmin", "Nested User")
+
+    def write_agent(self, content: Path, name: str, operator: str) -> None:
+        content.mkdir(parents=True, exist_ok=True)
+        (content / "bSmart_Agent.md").write_text(
+            f"# Agent\n\n```yaml\nagent:\n  name: {name}\n  operator: {operator}\n```\n",
+            encoding="utf-8",
+        )
+
+    def env(self) -> dict[str, str]:
+        home = self.root / "home"
+        home.mkdir(exist_ok=True)
+        env = os.environ.copy()
+        env["HOME"] = str(home)
+        env["PATH"] = "/usr/bin:/bin"
+        env.pop("HERMES_HOME", None)
+        return env
+
+    def assert_main_untouched(self) -> None:
+        state = self.main / "bSmart" / "State"
+        self.assertFalse((state / "bsmart-system-update.yaml").exists())
+        self.assertFalse((state / "bsmart-startup-check.yaml").exists())
+        self.assertFalse((state / "bsmart-release-notice.yaml").exists())
+        self.assertFalse((self.main / "bSmart" / "bHistory.md").exists())
+        self.assertFalse((self.main / "bSmart" / "Roles").exists())
+        self.assertEqual((self.main / "bSmart" / "sentinel.txt").read_text(encoding="utf-8"), "main\n")
+        self.assertFalse((self.stray / "State" / "bsmart-system-update.yaml").exists())
+        if not self.container_existed:
+            self.assertFalse((self.container / "State" / "bsmart-system-update.yaml").exists())
+
+    def test_both_bstart_entry_points_cache_only_in_the_nested_instance(self):
+        env = self.env()
+        for script in (self.nested / "bStart.py", self.nested / "bSmart-System" / "bStart.py"):
+            result = subprocess.run(
+                [sys.executable, str(script)],
+                cwd=self.nested,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("Agent: GrokAdmin", result.stdout)
+            self.assertNotIn("Agent: MainAgent", result.stdout)
+            self.assertTrue((self.nested / "bSmart" / "State" / "bsmart-system-update.yaml").is_file(), result.stdout)
+            self.assert_main_untouched()
+
+    def test_direct_update_check_through_system_symlink_uses_nested_content(self):
+        result = subprocess.run(
+            [sys.executable, str(self.nested / "bSmart-System" / "scripts" / "bsmart-system-update-check")],
+            cwd=self.nested,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=self.env(),
+            check=False,
+        )
+        self.assertTrue(
+            (self.nested / "bSmart" / "State" / "bsmart-system-update.yaml").is_file(),
+            result.stdout + result.stderr,
+        )
+        self.assert_main_untouched()
+
+    def test_startup_check_through_system_symlink_writes_only_nested_state(self):
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(self.nested / "bSmart-System" / "scripts" / "bsmart-startup-check"),
+                "--skip-project-integration",
+            ],
+            cwd=self.nested,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=self.env(),
+            check=False,
+        )
+        nested_state = self.nested / "bSmart" / "State"
+        self.assertTrue((nested_state / "bsmart-startup-check.yaml").is_file(), result.stdout + result.stderr)
+        self.assertTrue((nested_state / "bsmart-system-update.yaml").is_file(), result.stdout + result.stderr)
+        self.assertTrue((nested_state / "bsmart-release-notice.yaml").is_file(), result.stdout + result.stderr)
+        self.assertTrue((self.nested / "bSmart" / "bHistory.md").is_file())
+        self.assert_main_untouched()
+
+    def test_separate_system_checkout_does_not_write_the_main_instance(self):
+        shutil.rmtree(self.nested)
+        self.nested.mkdir(parents=True)
+        shutil.copytree(self.main / "bSmart-System", self.nested / "bSmart-System")
+        shutil.copy2(ROOT / "bStart.py", self.nested / "bStart.py")
+        self.write_agent(self.nested / "bSmart", "GrokAdmin", "Nested User")
+        result = subprocess.run(
+            [sys.executable, str(self.nested / "bSmart-System" / "bStart.py")],
+            cwd=self.nested,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=self.env(),
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Agent: GrokAdmin", result.stdout)
+        self.assertTrue((self.nested / "bSmart" / "State" / "bsmart-system-update.yaml").is_file())
+        self.assert_main_untouched()
 
 
 if __name__ == "__main__":
