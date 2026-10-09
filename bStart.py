@@ -42,6 +42,32 @@ def default_workspace() -> Path:
 DEFAULT_WORKSPACE = default_workspace()
 
 
+def configure_output_streams() -> None:
+    """Print instance text without raising UnicodeEncodeError.
+
+    This function stays in this file. bsmart-instance-upgrade installs the
+    workspace-root copy as this file alone, so the fix cannot live in a helper
+    the copy would have to import.
+
+    A pipe or redirect on Windows uses the ANSI code page (often cp1252) with
+    a strict error handler. Session hooks capture startup that way, and project
+    or content files can contain characters that page cannot encode, such as
+    U+2610. UTF-8 keeps those characters. When a stream cannot change encoding,
+    keep its current encoding and escape characters it cannot represent.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="backslashreplace")
+        except (AttributeError, OSError, ValueError):
+            try:
+                reconfigure(errors="backslashreplace")
+            except (AttributeError, OSError, ValueError):
+                continue
+
+
 def now_utc() -> str:
     return dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
@@ -263,6 +289,7 @@ def context_value(role_text: str, keys: tuple[str, ...]) -> str:
 
 
 def main() -> int:
+    configure_output_streams()
     parser = argparse.ArgumentParser(description="Run deterministic bSmart session startup.")
     parser.add_argument("--root", default=str(DEFAULT_WORKSPACE))
     parser.add_argument("--role", help="select a role for this startup without changing the selector")

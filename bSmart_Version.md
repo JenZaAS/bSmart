@@ -1,9 +1,23 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.44-draft
-updated: 2026-10-09 12:41 UTC
+current_version: 0.1.44.1-draft
+updated: 2026-10-09 13:10 UTC
 status: draft
+```
+
+## 0.1.44.1-draft
+
+```yaml
+release_type: startup_output_encoding
+scope:
+  - reconfigure bStart stdout and stderr to UTF-8, and escape characters when a stream cannot change encoding, so a legacy pipe code page cannot abort startup
+  - keep that behavior in the workspace-root bStart.py that bsmart-instance-upgrade installs, because that copy is this same file
+  - decode session-start hook input and bStart output as UTF-8, and launch bStart with UTF-8 stdio
+verification:
+  - bStart exits 0 under PYTHONIOENCODING=cp1252:strict when printed content contains U+2610
+  - the session-start hook preserves that character in its UTF-8 context payload
+  - python and node tests pass on Linux, Windows, and macOS
 ```
 
 ## 0.1.44-draft
