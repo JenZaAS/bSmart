@@ -1,9 +1,47 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.43-draft
-updated: 2026-09-29 07:30 UTC
+current_version: 0.1.44-draft
+updated: 2026-10-09 12:41 UTC
 status: draft
+```
+
+## 0.1.44-draft
+
+```yaml
+release_type: harness_independent_install
+scope:
+  - skip the Hermes /project adapter when the hermes CLI and an existing Hermes profile are both absent, without creating ~/.hermes
+  - let bsmart-update and bsmart-startup-check finish on non-Hermes harnesses
+  - resolve bStart.py from both bSmart-System and the workspace-root copy
+  - prefer python3 in startup hooks; if python3 is missing or fails, use python or py -3 on Windows
+  - add bsmart-project-storage-check --configure-internal for workspace-local ./projects storage
+  - store internal storage paths as workspace-relative ./projects and ./sandboxes, and still honor absolute paths already in a spec
+  - prefer the sibling bSmart content root over a hardcoded /workspace path when both exist
+  - choose the checkout sibling workspace in bsmart-update before falling back to /workspace
+  - share default_content_root across the checkout scripts that write instance state
+  - require the hermes CLI only when the adapter still needs to be enabled; an already current and enabled adapter stays successful without the CLI
+  - launch a Windows hermes .cmd shim as one ComSpec /d /s /c command so paths with spaces are not re-quoted
+  - realpath a configured projects root once, then reject symlinks and junctions below it, including a broken link
+  - resolve the instance project root from BSMART_PROJECT_ROOT, then container-storage.yaml, then /projects and ./projects, in bStart, the client adapter, and the Hermes /project plugin
+  - let an installed Hermes /project plugin read that spec from /workspace/bSmart-System when BSMART_SYSTEM_ROOT is unset
+  - write bProtective state with POSIX mode 0o600, and on Windows call System32\\icacls.exe with a read/write/delete grant and a 10 second timeout
+  - keep update and startup state in the instance that was started when several instances share a machine, including a symlinked bSmart-System
+verification:
+  - integration check returns success and creates no Hermes home when hermes is absent
+  - integration check still installs and enables the adapter when a hermes CLI is present
+  - workspace-root and in-system bStart.py copies both resolve the workspace
+  - --configure-internal writes container-storage.yaml with ./projects and ./sandboxes and creates those directories
+  - an existing absolute storage spec still resolves to that absolute path
+  - findmnt absence stays a skipped host-mount inference
+  - existing unittest and node project tests pass
+  - two instances on one filesystem keep bsmart-system-update.yaml and startup state in the instance that was started
+  - python and node tests pass on Linux, Windows, and macOS
+  - an enabled current Hermes adapter returns success when hermes is not on PATH
+  - a symlinked projects root can create a project, and a symlinked or broken project directory is rejected
+  - startup, the client adapter, and the Hermes plugin follow container-storage.yaml when BSMART_PROJECT_ROOT is unset
+  - an installed Hermes plugin copy under hermes-home/plugins/bsmart-project reads the spec when BSMART_SYSTEM_ROOT is unset
+  - the Windows icacls invocation uses System32\\icacls.exe, grants (R,W,D), and a timeout does not fail the write
 ```
 
 ## 0.1.43-draft

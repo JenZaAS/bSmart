@@ -7,10 +7,48 @@ const fail=message=>{throw Error(message);};
 const yamlKeys={'Mode':'mode','Active project (short name)':'active_project','Active workstream':'active_workstream','Updated at (UTC)':'updated_utc'};
 const nativeOps=Object.freeze({renameSync:fs.renameSync.bind(fs),writeFileSync:fs.writeFileSync.bind(fs),rmSync:fs.rmSync.bind(fs),unlinkSync:fs.unlinkSync.bind(fs)});
 
+function resolveConfiguredRoot(p) {
+ // The configured root may itself be a symlink or junction (/projects, macOS
+ // /tmp or /var, a Windows junction). Collapse that once. Children are not
+ // collapsed here.
+ p=path.resolve(String(p));
+ const missing=[];
+ let at=p;
+ for(;;){
+  try { return path.join(fs.realpathSync(at), ...missing); }
+  catch(error){
+   if(!error || error.code!=='ENOENT') throw error;
+   const parent=path.dirname(at);
+   if(parent===at) throw error;
+   missing.unshift(path.basename(at));
+   at=parent;
+  }
+ }
+}
+function isRedirect(p, st) {
+ if(st.isSymbolicLink()) return true;
+ // Windows junctions are not reported as symlinks. readlink still sees them.
+ if(process.platform!=='win32') return false;
+ try { fs.readlinkSync(p); return true; }
+ catch { return false; }
+}
 function safePath(p) {
- p=path.resolve(p);let at=path.parse(p).root;
- for(const part of p.slice(at.length).split(path.sep).filter(Boolean)){at=path.join(at,part);if(fs.existsSync(at)&&fs.lstatSync(at).isSymbolicLink())fail('Symlinks are not allowed');}
+ // No symlink or junction below a path whose configured root was already
+ // realpath'd. lstat rejects a broken link instead of treating it as missing.
+ p=path.resolve(String(p));
+ let at=path.parse(p).root;
+ for(const part of p.slice(at.length).split(path.sep).filter(Boolean)){
+  at=path.join(at,part);
+  let st;
+  try { st=fs.lstatSync(at); }
+  catch(error){ if(error && error.code==='ENOENT') continue; throw error; }
+  if(isRedirect(at, st)) fail('Symlinks are not allowed');
+ }
  return p;
+}
+function anchoredFile(file) {
+ const resolved=path.resolve(String(file));
+ return path.join(resolveConfiguredRoot(path.dirname(resolved)), path.basename(resolved));
 }
 function name(s) {
  if(typeof s!=='string'||!s||s!==s.trim()||s.length>100||/[\\/\x00-\x1f<>:"|?*`#]/.test(s)||s.startsWith('.')||s.endsWith('.')||!norm(s)||/^(none|list|ws|add|rename|retire|delete|yes|no|_archive|archive|archives|con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(s))fail('Unsafe or reserved name');
@@ -18,7 +56,16 @@ function name(s) {
 }
 function contextOf(input,ops=nativeOps) {
  if(!input?.projectsRoot||!input.rolesRoot||!input.selectorFile||!input.archiveRoot)fail('Explicit projectsRoot, rolesRoot, selectorFile and archiveRoot required');
- const c=Object.fromEntries(Object.entries(input).map(([k,v])=>[k,['projectsRoot','rolesRoot','selectorFile','roleFile','legacyStateFile','archiveRoot','home'].includes(k)?safePath(v):v]));
+ const rooted={...input,
+  projectsRoot:resolveConfiguredRoot(input.projectsRoot),
+  rolesRoot:resolveConfiguredRoot(input.rolesRoot),
+  archiveRoot:resolveConfiguredRoot(input.archiveRoot),
+  selectorFile:anchoredFile(input.selectorFile),
+ };
+ if(input.roleFile) rooted.roleFile=anchoredFile(input.roleFile);
+ if(input.legacyStateFile) rooted.legacyStateFile=anchoredFile(input.legacyStateFile);
+ if(input.home) rooted.home=resolveConfiguredRoot(input.home);
+ const c=Object.fromEntries(Object.entries(rooted).map(([k,v])=>[k,['projectsRoot','rolesRoot','selectorFile','roleFile','legacyStateFile','archiveRoot','home'].includes(k)?safePath(v):v]));
  c.ops={...nativeOps,...ops};
  if(c.projectsRoot===path.parse(c.projectsRoot).root)fail('Filesystem root is not a projects root');
  if(!fs.statSync(c.projectsRoot).isDirectory())fail('Projects root must exist');

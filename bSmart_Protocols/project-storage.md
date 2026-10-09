@@ -86,6 +86,30 @@ mounted_volume_flow:
 ```
 
 ```yaml
+internal_bsmart_flow:
+  after_choice: Internal bSmart
+  meaning: project folders live in the workspace next to the startup hooks; no Docker or host mount is required
+  default_project_root: ./projects
+  default_sandbox_root: ./sandboxes
+  save:
+    mode: internal
+    project_root: ./projects
+    sandbox_root: ./sandboxes
+    path_form: workspace-relative; resolved against the instance workspace at read time
+    absolute_specs: older specs that already store an absolute path keep that path
+    backing: workspace-local
+  helper_command: python3 ./bSmart-System/scripts/bsmart-project-storage-check --configure-internal
+  helper_command_container: python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check --configure-internal
+  optional_overrides:
+    - --workspace <workspace-root>
+    - --project-root <path>
+    - --sandbox-root <path>
+  compose: not required
+  feedback_template: |
+    bSmart - Project storage configured.
+
+    Projects will be stored in ./projects inside this workspace.
+    No Compose or host mount change is required.
 ```
 
 ```yaml
@@ -130,12 +154,12 @@ container_storage_spec:
   not_in_project_volume: true
   minimum_fields:
     project_storage:
-      mode: mounted
-      project_root: /projects
-      host_project_folder: host path used in Compose
+      mode: mounted or internal
+      project_root: /projects for mounted mode, or the workspace ./projects path for internal mode
+      host_project_folder: host path used in Compose, or the same local path when mode is internal
     sandbox_storage:
-      sandbox_root: /sandboxes
-      mode: vps_local_preferred
+      sandbox_root: /sandboxes for mounted mode, or the workspace ./sandboxes path for internal mode
+      mode: vps_local_preferred or workspace_local
 
 ```
 
@@ -161,6 +185,8 @@ startup_check_behavior:
   local_spec_creation:
     mounted_volume: python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check --configure-mounted --host-project-folder <host-path>
     mounted_volume_local: python3 ./bSmart-System/scripts/bsmart-project-storage-check --configure-mounted --host-project-folder <host-path>
+    internal: python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check --configure-internal
+    internal_local: python3 ./bSmart-System/scripts/bsmart-project-storage-check --configure-internal
 
   executable_bit_pitfall: On CIFS/SMB-backed workspaces, file_mode mount options may ignore Git executable bits. Prefer python3 <script> for Python helpers.
   local_platform_fallback: On Windows/macOS checkouts, findmnt may be unavailable; skip host-mount inference and use explicit local paths or BSMART_PROJECT_ROOT/BSMART_SANDBOX_ROOT.

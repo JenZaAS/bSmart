@@ -9,14 +9,18 @@ deletes, or migrates existing instance content.
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPT_DIR = Path(__file__).absolute().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from bsmart_instance import default_content_root
 SYSTEM_ROOT = SCRIPT_DIR.parent
-WORKSPACE_ROOT = SYSTEM_ROOT.parent
-DEFAULT_CONTENT_ROOT = Path("/workspace/bSmart") if Path("/workspace/bSmart").exists() else WORKSPACE_ROOT / "bSmart"
+
+
+DEFAULT_CONTENT_ROOT = default_content_root(SYSTEM_ROOT)
 
 STANDARD_FILES = {
     "bHistory.md": "bSmart_Templates/bHistory.template.md",

@@ -18,7 +18,7 @@ from pathlib import Path
 
 DEFAULT_REPO_URL = "https://github.com/JenZaAS/bSmart.git"
 SYSTEM_ROOT = Path(__file__).resolve().parent.parent
-BOOTSTRAP_HOOK = """Run `python bStart.py` exactly once at the beginning of every new session, including after `/new`, before replying or taking any action. In the first reply, preserve the bStart startup lines and command-help lines; do not replace them with a custom greeting or reduced summary. Follow the startup result and its loaded context.
+BOOTSTRAP_HOOK = """Run `python3 bSmart-System/bStart.py` exactly once at the beginning of every new session, including after `/new`, before replying or taking any action. If `python3` is missing or fails, use `python bSmart-System/bStart.py` (or `py -3 bSmart-System/bStart.py` on Windows). In the first reply, preserve the bStart startup lines and command-help lines; do not replace them with a custom greeting or reduced summary. Follow the startup result and its loaded context.
 
 Hierarchy:
 - `bSmart-System/bSmart.md`: shared system rules and bStart contract.
@@ -28,8 +28,15 @@ Hierarchy:
 
 Do not duplicate system/project rules here. Do not delete or rewrite this hook for task-specific instructions.
 """
-HERMES_HOOK = BOOTSTRAP_HOOK
-AGENTS_HOOK = BOOTSTRAP_HOOK
+
+
+def startup_hook_text() -> str:
+    template = SYSTEM_ROOT / "bSmart_Templates" / "AGENTS.md"
+    if template.is_file():
+        text = template.read_text(encoding="utf-8")
+        if text.strip():
+            return text if text.endswith("\n") else text + "\n"
+    return BOOTSTRAP_HOOK
 
 
 def run(cmd: list[str], *, cwd: Path | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -157,9 +164,10 @@ def main() -> int:
     install_dir(workspace / "bSmart-Extensions", args.uid, args.gid)
 
     files_created: list[str] = []
-    if write_if_missing(workspace / "HERMES.md", HERMES_HOOK):
+    hook = startup_hook_text()
+    if write_if_missing(workspace / "HERMES.md", hook):
         files_created.append("HERMES.md")
-    if write_if_missing(workspace / "AGENTS.md", AGENTS_HOOK):
+    if write_if_missing(workspace / "AGENTS.md", hook):
         files_created.append("AGENTS.md")
 
     agent_md = f"""# bSmart agent profile

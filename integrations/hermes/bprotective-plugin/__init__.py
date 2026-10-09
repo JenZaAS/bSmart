@@ -6,6 +6,7 @@ import json
 import os
 import re
 import secrets
+import subprocess
 import tempfile
 import time
 from pathlib import Path
@@ -47,21 +48,62 @@ def _read_state() -> dict[str, Any]:
     return value if isinstance(value, dict) else {"enabled": False, "pending": None, "error": "state file is invalid"}
 
 
+def _restrict_private(fd: int, temp_name: str) -> None:
+    """Best-effort owner-only access for the private state file.
+
+    On POSIX, mode 0o600 is owner read/write. On Windows, os.chmod only
+    toggles the read-only attribute, so it does not limit access to the
+    owner. There, call System32\\icacls.exe by full path, drop inherited
+    ACEs, and grant the current user read, write, and delete. Delete is
+    required to replace the file on a share where the user only has Modify.
+    A failed or timed-out ACL change must not block the write.
+    """
+    if hasattr(os, "fchmod"):
+        os.fchmod(fd, 0o600)
+    else:
+        os.chmod(temp_name, 0o600)
+    if os.name != "nt":
+        return
+    user = os.environ.get("USERNAME")
+    if not user:
+        return
+    system_root = os.environ.get("SystemRoot") or r"C:\Windows"
+    icacls = system_root.rstrip("\\/") + "\\System32\\icacls.exe"
+    try:
+        subprocess.run(
+            [icacls, temp_name, "/inheritance:r", "/grant:r", f"{user}:(R,W,D)"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
 def _write_state(value: dict[str, Any]) -> None:
     path = _state_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    opened = False
     try:
-        os.fchmod(fd, 0o600)
+        _restrict_private(fd, temp_name)
         with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            opened = True
             json.dump(value, stream, sort_keys=True)
             stream.write("\n")
         os.replace(temp_name, path)
-    finally:
+    except Exception:
+        if not opened:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
         try:
             os.unlink(temp_name)
-        except FileNotFoundError:
+        except OSError:
             pass
+        raise
 
 
 def _confirmation(operation: str) -> str:

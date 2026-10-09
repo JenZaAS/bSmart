@@ -8,4 +8,4 @@ Invoke `$bsmart-project` or `$bsmart-role`, or ask for `/project` or `/role`. Th
 
 This workspace lists the plugin in `.agents/plugins/marketplace.json`. Add that marketplace in Codex, install `bsmart`, trust the startup hook, and start a new session.
 
-Node.js must be available. The hook command uses `python3`. On Windows, use `python` if `python3` is not installed.
+Node.js must be available. The hook command tries `python3`, then `python`, then `py -3`.

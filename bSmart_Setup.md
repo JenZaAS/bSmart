@@ -174,6 +174,12 @@ project_storage:
     compose_line_template: "- <host-project-folder>:/projects:rw"
     helper_command: "python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check --configure-mounted --host-project-folder <host-project-folder>"
     helper_command_local: "python3 ./bSmart-System/scripts/bsmart-project-storage-check --configure-mounted --host-project-folder <host-project-folder>"
+  internal_bsmart:
+    meaning: store projects in ./projects next to the startup hooks; no host mount or Compose change
+    default_project_root: ./projects
+    default_sandbox_root: ./sandboxes
+    helper_command: "python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check --configure-internal"
+    helper_command_local: "python3 ./bSmart-System/scripts/bsmart-project-storage-check --configure-internal"
 
   sandbox:
     canonical_root: /sandboxes
@@ -206,7 +212,8 @@ hermes_project_integration:
     - send `/project list`
   existing_instances:
     - run the integration check during every `/new` startup, even when daily checks are throttled
-    - install/enable the managed adapter when the source and active Hermes home are available
+    - install/enable the managed adapter when Hermes is installed and the adapter is missing or stale
+    - skip the integration without creating a Hermes home when Hermes is not installed
     - report that a restart or relaunch is needed when plugin discovery requires it
   container_defaults:
     hermes_home: /opt/data
@@ -214,6 +221,10 @@ hermes_project_integration:
     project_root: /projects
     state_file: /workspace/bSmart/bSmart_State.md
   desktop_rule: Use the active local Hermes home and local bSmart paths; do not copy the container-specific `/opt/data` path literally.
+  when_hermes_absent:
+    - if the hermes executable is not on PATH and the Hermes home has no config.yaml or SOUL.md, report skipped/not applicable and return success
+    - do not create ~/.hermes or copy the adapter
+    - non-Hermes harnesses use the Cursor, Codex, Claude, or direct bStart.py paths instead of the Hermes plugin
 
 client_plugins:
   purpose: expose the same startup, /project, and /role behavior in Cursor, Codex, and Claude

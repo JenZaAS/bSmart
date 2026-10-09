@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import stat
 import tempfile
 import unittest
 from pathlib import Path
@@ -102,6 +103,42 @@ class BProtectiveTests(unittest.TestCase):
         decision = self.hook(args={"command": "printf safe"})
         self.assertEqual(decision["action"], "block")
         self.assertIsNone(self.hook(tool_name="read_file", args={"path": "/etc/shadow"}))
+
+    def test_private_state_write_succeeds(self):
+        self.call("on")
+        self.assertTrue(self.state.is_file())
+        if os.name != "nt":
+            mode = stat.S_IMODE(self.state.stat().st_mode)
+            self.assertEqual(mode & 0o077, 0)
+
+    def test_windows_acl_uses_full_icacls_and_survives_timeout(self):
+        fd, name = tempfile.mkstemp(prefix="bprotective-acl-", dir=self.home)
+        os.close(fd)
+        calls: list[tuple[list[str], dict]] = []
+
+        def fake_run(args, **kwargs):
+            calls.append((list(args), kwargs))
+            raise self.plugin.subprocess.TimeoutExpired(cmd=args, timeout=kwargs.get("timeout", 10))
+
+        patches = [
+            patch.object(self.plugin.os, "name", "nt"),
+            patch.dict(self.plugin.os.environ, {"USERNAME": "Erling", "SystemRoot": r"C:\Windows"}, clear=False),
+            patch.object(self.plugin.subprocess, "run", side_effect=fake_run),
+        ]
+        if hasattr(self.plugin.os, "fchmod"):
+            patches.append(patch.object(self.plugin.os, "fchmod", lambda *_args, **_kwargs: None))
+        for item in patches:
+            item.start()
+        try:
+            self.plugin._restrict_private(fd, name)
+        finally:
+            for item in reversed(patches):
+                item.stop()
+        self.assertEqual(len(calls), 1)
+        argv, kwargs = calls[0]
+        self.assertEqual(argv[0], r"C:\Windows\System32\icacls.exe")
+        self.assertEqual(argv[-1], "Erling:(R,W,D)")
+        self.assertEqual(kwargs["timeout"], 10)
 
     def test_non_terminal_tools_are_ignored(self):
         prompt = self.call("on")

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import shutil
@@ -17,12 +18,66 @@ _DEFAULT_LEGACY_STATE_FILE = "/workspace/bSmart/bSmart_State.md"
 _DEFAULT_ARCHIVE_ROOT = "/workspace/bSmart/.project-archives"
 
 
+def _system_roots() -> list[Path]:
+    """Checkout that holds scripts/bsmart_instance.py.
+
+    An installed copy under HERMES_HOME/plugins/bsmart-project/ is not next to
+    that file. BSMART_SYSTEM_ROOT wins. When it is unset, the container
+    default /workspace/bSmart-System is used so container-storage.yaml is
+    still read. The source checkout is last, for a plugin that has not been
+    copied out of the repo.
+    """
+    roots: list[Path] = []
+    system = os.environ.get("BSMART_SYSTEM_ROOT")
+    roots.append(Path(system).expanduser() if system else Path(_DEFAULT_SYSTEM_ROOT))
+    here = Path(__file__).resolve()
+    if len(here.parents) >= 4:
+        roots.append(here.parents[3])
+    return roots
+
+
+def _instance_helper():
+    for root in _system_roots():
+        path = root / "scripts" / "bsmart_instance.py"
+        if not path.is_file():
+            continue
+        name = "bsmart_instance_" + str(abs(hash(str(path.absolute()))))
+        spec = importlib.util.spec_from_file_location(name, path)
+        if spec is None or spec.loader is None:
+            continue
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    return None
+
+
+def _instance_workspace() -> Path | None:
+    for root in _system_roots():
+        if (root / "scripts" / "bsmart_instance.py").is_file():
+            return root.resolve().parent
+    return None
+
+
+def _projects_root() -> str:
+    """Env override, then the storage spec, then /projects and ./projects."""
+    override = os.environ.get("BSMART_PROJECT_ROOT")
+    if override:
+        return str(Path(override).expanduser().resolve())
+    helper = _instance_helper()
+    workspace = _instance_workspace()
+    if helper is not None and workspace is not None:
+        selected = helper.select_instance_project_root(workspace)
+        if selected is not None:
+            return str(selected)
+    return str(Path(_DEFAULT_PROJECTS_ROOT).resolve())
+
+
 def _context() -> dict[str, str]:
     """Resolve trusted process configuration, never paths from chat arguments."""
     roles_root = Path(os.environ.get("BSMART_ROLES_ROOT", _DEFAULT_ROLES_ROOT)).resolve()
     selector_file = Path(os.environ.get("BSMART_ROLE_SELECTOR", _DEFAULT_SELECTOR_FILE)).resolve()
     return {
-        "projectsRoot": str(Path(os.environ.get("BSMART_PROJECT_ROOT", _DEFAULT_PROJECTS_ROOT)).resolve()),
+        "projectsRoot": _projects_root(),
         "rolesRoot": str(roles_root),
         "selectorFile": str(selector_file),
         "legacyStateFile": str(Path(os.environ.get("BSMART_LEGACY_STATE_FILE", _DEFAULT_LEGACY_STATE_FILE)).resolve()),

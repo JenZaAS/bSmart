@@ -3,7 +3,7 @@
   "hooks": {
     "sessionStart": [
       {
-        "command": "python ./scripts/session_start.py --client cursor",
+        "command": "python3 ./scripts/session_start.py --client cursor || python ./scripts/session_start.py --client cursor || py -3 ./scripts/session_start.py --client cursor",
         "timeout": 120
       }
     ]

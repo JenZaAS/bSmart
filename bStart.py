@@ -9,14 +9,37 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import importlib.util
 import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 
-SCRIPT_ROOT = Path(__file__).resolve().parent
-DEFAULT_WORKSPACE = SCRIPT_ROOT.parent
+# absolute() keeps a symlinked bSmart-System attached to the instance that
+# launched it. resolve() would follow that link into another instance.
+SCRIPT_ROOT = Path(__file__).absolute().parent
+
+
+def system_checkout(path: Path) -> bool:
+    return (path / "scripts" / "bsmart-system-update-check").is_file()
+
+
+def workspace_root_copy(path: Path) -> bool:
+    """True for the installed bStart.py that sits beside bSmart-System/."""
+    return (path / "bSmart-System").is_dir() and not system_checkout(path)
+
+
+def default_workspace() -> Path:
+    # The canonical file lives in bSmart-System, so the workspace is its parent.
+    # bsmart-instance-upgrade also copies this file to the workspace root; that
+    # copy must not treat the parent of the workspace as the workspace.
+    if workspace_root_copy(SCRIPT_ROOT):
+        return SCRIPT_ROOT
+    return SCRIPT_ROOT.parent
+
+
+DEFAULT_WORKSPACE = default_workspace()
 
 
 def now_utc() -> str:
@@ -31,8 +54,13 @@ def run(command: list[str], cwd: Path, timeout: int = 60) -> subprocess.Complete
         return subprocess.CompletedProcess(command, 1, "", str(exc))
 
 
+def git_safe_directory(repo: Path) -> str:
+    """Forward slashes, so Git's safe.directory match works on Windows."""
+    return os.path.normpath(str(repo)).replace("\\", "/")
+
+
 def git_run(repo: Path, args: list[str], timeout: int = 20) -> subprocess.CompletedProcess[str]:
-    return run(["git", "-c", f"safe.directory={repo}", *args], repo, timeout)
+    return run(["git", "-c", f"safe.directory={git_safe_directory(repo)}", *args], repo, timeout)
 
 
 def first_value(text: str, keys: tuple[str, ...]) -> str | None:
@@ -47,15 +75,35 @@ def first_value(text: str, keys: tuple[str, ...]) -> str | None:
     return None
 
 
+def content_root_for(workspace: Path) -> Path:
+    """Content root for this instance: sibling bSmart, not another instance's.
+
+    Same rule as scripts/bsmart_instance.default_content_root. This file is
+    also copied to the workspace root, so it does not import that module.
+    """
+    sibling = workspace / "bSmart"
+    container = Path("/workspace/bSmart")
+    if sibling.is_dir():
+        return sibling
+    if os.path.normpath(str(workspace.absolute())) == os.path.normpath("/workspace") and container.is_dir():
+        return container
+    return sibling
+
+
 def resolve_paths(workspace: Path) -> tuple[Path, Path]:
     system = workspace / "bSmart-System"
-    content = workspace / "bSmart"
-    if not system.is_dir() and SCRIPT_ROOT.is_dir():
-        system = SCRIPT_ROOT
-        workspace = system.parent
-    if not content.exists() and Path("/workspace/bSmart").is_dir():
-        content = Path("/workspace/bSmart")
-    return system.resolve(), content.resolve()
+    if system.is_dir():
+        # Keep the launched path. Resolving a symlinked bSmart-System jumps to
+        # the checkout it points at and would cache state in that other instance.
+        return system, content_root_for(workspace)
+    if system_checkout(SCRIPT_ROOT):
+        if (workspace / "bSmart").is_dir():
+            return SCRIPT_ROOT, workspace / "bSmart"
+        return SCRIPT_ROOT, content_root_for(SCRIPT_ROOT.parent)
+    if workspace_root_copy(SCRIPT_ROOT):
+        workspace = SCRIPT_ROOT
+        return workspace / "bSmart-System", content_root_for(workspace)
+    return system, content_root_for(workspace)
 
 
 def git_status(repo: Path, label: str) -> str:
@@ -95,7 +143,12 @@ def safe_system_update(system: Path, content: Path, skip: bool) -> tuple[bool, s
     helper = system / "scripts" / "bsmart-system-update-check"
     if not helper.is_file():
         return False, "bSmart-System: update helper unavailable"
-    proc = run([sys.executable, str(helper), "--auto-pull"], system, 90)
+    state = content / "State" / "bsmart-system-update.yaml"
+    proc = run(
+        [sys.executable, str(helper), "--auto-pull", "--repo", str(system), "--state", str(state)],
+        system,
+        90,
+    )
     output = " ".join((proc.stdout + " " + proc.stderr).split())
     updated = "updated" in output.lower() and "skipped" not in output.lower()
     if not output:
@@ -167,7 +220,34 @@ def ensure_role_bootstrap(system: Path, content: Path) -> tuple[str, Path, list[
     return selected, selected_file, notes
 
 
+def load_instance_module():
+    """Load the shared path helper.
+
+    The workspace-root copy of this file does not sit beside the helper, so
+    the import is by path. A unique module name keeps one process from
+    reusing another checkout's copy.
+    """
+    candidates = (
+        SCRIPT_ROOT / "scripts" / "bsmart_instance.py",
+        SCRIPT_ROOT / "bSmart-System" / "scripts" / "bsmart_instance.py",
+    )
+    for path in candidates:
+        if not path.is_file():
+            continue
+        name = "bsmart_instance_" + str(abs(hash(str(path.absolute()))))
+        spec = importlib.util.spec_from_file_location(name, path)
+        if spec is None or spec.loader is None:
+            continue
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    return None
+
+
 def project_root(content: Path) -> Path | None:
+    module = load_instance_module()
+    if module is not None:
+        return module.select_instance_project_root(content.parent)
     override = os.environ.get("BSMART_PROJECT_ROOT")
     if override:
         candidate = Path(override).expanduser()
@@ -189,7 +269,7 @@ def main() -> int:
     parser.add_argument("--skip-update", action="store_true")
     parser.add_argument("--skip-integrity", action="store_true")
     args = parser.parse_args()
-    workspace = Path(args.root).expanduser().resolve()
+    workspace = Path(args.root).expanduser().absolute()
     system, content = resolve_paths(workspace)
     warnings: list[str] = []
     updated, update_line = safe_system_update(system, content, args.skip_update)
@@ -266,7 +346,8 @@ def main() -> int:
     for path in context_files:
         print(f"  - {path}")
     scoped_paths = {agent_file, content / "bGuardrails.md", role_file}
-    scoped_paths.update(path for path in context_files if "/projects/" in str(path) or "/projects" in str(path.parent))
+    if root is not None:
+        scoped_paths.update(path for path in context_files if path == root or root in path.parents)
     for path, text in loaded_context:
         if path in scoped_paths:
             print(f"--- {path} ---")

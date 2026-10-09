@@ -71,6 +71,21 @@ class ClientAdapterTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.adapter.command_text("project", ["--root", "C:/elsewhere"])
 
+    def test_unset_env_uses_the_storage_spec(self):
+        workspace = Path(self.tmp.name)
+        spec_root = workspace / "from-spec"
+        spec_root.mkdir()
+        (workspace / "projects").mkdir(exist_ok=True)
+        spec = workspace / "bSmart" / "State" / "container-storage.yaml"
+        spec.parent.mkdir(parents=True)
+        spec.write_text("project_storage:\n  project_root: ./from-spec\n", encoding="utf-8")
+        env = dict(self.env)
+        env.pop("BSMART_PROJECT_ROOT", None)
+        with patch.dict(os.environ, env, clear=False):
+            os.environ.pop("BSMART_PROJECT_ROOT", None)
+            self.adapter.ensure_environment(workspace)
+            self.assertEqual(Path(os.environ["BSMART_PROJECT_ROOT"]).resolve(), spec_root.resolve())
+
 
 class SessionHookTests(unittest.TestCase):
     def setUp(self):
@@ -122,12 +137,27 @@ class SessionHookTests(unittest.TestCase):
         for relative, name in manifests.items():
             data = json.loads((SYSTEM / relative).read_text(encoding="utf-8"))
             self.assertEqual(data["name"], name)
-        workspace = SYSTEM.parent / ".cursor" / "commands"
         plugin_commands = SYSTEM / "integrations" / "cursor" / "bsmart-plugin" / "commands"
-        for name in ("project.md", "role.md"):
-            self.assertEqual((workspace / name).read_text(encoding="utf-8"), (plugin_commands / name).read_text(encoding="utf-8"))
-        self.assertFalse((workspace / "projcet.md").exists())
+        self.assertTrue((plugin_commands / "project.md").is_file())
+        self.assertTrue((plugin_commands / "role.md").is_file())
         self.assertFalse((plugin_commands / "projcet.md").exists())
+        for installed in (SYSTEM / ".cursor" / "commands", SYSTEM.parent / ".cursor" / "commands"):
+            if not (installed / "project.md").is_file():
+                continue
+            for name in ("project.md", "role.md"):
+                self.assertEqual((installed / name).read_text(encoding="utf-8"), (plugin_commands / name).read_text(encoding="utf-8"))
+            self.assertFalse((installed / "projcet.md").exists())
+
+    def test_session_hooks_fall_back_when_python3_fails(self):
+        for relative in (
+            "integrations/cursor/bsmart-plugin/hooks/hooks.json",
+            "integrations/codex/bsmart-plugin/hooks/hooks.json",
+            "integrations/claude/bsmart-plugin/hooks/hooks.json",
+        ):
+            text = (SYSTEM / relative).read_text(encoding="utf-8")
+            self.assertIn("python3", text)
+            self.assertIn("|| python ", text)
+            self.assertIn("py -3", text)
 
 
 if __name__ == "__main__":

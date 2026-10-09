@@ -15,10 +15,15 @@ import subprocess
 import sys
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPT_DIR = Path(__file__).absolute().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from bsmart_instance import default_content_root, git_safe_directory
 SYSTEM_ROOT = SCRIPT_DIR.parent
-WORKSPACE_ROOT = SYSTEM_ROOT.parent
-CONTENT_ROOT = Path("/workspace/bSmart") if Path("/workspace/bSmart").exists() else WORKSPACE_ROOT / "bSmart"
+
+
+CONTENT_ROOT = default_content_root(SYSTEM_ROOT)
 DEFAULT_REPO = SYSTEM_ROOT
 DEFAULT_STATE = CONTENT_ROOT / "State" / "bsmart-system-update.yaml"
 
@@ -59,7 +64,7 @@ def run(cmd: list[str], cwd: Path, timeout: int = 30) -> subprocess.CompletedPro
 
 
 def git(args: list[str], repo: Path, timeout: int = 30) -> subprocess.CompletedProcess[str]:
-    return run(["git", "-c", f"safe.directory={repo}", *args], repo, timeout=timeout)
+    return run(["git", "-c", f"safe.directory={git_safe_directory(repo)}", *args], repo, timeout=timeout)
 
 
 def fail(state: Path, status: str, detail: str) -> int:

@@ -45,6 +45,38 @@ test('file-level bLock collision stops a competing writer and leaves the lock in
  fs.rmSync(lock); assert.equal(run('/project add Beta').status,'ok');
 });
 
+test('a symlinked projects root is accepted and a symlinked project is rejected', t=>{
+ const base=fs.mkdtempSync(path.join(os.tmpdir(),'bsmart-symlink-'));
+ t.after(()=>fs.rmSync(base,{recursive:true,force:true}));
+ const home=path.join(base,'home'), realProjects=path.join(base,'real-projects'), linked=path.join(base,'linked-projects'), outside=path.join(base,'outside');
+ fs.mkdirSync(home); fs.mkdirSync(realProjects); fs.mkdirSync(outside);
+ fs.writeFileSync(path.join(outside,'secret.txt'),'keep');
+ const rolesRoot=path.join(home,'Roles'); fs.mkdirSync(rolesRoot);
+ const selectorFile=path.join(rolesRoot,'current_role.md'), roleFile=path.join(rolesRoot,'general_role.md');
+ fs.writeFileSync(selectorFile,'```yaml\nrole_selection:\n  current_role: general\n```\n');
+ const roleText=project=>`\`\`\`yaml\nstate:\n  active_project: "${project}"\n  active_workstream: "none"\n\`\`\`\n`;
+ fs.writeFileSync(roleFile,roleText('none'));
+ let skipped=false;
+ try { fs.symlinkSync(realProjects, linked, 'dir'); }
+ catch { skipped=true; }
+ if (skipped) { t.skip('symlinks are unavailable'); return; }
+ const context={home,projectsRoot:linked,rolesRoot,selectorFile,roleFile,archiveRoot:path.join(home,'archives')};
+ const added=execute({command:'/project add Alpha',context});
+ assert.equal(added.status,'ok');
+ assert.ok(fs.existsSync(path.join(realProjects,'Alpha','project.md')));
+ fs.symlinkSync(outside, path.join(realProjects,'Escape'), 'dir');
+ fs.writeFileSync(roleFile,roleText('Escape'));
+ const removed=execute({command:'/project delete',context});
+ assert.equal(removed.status,'error');
+ assert.match(removed.diagnostic,/Symlinks are not allowed/);
+ assert.equal(fs.readFileSync(path.join(outside,'secret.txt'),'utf8'),'keep');
+ fs.symlinkSync(path.join(base,'missing-target'), path.join(realProjects,'Broken'), 'dir');
+ fs.writeFileSync(roleFile,roleText('Broken'));
+ const broken=execute({command:'/project delete',context});
+ assert.equal(broken.status,'error');
+ assert.match(broken.diagnostic,/Symlinks are not allowed/);
+});
+
 test('project rename and delete use selected role state, not legacy state', t=>{
  const {context,run}=fixture(t); run('/project add Alpha');
  const pending=run('/project rename Beta'); assert.equal(pending.status,'pending');
