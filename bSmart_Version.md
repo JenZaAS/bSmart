@@ -2,7 +2,7 @@
 
 ```yaml
 current_version: 0.1.44-draft
-updated: 2026-10-09 12:40 UTC
+updated: 2026-10-09 12:41 UTC
 status: draft
 ```
 
@@ -24,7 +24,8 @@ scope:
   - launch a Windows hermes .cmd shim as one ComSpec /d /s /c command so paths with spaces are not re-quoted
   - realpath a configured projects root once, then reject symlinks and junctions below it, including a broken link
   - resolve the instance project root from BSMART_PROJECT_ROOT, then container-storage.yaml, then /projects and ./projects, in bStart, the client adapter, and the Hermes /project plugin
-  - write bProtective state with POSIX mode 0o600, and on Windows also try an owner-only icacls grant because chmod there is only the read-only bit
+  - let an installed Hermes /project plugin read that spec from /workspace/bSmart-System when BSMART_SYSTEM_ROOT is unset
+  - write bProtective state with POSIX mode 0o600, and on Windows call System32\\icacls.exe with a read/write/delete grant and a 10 second timeout
   - keep update and startup state in the instance that was started when several instances share a machine, including a symlinked bSmart-System
 verification:
   - integration check returns success and creates no Hermes home when hermes is absent
@@ -39,6 +40,8 @@ verification:
   - an enabled current Hermes adapter returns success when hermes is not on PATH
   - a symlinked projects root can create a project, and a symlinked or broken project directory is rejected
   - startup, the client adapter, and the Hermes plugin follow container-storage.yaml when BSMART_PROJECT_ROOT is unset
+  - an installed Hermes plugin copy under hermes-home/plugins/bsmart-project reads the spec when BSMART_SYSTEM_ROOT is unset
+  - the Windows icacls invocation uses System32\\icacls.exe, grants (R,W,D), and a timeout does not fail the write
 ```
 
 ## 0.1.43-draft

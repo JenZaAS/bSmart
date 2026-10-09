@@ -18,15 +18,27 @@ _DEFAULT_LEGACY_STATE_FILE = "/workspace/bSmart/bSmart_State.md"
 _DEFAULT_ARCHIVE_ROOT = "/workspace/bSmart/.project-archives"
 
 
-def _instance_helper():
-    candidates: list[Path] = []
+def _system_roots() -> list[Path]:
+    """Checkout that holds scripts/bsmart_instance.py.
+
+    An installed copy under HERMES_HOME/plugins/bsmart-project/ is not next to
+    that file. BSMART_SYSTEM_ROOT wins. When it is unset, the container
+    default /workspace/bSmart-System is used so container-storage.yaml is
+    still read. The source checkout is last, for a plugin that has not been
+    copied out of the repo.
+    """
+    roots: list[Path] = []
     system = os.environ.get("BSMART_SYSTEM_ROOT")
-    if system:
-        candidates.append(Path(system).expanduser() / "scripts" / "bsmart_instance.py")
+    roots.append(Path(system).expanduser() if system else Path(_DEFAULT_SYSTEM_ROOT))
     here = Path(__file__).resolve()
     if len(here.parents) >= 4:
-        candidates.append(here.parents[3] / "scripts" / "bsmart_instance.py")
-    for path in candidates:
+        roots.append(here.parents[3])
+    return roots
+
+
+def _instance_helper():
+    for root in _system_roots():
+        path = root / "scripts" / "bsmart_instance.py"
         if not path.is_file():
             continue
         name = "bsmart_instance_" + str(abs(hash(str(path.absolute()))))
@@ -40,12 +52,9 @@ def _instance_helper():
 
 
 def _instance_workspace() -> Path | None:
-    system = os.environ.get("BSMART_SYSTEM_ROOT")
-    if system:
-        return Path(system).expanduser().resolve().parent
-    here = Path(__file__).resolve()
-    if len(here.parents) >= 4 and (here.parents[3] / "scripts" / "bsmart_instance.py").is_file():
-        return here.parents[3].parent
+    for root in _system_roots():
+        if (root / "scripts" / "bsmart_instance.py").is_file():
+            return root.resolve().parent
     return None
 
 

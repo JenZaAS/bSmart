@@ -117,6 +117,35 @@ class ProjectPluginTests(unittest.TestCase):
                 selected = Path(self.plugin._context()["projectsRoot"]).resolve()
             self.assertEqual(selected, spec_root.resolve())
 
+    def test_installed_copy_reads_the_spec_without_system_root_env(self):
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            system = workspace / "bSmart-System"
+            scripts = system / "scripts"
+            scripts.mkdir(parents=True)
+            shutil.copy2(SYSTEM_ROOT / "scripts" / "bsmart_instance.py", scripts / "bsmart_instance.py")
+            spec_root = workspace / "from-spec"
+            spec_root.mkdir()
+            (workspace / "projects").mkdir()
+            spec = workspace / "bSmart" / "State" / "container-storage.yaml"
+            spec.parent.mkdir(parents=True)
+            spec.write_text("project_storage:\n  project_root: ./from-spec\n", encoding="utf-8")
+            installed = workspace / "hermes-home" / "plugins" / "bsmart-project" / "__init__.py"
+            installed.parent.mkdir(parents=True)
+            shutil.copy2(PLUGIN, installed)
+            spec_mod = importlib.util.spec_from_file_location("bsmart_project_plugin_installed", installed)
+            assert spec_mod is not None and spec_mod.loader is not None
+            plugin = importlib.util.module_from_spec(spec_mod)
+            spec_mod.loader.exec_module(plugin)
+            plugin._DEFAULT_SYSTEM_ROOT = str(system)
+            env = os.environ.copy()
+            env.pop("BSMART_SYSTEM_ROOT", None)
+            env.pop("BSMART_PROJECT_ROOT", None)
+            with patch.dict(os.environ, env, clear=True):
+                selected = Path(plugin._projects_root()).resolve()
+            self.assertEqual(selected, spec_root.resolve())
+            self.assertFalse((workspace / "scripts" / "bsmart_instance.py").exists())
+
     def test_chat_arguments_cannot_override_context(self):
         other = Path(self.tmp.name) / "other"
         other.mkdir()

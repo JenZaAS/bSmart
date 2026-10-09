@@ -53,8 +53,10 @@ def _restrict_private(fd: int, temp_name: str) -> None:
 
     On POSIX, mode 0o600 is owner read/write. On Windows, os.chmod only
     toggles the read-only attribute, so it does not limit access to the
-    owner. There, also ask icacls to drop inherited ACEs and grant the
-    current user read/write. A failed ACL change must not block the write.
+    owner. There, call System32\\icacls.exe by full path, drop inherited
+    ACEs, and grant the current user read, write, and delete. Delete is
+    required to replace the file on a share where the user only has Modify.
+    A failed or timed-out ACL change must not block the write.
     """
     if hasattr(os, "fchmod"):
         os.fchmod(fd, 0o600)
@@ -65,14 +67,17 @@ def _restrict_private(fd: int, temp_name: str) -> None:
     user = os.environ.get("USERNAME")
     if not user:
         return
+    system_root = os.environ.get("SystemRoot") or r"C:\Windows"
+    icacls = system_root.rstrip("\\/") + "\\System32\\icacls.exe"
     try:
         subprocess.run(
-            ["icacls", temp_name, "/inheritance:r", "/grant:r", f"{user}:(R,W)"],
+            [icacls, temp_name, "/inheritance:r", "/grant:r", f"{user}:(R,W,D)"],
             check=False,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            timeout=10,
         )
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         pass
 
 
