@@ -1,5 +1,9 @@
 # bSmart role (deprecated)
 
+status: deprecated
+
+Do not install this file. It is a historical shape, not a live template.
+
 Roles are deprecated. Do not create a new role file from this template.
 
 A historical role file looked like this:

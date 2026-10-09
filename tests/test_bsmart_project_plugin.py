@@ -54,6 +54,21 @@ class ProjectPluginTests(unittest.TestCase):
 
     def call(self, command, args=""):
         with patch.dict(os.environ, self.env, clear=False):
+            for key in (
+                "BSMART_SESSION_ID",
+                "BSMART_SESSION_PROJECT",
+                "BSMART_SESSION_WORKSTREAM",
+                "BSMART_SESSION_HANDOFF",
+                "HERMES_SESSION_KEY",
+                "HERMES_SESSION_ID",
+                "CLAUDE_SESSION_ID",
+                "CURSOR_CONVERSATION_ID",
+                "CURSOR_SESSION_ID",
+                "CODEX_THREAD_ID",
+                "CODEX_SESSION_ID",
+            ):
+                if key not in self.env:
+                    os.environ.pop(key, None)
             return self.ctx.commands[command]["handler"](args)
 
     def test_registers_project_and_deprecated_role_and_lists(self):
@@ -77,21 +92,34 @@ class ProjectPluginTests(unittest.TestCase):
 
     def test_two_sessions_do_not_share_a_selector(self):
         self.call("project", "add Alpha")
-        self.call("project", "add Beta")
+        self.call("project", "add Beta handoff: left Alpha")
         self.assertFalse((Path(self.tmp.name) / "Roles" / "current_role.md").exists())
         env_a = dict(self.env)
         env_b = dict(self.env)
         env_a["BSMART_SESSION_PROJECT"] = "Alpha"
         env_b["BSMART_SESSION_PROJECT"] = "Beta"
         with patch.dict(os.environ, env_a, clear=False):
+            os.environ.pop("BSMART_SESSION_ID", None)
             listed_a = self.ctx.commands["project"]["handler"]("list")
         with patch.dict(os.environ, env_b, clear=False):
+            os.environ.pop("BSMART_SESSION_ID", None)
             listed_b = self.ctx.commands["project"]["handler"]("list")
         self.assertIn("- Alpha (current)", listed_a)
         self.assertNotIn("- Beta (current)", listed_a)
         self.assertIn("- Beta (current)", listed_b)
         self.assertNotIn("- Alpha (current)", listed_b)
-        self.assertFalse((Path(self.tmp.name) / "State" / "sessions").exists())
+        self.assertFalse((Path(self.tmp.name) / "Roles" / "current_role.md").exists())
+
+    def test_select_then_delete_without_a_session_env(self):
+        self.assertIn("Current: Gamma", self.call("project", "add Gamma"))
+        prompt = self.call("project", "delete")
+        self.assertIn("Confirmation required: delete exact target", prompt)
+        pending_id = next(line for line in prompt.splitlines() if line.startswith("Yes:")).rsplit(" ", 1)[1]
+        result = self.call("project", f"yes {pending_id}")
+        self.assertIn("Free Mode", result)
+        self.assertFalse((self.projects / "Gamma").exists())
+        stored = json.loads((Path(self.tmp.name) / "State" / "sessions" / "channel-client.json").read_text(encoding="utf-8"))
+        self.assertIsNone(stored["project"])
 
     def test_real_no_continuation(self):
         self.call("project", "add Keep")

@@ -42,6 +42,21 @@ class ClientAdapterTests(unittest.TestCase):
 
     def run_adapter(self, kind: str, args: list[str]) -> str:
         with patch.dict(os.environ, self.env, clear=False):
+            for key in (
+                "BSMART_SESSION_ID",
+                "BSMART_SESSION_PROJECT",
+                "BSMART_SESSION_WORKSTREAM",
+                "BSMART_SESSION_HANDOFF",
+                "HERMES_SESSION_KEY",
+                "HERMES_SESSION_ID",
+                "CLAUDE_SESSION_ID",
+                "CURSOR_CONVERSATION_ID",
+                "CURSOR_SESSION_ID",
+                "CODEX_THREAD_ID",
+                "CODEX_SESSION_ID",
+            ):
+                if key not in self.env:
+                    os.environ.pop(key, None)
             return self.adapter.run(kind, args, workspace=Path(self.tmp.name))
 
     def test_lists_and_creates_in_the_isolated_root(self):
@@ -58,6 +73,32 @@ class ClientAdapterTests(unittest.TestCase):
         other = self.run_adapter("project", ["list"])
         self.assertNotIn("- Alpha (current)", other)
         self.assertIn("Current: Beta", other)
+
+    def test_selected_project_is_remembered_for_delete_and_handoff(self):
+        self.assertIn("Current: Gamma", self.run_adapter("project", ["add", "Gamma"]))
+        blocked = self.run_adapter("project", ["add", "Beta"])
+        self.assertIn("handoff:", blocked)
+        self.assertFalse((self.projects / "Beta").exists())
+        switched = self.run_adapter("project", ["add", "Beta", "handoff:", "Wrapped", "Gamma"])
+        self.assertIn("Current: Beta", switched)
+        self.assertIn("Wrapped Gamma", (self.projects / "Gamma" / "handoff.md").read_text(encoding="utf-8"))
+        prompt = self.run_adapter("project", ["delete"])
+        self.assertIn("Confirmation required: delete exact target", prompt)
+        pending_id = next(line for line in prompt.splitlines() if line.startswith("Yes:")).rsplit(" ", 1)[1]
+        removed = self.run_adapter("project", ["yes", pending_id])
+        self.assertIn("Free Mode", removed)
+        self.assertFalse((self.projects / "Beta").exists())
+
+    def test_named_delete_does_not_need_the_remembered_session(self):
+        self.run_adapter("project", ["add", "Gamma"])
+        self.env["BSMART_SESSION_ID"] = "other-chat"
+        prompt = self.run_adapter("project", ["delete", "Gamma"])
+        self.assertIn("Confirmation required: delete exact target", prompt)
+        self.env.pop("BSMART_SESSION_ID")
+        pending_id = next(line for line in prompt.splitlines() if line.startswith("Yes:")).rsplit(" ", 1)[1]
+        removed = self.run_adapter("project", ["yes", pending_id])
+        self.assertIn("Free Mode", removed)
+        self.assertFalse((self.projects / "Gamma").exists())
 
     def test_role_command_is_deprecated(self):
         text = self.run_adapter("role", [])

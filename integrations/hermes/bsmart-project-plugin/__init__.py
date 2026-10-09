@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -70,24 +71,71 @@ def _projects_root() -> str:
     return str(Path(_DEFAULT_PROJECTS_ROOT).resolve())
 
 
-def _context() -> dict[str, str]:
-    """Resolve trusted process configuration, never paths from chat arguments.
+_HARNESS_SESSION_KEYS = (
+    "HERMES_SESSION_KEY",
+    "HERMES_SESSION_ID",
+    "CLAUDE_SESSION_ID",
+    "CURSOR_CONVERSATION_ID",
+    "CURSOR_SESSION_ID",
+    "CODEX_THREAD_ID",
+    "CODEX_SESSION_ID",
+)
 
-    Session selection is not read from a shared file. A harness may pass
-    BSMART_SESSION_PROJECT for this process only, or BSMART_SESSION_ID when it
-    has a stable id for this conversation. Neither value is an instance-wide selector.
+
+def _sanitize_session_id(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_-]+", "-", value).strip("-_")[:80]
+
+
+def _hermes_context_value(name: str) -> str:
+    """Hermes keeps the live chat id in a context variable, not os.environ."""
+    try:
+        from gateway.session_context import get_session_env
+    except ImportError:
+        return ""
+    try:
+        return str(get_session_env(name, "") or "").strip()
+    except Exception:
+        return ""
+
+
+def _channel_session_id() -> str:
+    """Stable id for this conversation. Fallback is one channel per instance home.
+
+    A harness that exposes a session id gets its own file. Parallel chats on a
+    harness that exposes none share channel-client; /project delete NAME does
+    not depend on that file.
     """
+    explicit = os.environ.get("BSMART_SESSION_ID", "").strip()
+    if explicit:
+        cleaned = _sanitize_session_id(explicit)
+        if not cleaned or not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", cleaned):
+            raise ValueError("Invalid session id")
+        return cleaned
+    for name in ("HERMES_SESSION_KEY", "HERMES_SESSION_ID"):
+        value = _hermes_context_value(name) or os.environ.get(name, "").strip()
+        if value:
+            cleaned = _sanitize_session_id("hermes-" + value)
+            if cleaned:
+                return cleaned
+    for name in _HARNESS_SESSION_KEYS:
+        value = os.environ.get(name, "").strip()
+        if not value:
+            continue
+        cleaned = _sanitize_session_id(name.lower().replace("_", "-") + "-" + value)
+        if cleaned:
+            return cleaned
+    return "channel-client"
+
+
+def _context() -> dict[str, str]:
+    """Resolve trusted process configuration, never paths from chat arguments."""
     archive = Path(os.environ.get("BSMART_ARCHIVE_ROOT", _DEFAULT_ARCHIVE_ROOT)).resolve()
     home = Path(os.environ.get("BSMART_INSTANCE_HOME", "")).expanduser().resolve() if os.environ.get("BSMART_INSTANCE_HOME") else archive.parent
-    context = {
+    return {
         "projectsRoot": _projects_root(),
         "archiveRoot": str(archive),
         "home": str(home),
     }
-    session_id = os.environ.get("BSMART_SESSION_ID", "").strip()
-    if session_id:
-        context["sessionId"] = session_id
-    return context
 
 
 def _session_from_env() -> dict[str, str | None] | None:
@@ -126,8 +174,18 @@ def _execute(command: str) -> dict[str, Any]:
     try:
         request: dict[str, Any] = {"command": command, "context": _context()}
         session = _session_from_env()
-        if session is not None:
+        explicit_id = os.environ.get("BSMART_SESSION_ID", "").strip()
+        # An explicit project env is this process only and must not overwrite
+        # another conversation's file. With no project env, persist by session id.
+        if session is not None and not explicit_id:
             request["session"] = session
+        else:
+            try:
+                request["context"]["sessionId"] = _channel_session_id()
+            except ValueError as exc:
+                return {"status": "error", "diagnostic": str(exc)}
+            if session is not None:
+                request["session"] = session
         handoff = os.environ.get("BSMART_SESSION_HANDOFF", "").strip()
         if handoff:
             request["handoff"] = handoff

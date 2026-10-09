@@ -98,13 +98,17 @@ class MigrationTests(unittest.TestCase):
             self.assertTrue(handoff.startswith("# Handoff\n\nORIGINAL"))
             self.assertIn("Ship the cut", handoff)
             self.assertIn("Resume the parser", handoff)
-            self.assertIn("custom_note: keep me", handoff)
-            self.assertIn("unknown: retain", handoff)
+            self.assertNotIn("custom_note", handoff)
+            self.assertNotIn("unknown:", handoff)
+            review = (content / "State" / "role-migration-review.md").read_text(encoding="utf-8")
+            self.assertIn("custom_note: keep me", review)
+            self.assertIn("unknown: retain", review)
+            self.assertIn("custom_note: keep me", (backup / "roles-migration" / "review.md").read_text(encoding="utf-8"))
             stream_handoff = (alpha / "workstreams" / "Build" / "handoff.md").read_text(encoding="utf-8")
             self.assertIn("Review the log", stream_handoff)
             self.assertNotIn("ORIGINAL", stream_handoff)
             role.write_text("changed after migration\n", encoding="utf-8")
-            original_handoff.write_text("changed handoff\n", encoding="utf-8")
+            role.chmod(0o444)
             restored = session["restore_workspace"](workspace, backup, projects)
             self.assertIn("restore complete", "\n".join(restored))
             self.assertEqual(role.read_bytes(), role_bytes)
@@ -163,6 +167,86 @@ class MigrationTests(unittest.TestCase):
                 sys.argv = old
             self.assertIn("active_project: Alpha", (roles / "general_role.md").read_text(encoding="utf-8"))
             self.assertIn("restore complete", restore_out.getvalue())
+
+    def test_non_utf8_handoff_keeps_a_manifest_and_can_restore(self):
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            content = workspace / "bSmart"
+            roles = content / "Roles"
+            roles.mkdir(parents=True)
+            projects = workspace / "projects"
+            alpha = projects / "Alpha"
+            beta = projects / "Beta"
+            alpha.mkdir(parents=True)
+            beta.mkdir()
+            (alpha / "handoff.md").write_text("# Handoff\n\nAlpha\n", encoding="utf-8")
+            beta_bytes = "Beta caf\xe9\n".encode("cp1252")
+            (beta / "handoff.md").write_bytes(beta_bytes)
+            (roles / "alpha_role.md").write_text("active_project: Alpha\ncurrent_focus: Keep alpha\n", encoding="utf-8")
+            (roles / "beta_role.md").write_text("active_project: Beta\ncurrent_focus: Keep beta\n", encoding="utf-8")
+            backup = workspace / ".bsmart-upgrade-backups" / "stamp"
+            report = "\n".join(session["migrate_workspace"](workspace, backup, projects))
+            self.assertIn("migrated alpha -> Alpha/handoff.md", report)
+            self.assertIn("not UTF-8", report)
+            self.assertTrue((backup / "roles-migration" / "manifest.json").is_file())
+            self.assertEqual((beta / "handoff.md").read_bytes(), beta_bytes)
+            self.assertIn("Keep alpha", (alpha / "handoff.md").read_text(encoding="utf-8"))
+            restored = "\n".join(session["restore_workspace"](workspace, backup, projects))
+            self.assertIn("restore complete", restored)
+            self.assertEqual((beta / "handoff.md").read_bytes(), beta_bytes)
+            self.assertEqual((alpha / "handoff.md").read_text(encoding="utf-8"), "# Handoff\n\nAlpha\n")
+
+    def test_later_notes_survive_a_second_migrate_and_restore(self):
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            content = workspace / "bSmart"
+            roles = content / "Roles"
+            roles.mkdir(parents=True)
+            projects = workspace / "projects" / "Alpha"
+            projects.mkdir(parents=True)
+            handoff = projects / "handoff.md"
+            handoff.write_text("# Handoff\n\nORIGINAL\n", encoding="utf-8")
+            (roles / "developer_role.md").write_text("active_project: Alpha\ncurrent_focus: Ship\n", encoding="utf-8")
+            first = workspace / ".bsmart-upgrade-backups" / "first"
+            session["migrate_workspace"](workspace, first, workspace / "projects")
+            handoff.write_text(handoff.read_text(encoding="utf-8") + "REAL NOTES\n", encoding="utf-8")
+            second = workspace / ".bsmart-upgrade-backups" / "second"
+            again = "\n".join(session["migrate_workspace"](workspace, second, workspace / "projects"))
+            self.assertIn("already migrated", again)
+            self.assertFalse((second / "roles-migration").exists())
+            self.assertIn("REAL NOTES", handoff.read_text(encoding="utf-8"))
+            restored = "\n".join(session["restore_workspace"](workspace, first, workspace / "projects"))
+            self.assertIn("kept Alpha/handoff.md", restored)
+            self.assertIn("REAL NOTES", handoff.read_text(encoding="utf-8"))
+            self.assertIn("Ship", handoff.read_text(encoding="utf-8"))
+
+    def test_upgrade_catches_a_decode_error(self):
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            system = workspace / "bSmart-System"
+            (system / "bSmart_Templates").mkdir(parents=True)
+            (system / "bStart.py").write_text("new bStart\n", encoding="utf-8")
+            (system / "bSmart_Templates" / "AGENTS.md").write_text("Run `python bStart.py`.\n", encoding="utf-8")
+            (workspace / "bSmart").mkdir()
+            original = upgrade["main"].__globals__["migrate_workspace"]
+
+            def boom(*_args, **_kwargs):
+                raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")
+
+            upgrade["main"].__globals__["migrate_workspace"] = boom
+            output = io.StringIO()
+            import sys
+            old = sys.argv
+            try:
+                sys.argv = [str(UPGRADE), "--workspace", str(workspace)]
+                with contextlib.redirect_stdout(output):
+                    code = upgrade["main"]()
+            finally:
+                sys.argv = old
+                upgrade["main"].__globals__["migrate_workspace"] = original
+            self.assertEqual(code, 1)
+            self.assertIn("role_migration: blocked", output.getvalue())
+            self.assertNotIn("Traceback", output.getvalue())
 
 
 if __name__ == "__main__":

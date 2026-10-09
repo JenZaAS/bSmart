@@ -3,7 +3,9 @@
 
 This is the tracked system entrypoint. It performs safe system freshness checks,
 reads the project index, and emits a compact startup payload. A new session
-starts in Free mode. It does not read or write a shared project selector.
+starts in Free mode. BSMART_SESSION_PROJECT and BSMART_SESSION_WORKSTREAM, when
+this process sets them, are this session's selection. Startup does not read
+State/sessions or a role file.
 """
 from __future__ import annotations
 
@@ -282,6 +284,19 @@ def project_catalog(root: Path | None, warnings: list[str]) -> list[str]:
     return lines
 
 
+def session_lines() -> tuple[str, str]:
+    """Show this process's session. An unset variable is Free mode, not a guess."""
+    project = os.environ.get("BSMART_SESSION_PROJECT", "").strip()
+    workstream = os.environ.get("BSMART_SESSION_WORKSTREAM", "").strip()
+    if project.lower() in {"", "none", "free"}:
+        project = ""
+    if workstream.lower() in {"", "none"}:
+        workstream = ""
+    if not project:
+        return "Project (session): Free mode", "Workstream: none"
+    return f"Project (session): {project}", f"Workstream: {workstream or 'none'}"
+
+
 def main() -> int:
     configure_output_streams()
     parser = argparse.ArgumentParser(description="Run deterministic bSmart session startup.")
@@ -318,10 +333,14 @@ def main() -> int:
     active_lines: list[str] = []
     if root is None:
         project_line = "Project (session): unavailable"
+        workstream_line = "Workstream: none"
         warnings.append("Projects are currently unavailable; the project mount appears to be down.")
     else:
-        project_line = "Project (session): Free mode"
+        project_line, workstream_line = session_lines()
         active_lines = project_catalog(root, warnings)
+        selected = os.environ.get("BSMART_SESSION_PROJECT", "").strip()
+        if selected and selected.lower() not in {"none", "free"} and not (root / selected).is_dir():
+            warnings.append(f"Project {selected} is not in the projects root.")
     for path in context_files:
         try:
             loaded_context.append((path, path.read_text(encoding="utf-8", errors="replace")))
@@ -332,7 +351,7 @@ def main() -> int:
     print(f"Agent: {agent}")
     print(project_line)
     print("  Use: /project list | /project <project> | /project add <project> | /project help")
-    print("Workstream: none")
+    print(workstream_line)
     print("  Use: /project ws <workstream> | /project add ws <workstream> | /project help")
     print("Active projects:")
     if active_lines:

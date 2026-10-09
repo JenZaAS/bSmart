@@ -120,11 +120,39 @@ def payload(client: str, text: str) -> dict:
     raise ValueError(f"Unknown client: {client}")
 
 
+def publish_session_id(data: dict) -> None:
+    """Give later /project commands this conversation's id when the hook can.
+
+    Claude Code reads CLAUDE_ENV_FILE into the session's later commands.
+    Other clients pick up BSMART_SESSION_ID, or their own session env, themselves.
+    """
+    raw = ""
+    for key in ("session_id", "conversation_id", "sessionId", "thread_id"):
+        value = data.get(key)
+        if isinstance(value, str) and value.strip():
+            raw = value.strip()
+            break
+    if not raw:
+        return
+    cleaned = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in raw).strip("-_")[:80]
+    if not cleaned:
+        return
+    path = os.environ.get("CLAUDE_ENV_FILE", "").strip()
+    if not path:
+        return
+    try:
+        with open(path, "a", encoding="utf-8") as handle:
+            handle.write(f"BSMART_SESSION_ID={cleaned}\n")
+    except OSError:
+        return
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Emit bSmart session-start context.")
     parser.add_argument("--client", required=True, choices=CLIENTS)
     args = parser.parse_args(argv)
     data = read_payload()
+    publish_session_id(data)
     workspace = workspace_from(data)
     if workspace is None:
         text = context_text(

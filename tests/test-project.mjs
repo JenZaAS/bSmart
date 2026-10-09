@@ -165,6 +165,30 @@ test('a symlinked projects root is accepted and a symlinked project is rejected'
   assert.match(broken.diagnostic, /Symlinks are not allowed/);
 });
 
+test('named delete works without a session and handoff text can travel in the command', t => {
+  const { context, projectsRoot } = fixture(t);
+  const alpha = run(context, '/project add Alpha');
+  assert.equal(alpha.status, 'ok');
+  const blocked = run(context, '/project add Beta handoff:', { session: alpha.session });
+  assert.equal(blocked.status, 'error');
+  const switched = run(context, '/project add Beta handoff: Wrapped Alpha before Beta.', { session: alpha.session });
+  assert.equal(switched.status, 'ok');
+  assert.equal(switched.session.project, 'Beta');
+  assert.match(fs.readFileSync(path.join(projectsRoot, 'Alpha', 'handoff.md'), 'utf8'), /Wrapped Alpha before Beta/);
+  const unnamed = run(context, '/project delete');
+  assert.equal(unnamed.status, 'error');
+  assert.match(unnamed.diagnostic, /No project selected/);
+  const pending = run(context, '/project delete Beta');
+  assert.equal(pending.status, 'pending');
+  assert.equal(pending.pending.project, 'Beta');
+  const removed = run(context, '/project yes', { confirmation: { id: pending.pending.id, answer: 'yes' } });
+  assert.equal(removed.status, 'ok');
+  assert.equal(fs.existsSync(path.join(projectsRoot, 'Beta')), false);
+  const fuzzy = run(context, '/project delete Alph');
+  assert.equal(fuzzy.status, 'error');
+  assert.equal(fs.existsSync(path.join(projectsRoot, 'Alpha')), true);
+});
+
 test('project rename and delete use the session, not a role file', t => {
   const { context, home, projectsRoot } = fixture(t);
   const created = run(context, '/project add Alpha');

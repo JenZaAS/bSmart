@@ -1,5 +1,9 @@
 # bSmart current role (deprecated)
 
+status: deprecated
+
+Do not install this file. It is a historical shape, not a live template.
+
 Do not create this file. `current_role.md` was the instance-wide role selector. It is not a session's project.
 
 Historical shape:

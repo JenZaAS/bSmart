@@ -142,6 +142,14 @@ function tokens(command) {
   }
   return out;
 }
+function splitCommandHandoff(command, handoff) {
+  const args = tokens(String(command ?? '').trim());
+  const at = args.indexOf('handoff:');
+  if (at < 0) return { command, handoff };
+  const text = args.slice(at + 1).join(' ').trim();
+  if (!text) fail('Handoff text required after handoff:');
+  return { command: args.slice(0, at).join(' '), handoff: text };
+}
 function shortLabel(project) {
   const parts = project.match(/[A-Z]+(?![a-z])|[A-Z]?[a-z]+|[0-9]+/g) || [];
   const letters = parts.length >= 2 ? parts.map(part => part[0]).join('') : project.replace(/[^A-Za-z0-9]/g, '').slice(0, 4);
@@ -278,6 +286,13 @@ function projectTarget(c, project) {
   if (!fs.existsSync(target) || !fs.statSync(target).isDirectory()) fail('Current project does not exist');
   return target;
 }
+function exactProjectName(c, project) {
+  name(project);
+  const target = path.join(c.projectsRoot, project);
+  if (!fs.existsSync(target) || !fs.statSync(target).isDirectory()) fail('Project does not exist');
+  projectTarget(c, project);
+  return project;
+}
 function handoffFile(c, session) {
   const base = projectTarget(c, session.project);
   if (!session.workstream) return safePath(path.join(base, 'handoff.md'));
@@ -335,7 +350,7 @@ function requireSwitchHandoff(session, project, handoff) {
     status: 'handoff_required',
     session,
     selection: { project: session.project, workstream: session.workstream, cwd: null },
-    diagnostic: `Write a short handoff for ${where} before switching. Repeat the command with that wrap-up. Selection was not changed.`,
+    diagnostic: `Write a short handoff for ${where} before switching. Repeat the command and add handoff: <wrap-up>. Selection was not changed.`,
   };
 }
 function noteLeavingScope(c, session, project, workstream, handoff) {
@@ -407,7 +422,7 @@ function perform(command, c, session, handoff) {
   const args = tokens(command.trim());
   if (args.shift() !== '/project') fail('Expected /project');
   if (args.length === 1 && args[0] === 'help') {
-    return { status: 'ok', session, diagnostic: 'Projects are the unit. The active project and workstream belong to this session only and are not stored in a shared selector. Commands: /project help, /project list, /project list --all, /project NAME [WORKSTREAM], /project ws WORKSTREAM, /project free, /project add NAME, /project add ws WORKSTREAM, /project label LABEL, /project describe TEXT, /project alias WORDS, /project rename NAME, /project retire, /project delete, /project index, /project index repair.' };
+    return { status: 'ok', session, diagnostic: 'Projects are the unit. This session remembers its project. Commands: /project help, /project list, /project list --all, /project NAME [WORKSTREAM], /project NAME handoff: TEXT, /project ws WORKSTREAM, /project free, /project add NAME, /project add ws WORKSTREAM, /project label LABEL, /project describe TEXT, /project alias WORDS, /project rename NEWNAME, /project rename CURRENT NEW, /project retire [NAME], /project delete [NAME], /project index, /project index repair.' };
   }
   if (!args.length || (args[0] === 'list' && (args.length === 1 || (args.length === 2 && ['--all', 'all'].includes(args[1]))))) {
     const all = args[1] === '--all' || args[1] === 'all';
@@ -540,8 +555,10 @@ function destructive(command, c, session, confirmation) {
     c.ops.unlinkSync(file);
     if (answer === 'no') return { status: 'cancelled', session, diagnostic: 'Cancelled; no project changed' };
     if (Date.now() > pending.expiresAt || JSON.stringify(pending.context) !== JSON.stringify(binding(c, { project: pending.project, workstream: pending.workstream || null }))) fail('Expired or stale confirmation');
-    if (session.project && session.project !== pending.project) fail('Current project changed');
-    if (session.project && (session.workstream || null) !== (pending.workstream || null)) fail('Current workstream changed');
+    if (!pending.named) {
+      if (session.project && session.project !== pending.project) fail('Current project changed');
+      if (session.project && (session.workstream || null) !== (pending.workstream || null)) fail('Current workstream changed');
+    }
     const target = safePath(path.join(c.projectsRoot, pending.project));
     if (pending.target !== target || pending.identity !== identity(target) || pending.manifestHash !== hash(manifest(target))) fail('Project changed since confirmation');
     if (pending.operation === 'rename') {
@@ -614,16 +631,32 @@ function destructive(command, c, session, confirmation) {
     return result;
   }
   if (!['rename', 'retire', 'delete'].includes(op)) return null;
-  if (args.length !== (op === 'rename' ? 2 : 1)) fail('Destructive commands act only on the exact current project');
-  if (!session.project) fail('No project selected in this session. Use /project NAME.');
-  const project = session.project;
+  let project = session.project;
+  let newName = null;
+  let named = false;
+  if (op === 'rename') {
+    if (args.length === 2) {
+      if (!session.project) fail('No project selected in this session. Use /project rename CURRENT NEW.');
+      newName = args[1];
+    } else if (args.length === 3) {
+      project = exactProjectName(c, args[1]);
+      newName = args[2];
+      named = true;
+    } else fail('Use /project rename NEWNAME or /project rename CURRENT NEW');
+  } else if (args.length === 1) {
+    if (!session.project) fail(`No project selected in this session. Use /project ${op} NAME.`);
+  } else if (args.length === 2) {
+    project = exactProjectName(c, args[1]);
+    named = true;
+  } else fail(`Use /project ${op} or /project ${op} NAME`);
+  const bound = { project, workstream: !named || session.project === project ? session.workstream : null };
   const target = projectTarget(c, project);
   if (!outside(target, file) || !outside(target, c.archiveRoot) || !outside(target, c.indexFile)) fail('Pending storage, archive and index must be outside target');
-  if (op === 'rename') absent(c.projectsRoot, args[1]);
+  if (op === 'rename') absent(c.projectsRoot, newName);
   if (op === 'retire' && !outside(c.projectsRoot, c.archiveRoot)) fail('Archive root must be outside projects root');
   const pending = {
-    id: crypto.randomUUID(), operation: op, project, workstream: session.workstream, target,
-    newName: op === 'rename' ? args[1] : null, context: binding(c, session),
+    id: crypto.randomUUID(), operation: op, project, workstream: bound.workstream, target, named,
+    newName, context: binding(c, bound),
     identity: identity(target), manifestHash: hash(manifest(target)), expiresAt: Date.now() + 300000,
   };
   atomic(c, file, JSON.stringify(pending));
@@ -647,6 +680,9 @@ function executeWith(ops, { command, context, confirmation, session, handoff } =
   let operationError;
   try {
     c = contextOf(context, ops);
+    const parsed = splitCommandHandoff(command, handoff);
+    command = parsed.command;
+    handoff = parsed.handoff;
     const active = session != null ? normalizeSession(session) : loadStoredSession(c);
     if (!wantsLock(command)) {
       operationResult = destructive(command, c, active, confirmation) ?? perform(command, c, active, handoff);

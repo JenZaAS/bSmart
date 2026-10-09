@@ -6,11 +6,14 @@ index, handoff migration, and the backup that makes that migration reversible.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
 import shutil
+import stat
 import sys
+import uuid
 from pathlib import Path
 
 INDEX_NAME = "INDEX.md"
@@ -288,7 +291,7 @@ def _unknown(found: dict[str, list[str]]) -> list[str]:
     return lines
 
 
-def _section(source: str, project: str, workstream: str | None, focus: str | None, handoff: str | None, unknown: list[str]) -> str:
+def _section(source: str, project: str, workstream: str | None, focus: str | None, handoff: str | None) -> str:
     lines = [f"## Migrated from {source}", "", f"- active_project: {project}"]
     if workstream and not _blank(workstream):
         lines.append(f"- active_workstream: {workstream}")
@@ -296,10 +299,76 @@ def _section(source: str, project: str, workstream: str | None, focus: str | Non
         lines.append(f"- current_focus: {focus}")
     if handoff and not _blank(handoff):
         lines.append(f"- task_handoff: {handoff}")
-    if unknown:
-        lines.extend(["", "### Fields preserved for review", ""])
-        lines.extend(f"- {item}" for item in unknown)
     return "\n".join(lines)
+
+
+def _sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    return _sha256_bytes(path.read_bytes())
+
+
+def migration_marker(workspace: Path) -> Path:
+    return workspace / "bSmart" / "State" / "role-migration.json"
+
+
+def _read_utf8(path: Path) -> str:
+    """Read UTF-8 text. A legacy code page raises UnicodeDecodeError instead of crashing later."""
+    return path.read_bytes().decode("utf-8")
+
+
+def _chmod_writable(path: Path) -> None:
+    try:
+        os.chmod(path, path.stat().st_mode | stat.S_IWRITE | stat.S_IREAD)
+    except OSError:
+        pass
+
+
+def _on_remove_error(func, path, _exc) -> None:
+    _chmod_writable(Path(path))
+    func(path)
+
+
+def _remove_tree(path: Path) -> None:
+    if path.is_symlink() or path.is_file():
+        _chmod_writable(path)
+        path.unlink()
+        return
+    if not path.exists():
+        return
+    shutil.rmtree(path, onexc=_on_remove_error)
+
+
+def _swap_tree(source: Path, dest: Path) -> None:
+    """Copy source beside dest, then rename into place. Do not delete dest first."""
+    parent = dest.parent
+    parent.mkdir(parents=True, exist_ok=True)
+    token = uuid.uuid4().hex
+    staging = parent / f".{dest.name}.incoming-{token}"
+    previous = parent / f".{dest.name}.previous-{token}"
+    if staging.exists() or staging.is_symlink():
+        _remove_tree(staging)
+    _copy_exact(source, staging)
+    replaced = False
+    try:
+        if dest.exists() or dest.is_symlink():
+            _chmod_writable(dest)
+            os.replace(dest, previous)
+        os.replace(staging, dest)
+        replaced = True
+    finally:
+        if not replaced and (previous.exists() or previous.is_symlink()) and not (dest.exists() or dest.is_symlink()):
+            os.replace(previous, dest)
+        if staging.exists() or staging.is_symlink():
+            _remove_tree(staging)
+    if previous.exists() or previous.is_symlink():
+        _remove_tree(previous)
+
+
+def _write_manifest(stamp_root: Path, manifest: dict) -> None:
+    (stamp_root / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
 
 def _copy_exact(source: Path, dest: Path) -> None:
@@ -320,11 +389,21 @@ def migrate_workspace(workspace: Path, backup: Path, projects_root: Path | None 
     """Back up Roles and legacy state, then merge unambiguous handoffs.
 
     Ambiguous roles are reported and left unread as selection. Nothing here
-    writes a shared current-project selector.
+    writes a shared current-project selector. A marker makes a later run a no-op.
+    The manifest is written before any handoff is modified.
     """
     content = workspace / "bSmart"
     roles = content / "Roles"
     legacy = content / "bSmart_State.md"
+    marker = migration_marker(workspace)
+    if marker.is_file():
+        report = ["role_migration: already migrated", f"role_migration: marker {marker}"]
+        try:
+            saved = json.loads(marker.read_text(encoding="utf-8"))
+        except (OSError, ValueError, json.JSONDecodeError):
+            saved = {}
+        report.extend(str(line) for line in saved.get("questions") or [])
+        return report
     report = ["role_migration: started"]
     if not roles.exists() and not legacy.is_file():
         report.append("role_migration: nothing to migrate")
@@ -361,6 +440,8 @@ def migrate_workspace(workspace: Path, backup: Path, projects_root: Path | None 
 
     handoff_backup = stamp_root / "handoffs"
     touched: list[dict] = []
+    planned: list[dict] = []
+    review: list[str] = []
     for source_name, path in sources:
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
@@ -374,6 +455,10 @@ def migrate_workspace(workspace: Path, backup: Path, projects_root: Path | None 
         handoff, handoff_conflict = _one(found, _HANDOFF_KEYS)
         unknown = _unknown(found)
         label = source_name
+        if unknown:
+            review.extend([f"## {label}", ""])
+            review.extend(f"- {item}" for item in unknown)
+            review.append("")
         if project_conflict or workstream_conflict or focus_conflict or handoff_conflict:
             report.append(f"role_migration: question: {label} has conflicting project, workstream, focus, or handoff values. Which value should be kept?")
             continue
@@ -401,32 +486,78 @@ def migrate_workspace(workspace: Path, backup: Path, projects_root: Path | None 
             destination = project_dir / "handoff.md"
             relative = Path(project) / "handoff.md"
             workstream = None
-        stored = handoff_backup / relative
-        if not any(item["relative"] == relative.as_posix() for item in touched):
+        relative_key = relative.as_posix()
+        if not any(item["relative"] == relative_key for item in touched):
+            stored = handoff_backup / relative
             if destination.is_file():
                 stored.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(destination, stored)
-            touched.append({"relative": relative.as_posix(), "existed": destination.is_file()})
-        section = _section(label, project, workstream, focus, handoff, unknown)
-        prior = destination.read_text(encoding="utf-8") if destination.is_file() else f"# Handoff\n\nProject: {project}\n"
-        if section.strip() not in prior:
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            destination.write_text(prior.rstrip() + "\n\n" + section.strip() + "\n", encoding="utf-8")
-        report.append(f"role_migration: migrated {label} -> {relative.as_posix()}")
+            touched.append({"relative": relative_key, "existed": destination.is_file()})
+        planned.append({
+            "label": label,
+            "project": project,
+            "workstream": workstream,
+            "focus": focus,
+            "handoff": handoff,
+            "destination": destination,
+            "relative": relative_key,
+        })
+
+    if review:
+        review_text = "# Role fields preserved for review\n\nThese lines were not copied into project handoff files.\n\n" + "\n".join(review)
+        (stamp_root / "review.md").write_text(review_text, encoding="utf-8")
+        review_path = content / "State" / "role-migration-review.md"
+        review_path.parent.mkdir(parents=True, exist_ok=True)
+        review_path.write_text(review_text, encoding="utf-8")
+        report.append(f"role_migration: review {review_path}")
 
     manifest["handoffs"] = touched
-    (stamp_root / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    _write_manifest(stamp_root, manifest)
+
+    for action in planned:
+        destination = action["destination"]
+        relative_key = action["relative"]
+        item = next(entry for entry in touched if entry["relative"] == relative_key)
+        try:
+            prior = _read_utf8(destination) if destination.is_file() else f"# Handoff\n\nProject: {action['project']}\n"
+        except UnicodeDecodeError:
+            report.append(
+                f"role_migration: question: {action['label']} handoff {relative_key} is not UTF-8. "
+                "It was left unchanged. The backup has the original bytes."
+            )
+            continue
+        except OSError as exc:
+            report.append(f"role_migration: blocked: cannot read {destination}: {exc}")
+            continue
+        section = _section(action["label"], action["project"], action["workstream"], action["focus"], action["handoff"])
+        if section.strip() not in prior:
+            payload = (prior.rstrip() + "\n\n" + section.strip() + "\n").encode("utf-8")
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(payload)
+        if destination.is_file():
+            item["written_sha256"] = _sha256_file(destination)
+        _write_manifest(stamp_root, manifest)
+        report.append(f"role_migration: migrated {action['label']} -> {relative_key}")
+
     questions = [line for line in report if ": question:" in line]
+    blocked = [line for line in report if ": blocked:" in line]
     if questions:
         report.append(f"role_migration: {len(questions)} question(s); those roles were not migrated")
     else:
         report.append("role_migration: complete")
     report.append("role_migration: Roles/ is historical and is not a session selector")
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text(json.dumps({
+        "marker": "session-projects-0.1.45",
+        "backup": str(stamp_root),
+        "questions": questions + blocked,
+    }, indent=2) + "\n", encoding="utf-8")
+    report.append(f"role_migration: marker {marker}")
     return report
 
 
 def restore_workspace(workspace: Path, backup: Path, projects_root: Path | None = None) -> list[str]:
-    """Put Roles, legacy state, and touched handoffs back to the backup bytes."""
+    """Put Roles and legacy state back. Restore a handoff only when it still matches migration."""
     stamp_root = backup / "roles-migration" if (backup / "roles-migration").is_dir() else backup
     manifest_path = stamp_root / "manifest.json"
     if not manifest_path.is_file():
@@ -436,9 +567,7 @@ def restore_workspace(workspace: Path, backup: Path, projects_root: Path | None 
     report = [f"role_migration: restoring {stamp_root}"]
     roles_dest = content / "Roles"
     if manifest.get("roles"):
-        if roles_dest.exists():
-            shutil.rmtree(roles_dest)
-        _copy_exact(stamp_root / "Roles", roles_dest)
+        _swap_tree(stamp_root / "Roles", roles_dest)
         report.append(f"role_migration: restored {roles_dest}")
     if manifest.get("legacy"):
         _copy_exact(stamp_root / "bSmart_State.md", content / "bSmart_State.md")
@@ -457,6 +586,17 @@ def restore_workspace(workspace: Path, backup: Path, projects_root: Path | None 
             continue
         destination = projects_root / relative
         stored = stamp_root / "handoffs" / relative
+        current_hash = _sha256_file(destination) if destination.is_file() else None
+        expected = item.get("written_sha256")
+        if destination.is_file() and expected and current_hash != expected:
+            kept = stamp_root / "handoffs-kept" / relative
+            kept.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(destination, kept)
+            report.append(f"role_migration: kept {relative.as_posix()} because it changed after migration; copy {kept}")
+            continue
+        if destination.is_file() and not expected and stored.is_file() and current_hash != _sha256_file(stored):
+            report.append(f"role_migration: kept {relative.as_posix()} because migration did not finish writing it")
+            continue
         if item.get("existed"):
             if not stored.is_file():
                 report.append(f"role_migration: blocked: backup handoff missing: {stored}")
@@ -464,7 +604,13 @@ def restore_workspace(workspace: Path, backup: Path, projects_root: Path | None 
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(stored, destination)
         elif destination.is_file():
+            _chmod_writable(destination)
             destination.unlink()
         report.append(f"role_migration: restored handoff {relative.as_posix()}")
+    marker = migration_marker(workspace)
+    if marker.is_file():
+        _chmod_writable(marker)
+        marker.unlink()
+        report.append(f"role_migration: removed marker {marker}")
     report.append("role_migration: restore complete")
     return report

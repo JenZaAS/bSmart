@@ -13,9 +13,13 @@ START = ROOT / "bStart.py"
 
 
 class BStartTests(unittest.TestCase):
-    def run_start(self, workspace: Path) -> str:
+    def run_start(self, workspace: Path, extra_env: dict | None = None) -> str:
         env = dict(__import__("os").environ)
+        env.pop("BSMART_SESSION_PROJECT", None)
+        env.pop("BSMART_SESSION_WORKSTREAM", None)
         env["BSMART_PROJECT_ROOT"] = str(workspace / "projects")
+        if extra_env:
+            env.update(extra_env)
         result = subprocess.run(
             [sys.executable, str(START), "--root", str(workspace), "--skip-update", "--skip-integrity"],
             text=True,
@@ -77,6 +81,8 @@ class BStartTests(unittest.TestCase):
         shutil.copy(START, system / "bStart.py")
         shutil.copy(START, workspace / "bStart.py")
         env = dict(__import__("os").environ)
+        env.pop("BSMART_SESSION_PROJECT", None)
+        env.pop("BSMART_SESSION_WORKSTREAM", None)
         env["BSMART_PROJECT_ROOT"] = str(workspace / "projects")
         for script in (workspace / "bStart.py", system / "bStart.py"):
             result = subprocess.run(
@@ -113,6 +119,17 @@ class BStartTests(unittest.TestCase):
         self.assertNotIn("# Demo", output)
         self.assertEqual(selector.read_bytes(), before)
         self.assertIn("deprecated", output.lower())
+
+    def test_process_session_env_is_shown_and_role_files_are_not_read(self):
+        workspace = self.make_workspace()
+        output = self.run_start(workspace, {
+            "BSMART_SESSION_PROJECT": "Demo",
+            "BSMART_SESSION_WORKSTREAM": "Build",
+        })
+        self.assertIn("Project (session): Demo", output)
+        self.assertIn("Workstream: Build", output)
+        self.assertNotIn("# Demo", output)
+        self.assertFalse((workspace / "bSmart" / "State" / "sessions").exists())
 
     def test_startup_uses_the_storage_spec_when_env_is_unset(self):
         workspace = self.make_workspace()

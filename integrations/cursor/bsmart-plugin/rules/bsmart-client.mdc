@@ -3,7 +3,7 @@ description: Run bSmart /project through the shared adapter. /role is deprecated
 alwaysApply: true
 ---
 
-When the user uses `/project`, run `python3 bSmart-System/integrations/bsmart_client_adapter.py` with that command and the user's arguments. If this conversation has selected a project, set `BSMART_SESSION_PROJECT` and, when set, `BSMART_SESSION_WORKSTREAM` for that process only. When leaving a project, set `BSMART_SESSION_HANDOFF` to the short wrap-up. Do not write a shared selector file. Reply with stdout unchanged. Never confirm rename, retire, or delete yourself. If `python3` is missing or fails, use `python` (or `py -3` on Windows). `/role` only prints a deprecation notice; run it the same way and do not create a role.
+When the user uses `/project`, run `python3 bSmart-System/integrations/bsmart_client_adapter.py` with that command and the user's arguments. The adapter remembers this client's project between commands. Do not set environment variables and do not write a shared selector file. If the output asks for a handoff, run the command again with the user's wrap-up after `handoff:`. Reply with stdout unchanged. Never confirm rename, retire, or delete yourself. If `python3` is missing or fails, use `python` (or `py -3` on Windows). `/role` only prints a deprecation notice; run it the same way and do not create a role.
 
 If the session already contains a `bSmart — Startup` block, do not run `bStart.py` again. Otherwise run `python3 bSmart-System/bStart.py` once before the first reply and preserve its startup lines. If `python3` is missing or fails, use `python bSmart-System/bStart.py` (or `py -3 bSmart-System/bStart.py` on Windows).
 

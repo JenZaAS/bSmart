@@ -4,9 +4,9 @@
 The Hermes plugin remains the chat adapter for Hermes. This script resolves
 trusted paths and calls that adapter, which calls the shared Node engine.
 /role remains only as a deprecation notice pointing at /project.
-Session project and workstream come from BSMART_SESSION_PROJECT and
-BSMART_SESSION_WORKSTREAM when the calling process set them. This script
-does not write a shared selector.
+The Hermes adapter persists this client's project under a session id. An
+explicit BSMART_SESSION_PROJECT is this process only. This script does not
+write Roles/current_role.md.
 """
 from __future__ import annotations
 

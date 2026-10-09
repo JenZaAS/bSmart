@@ -32,20 +32,20 @@ CLI: `node scripts/bsmart-project.mjs '<JSON request>'`, or pipe one JSON reques
 
 - `/project help`: show the complete `/project` command list with short explanations.
 - `/project`, `/project list`: active index rows. `/project list --all` includes archived rows.
-- `/project NAME [WS]`: select a project in this session, optionally an existing workstream. Quote multiword names. Leaving another project requires a handoff note.
+- `/project NAME [WS]`: select a project in this session, optionally an existing workstream. Quote multiword names. Leaving another project requires a handoff note. Put that note in the command as `handoff: TEXT`.
 - `/project ws WS`: select an existing workstream of the session project.
 - `/project free`: leave the session project after writing its handoff.
 - `/project add NAME`: create the standard project skeleton, append an active index row, and select it in this session.
 - `/project add ws WS`: create `workstreams/WS/README.md` and select it in this session.
 - `/project label LABEL`, `/project describe TEXT`, `/project alias WORDS`: update the index row for the session project.
-- `/project rename NEWNAME`: confirm, rename the exact session project and its index row.
-- `/project retire`: confirm, verified full archive, mark the index row archived, enter Free mode.
-- `/project delete`: confirm, remove the exact session project and its index row, enter Free mode.
+- `/project rename NEWNAME`: confirm, rename the session project and its index row. `/project rename CURRENT NEW` names the project exactly and does not require the remembered session.
+- `/project retire` and `/project retire NAME`: confirm, verified full archive, mark the index row archived, enter Free mode. NAME is the exact project name.
+- `/project delete` and `/project delete NAME`: confirm, remove the exact project and its index row, enter Free mode. NAME is the exact project name and is not fuzzy-matched.
 - `/project index` and `/project index repair`: compare the index with folder names, then add lines for folders the index does not name.
 - `/project yes ID` and `/project no ID` continue a pending operation across processes. The pending id names the project; it is not a selector for other sessions.
 - `/role`: deprecation notice only. It does not change a project.
 
-Selection resolution: exact spelling first, then unique case/punctuation normalization, then unique edit distance <=1 for normalized input length >=4. Ties and missing names are errors. Destructive commands never resolve fuzzy targets: they read the exact current selection and accept no target argument. Unsafe, reserved, traversal, symlink and colliding names are rejected.
+Selection resolution: exact spelling first, then unique case/punctuation normalization, then unique edit distance <=1 for normalized input length >=4. Ties and missing names are errors. Destructive commands never resolve fuzzy targets. With no name, they use the exact session project. With a name, that spelling must already be the project directory. Unsafe, reserved, traversal, symlink and colliding names are rejected.
 
 ## New retirement safety policy (not a legacy contract)
 

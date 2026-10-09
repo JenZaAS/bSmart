@@ -20,6 +20,10 @@ scope:
   - deprecate /role with a short pointer to /project
   - tag real work as "bSmart [<scope>]: <ops> - <note>"
   - back up Roles/ and bSmart_State.md, then merge unambiguous handoffs without overwriting existing text
+  - write the migration manifest before changing a handoff, skip non-UTF-8 handoffs, and keep later notes unless the file still matches what migration wrote
+  - run role migration once per instance; a marker stops later bsmart-update runs from appending again
+  - keep unrecognised role fields in the instance review file and the backup, not in the project handoff
+  - remember the project for Hermes, Cursor, Claude, Codex, and the shell adapter, and accept an exact /project delete|retire|rename NAME plus handoff: text
 migration:
   - bsmart-update and bsmart-instance-upgrade run the migration and print questions for ambiguous roles
   - restore with bsmart-instance-upgrade --restore-session-projects <backup-directory>

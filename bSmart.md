@@ -192,7 +192,7 @@ startup_sequence:
   - if bSmart_Agent.md missing, run bSmart_Setup.md
   - read bSmart_Agent.md
   - if startup check reports project storage setup_required, immediately prompt the operator with Telegram buttons using clarify choices from bSmart_Protocols/project-storage.md before the normal TODO prompt
-  - start in Free mode; do not read Roles/current_role.md or any role file as this session's project
+  - start in Free mode unless this process has BSMART_SESSION_PROJECT; do not read Roles/current_role.md, any role file, or State/sessions as this session's project
   - read projects/INDEX.md and list active projects; if the index is missing, generate it from project folders
   - if the index disagrees with project folder names, flag the mismatch and offer /project index repair
   - do not load bSmart_State.md or Roles/ as active state; upgrade migration copies them into project handoffs when unambiguous

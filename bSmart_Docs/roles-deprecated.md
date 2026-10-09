@@ -22,8 +22,8 @@ When you find an old role file in instance content:
 - Treat it as history, not as the current session's project.
 - Read `active_project`, `active_workstream`, `current_focus`, and `task_handoff` as the note that was current when the role was last used.
 - The same facts, when migration succeeded, are appended in that project's handoff under `Migrated from <role>`.
-- Unknown fields in the role file were preserved for review. Do not drop them and do not invent replacements.
+- Unknown fields stay in `bSmart/State/role-migration-review.md` and in the backup `review.md`. They are not copied into the project handoff.
 - `current_role.md` only named which role file the old selector pointed at. It is not a project.
 - `/role` does not change state. Use `/project`.
 
-The pre-migration copy is in `.bsmart-upgrade-backups/<stamp>/roles-migration/`. Restoring that backup puts `Roles/` and any handoff files the migration touched back to those bytes.
+The pre-migration copy is in `.bsmart-upgrade-backups/<stamp>/roles-migration/`. Restoring that backup puts `Roles/` back and restores a handoff only when the file still matches what migration wrote. A handoff edited after migration is kept. Migration runs once; the marker is `bSmart/State/role-migration.json`.
