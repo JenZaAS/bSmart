@@ -38,8 +38,7 @@ steps:
   - create_content_readme_if_missing
   - create_bSmart_Agent_from_template
   - create_bGuardrails_from_template
-  - create_role_directory_and_general_role_from_templates
-  - create_current_role_selector_from_template
+  - do_not_create_a_role_selector
   - create_bSmart_TODO_from_template
   - create_bHistory_from_template
   - create_bSmart_Log_from_template
@@ -60,6 +59,8 @@ python3 ./bSmart-System/scripts/bsmart-instance-upgrade
 python3 /workspace/bSmart-System/scripts/bsmart-content-upgrade --create-missing
 python3 ./bSmart-System/scripts/bsmart-content-upgrade --create-missing
 ```
+
+`bsmart-instance-upgrade` prints `workspace:` before it changes anything. With no `--workspace`, it uses `/workspace` only when the process is already inside that directory. From anywhere else, pass `--workspace`.
 
 For an existing instance, `bsmart-update` is the standard post-pull finalization command. It deliberately does not pull Git: it backs up differing startup hooks, installs the workspace `bStart.py`, synchronizes the canonical hooks, creates only missing standard content, refreshes or installs the managed `/project` integration, and reports when Hermes must restart. It automatically applies only known exact instance-profile compatibility migrations with a backup and clear report; ambiguous or broader changes still require a question. `bsmart-instance-upgrade` and `bsmart-content-upgrade` remain available as focused helpers.
 
@@ -227,7 +228,7 @@ hermes_project_integration:
     - non-Hermes harnesses use the Cursor, Codex, Claude, or direct bStart.py paths instead of the Hermes plugin
 
 client_plugins:
-  purpose: expose the same startup, /project, and /role behavior in Cursor, Codex, and Claude
+  purpose: expose the same startup and /project behavior in Cursor, Codex, and Claude; /role is a deprecation notice
   shared_adapter: ./bSmart-System/integrations/bsmart_client_adapter.py
   startup_hook: ./bSmart-System/integrations/client_session_start.py
   packages:

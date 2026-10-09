@@ -23,31 +23,17 @@ def load(name: str, path: Path):
     return module
 
 
-SELECTOR = "# bSmart current role\n\n```yaml\nrole_selection:\n  current_role: general\n```\n"
-ROLE = (
-    "# bSmart role\n\n```yaml\nstate:\n"
-    "  active_project: \"none\"\n"
-    "  active_workstream: \"none\"\n```\n"
-)
-
-
 class ClientAdapterTests(unittest.TestCase):
     def setUp(self):
         self.adapter = load("bsmart_client_adapter", SYSTEM / "integrations" / "bsmart_client_adapter.py")
         self.tmp = tempfile.TemporaryDirectory(prefix="bsmart-client-adapter-")
         home = Path(self.tmp.name)
         self.projects = home / "projects"
-        self.roles = home / "roles"
         self.projects.mkdir()
-        self.roles.mkdir()
-        (self.roles / "current_role.md").write_text(SELECTOR, encoding="utf-8")
-        (self.roles / "general_role.md").write_text(ROLE, encoding="utf-8")
         self.env = {
             "BSMART_SYSTEM_ROOT": str(SYSTEM),
             "BSMART_PROJECT_ROOT": str(self.projects),
-            "BSMART_ROLES_ROOT": str(self.roles),
-            "BSMART_ROLE_SELECTOR": str(self.roles / "current_role.md"),
-            "BSMART_LEGACY_STATE_FILE": str(home / "bSmart_State.md"),
+            "BSMART_INSTANCE_HOME": str(home),
             "BSMART_ARCHIVE_ROOT": str(home / "archives"),
         }
 
@@ -56,6 +42,21 @@ class ClientAdapterTests(unittest.TestCase):
 
     def run_adapter(self, kind: str, args: list[str]) -> str:
         with patch.dict(os.environ, self.env, clear=False):
+            for key in (
+                "BSMART_SESSION_ID",
+                "BSMART_SESSION_PROJECT",
+                "BSMART_SESSION_WORKSTREAM",
+                "BSMART_SESSION_HANDOFF",
+                "HERMES_SESSION_KEY",
+                "HERMES_SESSION_ID",
+                "CLAUDE_SESSION_ID",
+                "CURSOR_CONVERSATION_ID",
+                "CURSOR_SESSION_ID",
+                "CODEX_THREAD_ID",
+                "CODEX_SESSION_ID",
+            ):
+                if key not in self.env:
+                    os.environ.pop(key, None)
             return self.adapter.run(kind, args, workspace=Path(self.tmp.name))
 
     def test_lists_and_creates_in_the_isolated_root(self):
@@ -65,10 +66,44 @@ class ClientAdapterTests(unittest.TestCase):
         created = self.run_adapter("project", ["add", "Alpha"])
         self.assertIn("Alpha", created)
         self.assertTrue((self.projects / "Alpha" / "project.md").is_file())
+        self.assertFalse((Path(self.tmp.name) / "Roles" / "current_role.md").exists())
+        self.env["BSMART_SESSION_PROJECT"] = "Alpha"
         self.assertIn("- Alpha (current)", self.run_adapter("project", ["list"]))
+        self.env["BSMART_SESSION_PROJECT"] = "Beta"
+        other = self.run_adapter("project", ["list"])
+        self.assertNotIn("- Alpha (current)", other)
+        self.assertIn("Current: Beta", other)
 
-    def test_role_help_uses_the_shared_engine(self):
-        self.assertIn("/role help", self.run_adapter("role", []))
+    def test_selected_project_is_remembered_for_delete_and_handoff(self):
+        self.assertIn("Current: Gamma", self.run_adapter("project", ["add", "Gamma"]))
+        blocked = self.run_adapter("project", ["add", "Beta"])
+        self.assertIn("handoff:", blocked)
+        self.assertFalse((self.projects / "Beta").exists())
+        switched = self.run_adapter("project", ["add", "Beta", "handoff:", "Wrapped", "Gamma"])
+        self.assertIn("Current: Beta", switched)
+        self.assertIn("Wrapped Gamma", (self.projects / "Gamma" / "handoff.md").read_text(encoding="utf-8"))
+        prompt = self.run_adapter("project", ["delete"])
+        self.assertIn("Confirmation required: delete exact target", prompt)
+        pending_id = next(line for line in prompt.splitlines() if line.startswith("Yes:")).rsplit(" ", 1)[1]
+        removed = self.run_adapter("project", ["yes", pending_id])
+        self.assertIn("Free Mode", removed)
+        self.assertFalse((self.projects / "Beta").exists())
+
+    def test_named_delete_does_not_need_the_remembered_session(self):
+        self.run_adapter("project", ["add", "Gamma"])
+        self.env["BSMART_SESSION_ID"] = "other-chat"
+        prompt = self.run_adapter("project", ["delete", "Gamma"])
+        self.assertIn("Confirmation required: delete exact target", prompt)
+        self.env.pop("BSMART_SESSION_ID")
+        pending_id = next(line for line in prompt.splitlines() if line.startswith("Yes:")).rsplit(" ", 1)[1]
+        removed = self.run_adapter("project", ["yes", pending_id])
+        self.assertIn("Free Mode", removed)
+        self.assertFalse((self.projects / "Gamma").exists())
+
+    def test_role_command_is_deprecated(self):
+        text = self.run_adapter("role", [])
+        self.assertIn("deprecated", text.lower())
+        self.assertIn("/project", text)
 
     def test_flags_are_rejected(self):
         with self.assertRaises(ValueError):
@@ -101,6 +136,13 @@ class SessionHookTests(unittest.TestCase):
         self.assertEqual(claude["hookSpecificOutput"]["hookEventName"], "SessionStart")
         self.assertEqual(claude["hookSpecificOutput"]["additionalContext"], "hello")
         self.assertEqual(self.session.payload("codex", "hello"), claude)
+        self.assertNotIn("env", cursor)
+        cursor_id = self.session.payload("cursor", "hello", "conv-1")
+        self.assertEqual(cursor_id["env"], {"BSMART_SESSION_ID": "conv-1"})
+        codex_id = self.session.payload("codex", "hello", "thread-1")
+        self.assertEqual(codex_id["hookSpecificOutput"]["env"], {"BSMART_SESSION_ID": "thread-1"})
+        self.assertNotIn("CODEX_THREAD_ID", json.dumps(codex_id))
+        self.assertEqual(self.session.session_id_from_payload({"conversation_id": "conv 1"}), "conv-1")
 
     def test_cursor_context_asks_for_a_fence(self):
         cursor = self.session.context_text("Hi, there!", 0, "cursor")

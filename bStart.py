@@ -2,8 +2,10 @@
 """Deterministic bSmart session startup.
 
 This is the tracked system entrypoint. It performs safe system freshness checks,
-repairs only the agreed General-role bootstrap files, resolves one role and its
-project/workstream context, and emits a compact startup payload.
+reads the project index, and emits a compact startup payload. A new session
+starts in Free mode. BSMART_SESSION_PROJECT and BSMART_SESSION_WORKSTREAM, when
+this process sets them, are this session's selection. Startup does not read
+State/sessions or a role file.
 """
 from __future__ import annotations
 
@@ -193,8 +195,8 @@ def integrity_check(system: Path) -> list[str]:
         "bSmart.md", "bSmart_Invariants.md", "bSmart_Map.md", "bSmart_Features.md",
         "bSmart_Setup.md", "bSmart_Protocols/protocols.md",
         "bSmart_Protocols/roles-and-concurrency.md",
+        "bSmart_Protocols/projects.md",
         "bSmart_Templates/AGENTS.md", "bSmart_Templates/CLAUDE.md",
-        "bSmart_Templates/role.template.md", "bSmart_Templates/current-role.template.md",
     )
     missing = [item for item in required if not (system / item).is_file()]
     if missing:
@@ -204,63 +206,20 @@ def integrity_check(system: Path) -> list[str]:
     return ["Integrity: OK"]
 
 
-def general_role_content(system: Path) -> str:
-    template = system / "bSmart_Templates" / "role.template.md"
-    if template.is_file():
-        text = template.read_text(encoding="utf-8")
-        replacements = {
-            "<role-name>": "General",
-            "<role-id>": "general",
-            "<role focus>": "General operational focus",
-            "<short operational focus>": "General operational focus",
-            "<project-slug> | none": "none",
-            "<workstream-name> | none": "none",
-            "<ISO-8601 UTC timestamp>": now_utc(),
-            "<short current focus>": "No active project focus.",
-            "<short resume point>": "No active handoff.",
-        }
-        for old, new in replacements.items():
-            text = text.replace(old, new)
-        return text
-    return (
-        "# General role\n\n```yaml\nrole:\n  name: General\n  id: general\nstate:\n  active_project: none\n  active_workstream: none\n  updated_at_utc: " + now_utc() + "\n```\n"
-    )
+def load_named_module(relative: str):
+    """Load a checkout helper by path.
 
-
-def ensure_role_bootstrap(system: Path, content: Path) -> tuple[str, Path, list[str]]:
-    roles = content / "Roles"
-    selector = roles / "current_role.md"
-    general = roles / "general_role.md"
-    notes: list[str] = []
-    roles.mkdir(parents=True, exist_ok=True)
-    if not selector.is_file():
-        selector.write_text("# bSmart current role\n\n```yaml\nrole_selection:\n  current_role: general\n  updated_at_utc: " + now_utc() + "\n```\n", encoding="utf-8")
-    selected = first_value(selector.read_text(encoding="utf-8", errors="replace"), ("current_role",)) or "general"
-    selected_file = roles / f"{selected}_role.md"
-    if not selected_file.is_file():
-        selected = "general"
-        selected_file = general
-        selector.write_text("# bSmart current role\n\n```yaml\nrole_selection:\n  current_role: general\n  updated_at_utc: " + now_utc() + "\n```\n", encoding="utf-8")
-    if not general.is_file():
-        general.write_text(general_role_content(system), encoding="utf-8")
-    return selected, selected_file, notes
-
-
-def load_instance_module():
-    """Load the shared path helper.
-
-    The workspace-root copy of this file does not sit beside the helper, so
-    the import is by path. A unique module name keeps one process from
-    reusing another checkout's copy.
+    The workspace-root copy of this file does not sit beside the helper.
+    A unique module name keeps one process from reusing another checkout's copy.
     """
     candidates = (
-        SCRIPT_ROOT / "scripts" / "bsmart_instance.py",
-        SCRIPT_ROOT / "bSmart-System" / "scripts" / "bsmart_instance.py",
+        SCRIPT_ROOT / "scripts" / relative,
+        SCRIPT_ROOT / "bSmart-System" / "scripts" / relative,
     )
     for path in candidates:
         if not path.is_file():
             continue
-        name = "bsmart_instance_" + str(abs(hash(str(path.absolute()))))
+        name = "bsmart_" + path.stem + "_" + str(abs(hash(str(path.absolute()))))
         spec = importlib.util.spec_from_file_location(name, path)
         if spec is None or spec.loader is None:
             continue
@@ -268,6 +227,14 @@ def load_instance_module():
         spec.loader.exec_module(module)
         return module
     return None
+
+
+def load_instance_module():
+    return load_named_module("bsmart_instance.py")
+
+
+def load_session_module():
+    return load_named_module("bsmart_session_projects.py")
 
 
 def project_root(content: Path) -> Path | None:
@@ -284,15 +251,57 @@ def project_root(content: Path) -> Path | None:
     return None
 
 
-def context_value(role_text: str, keys: tuple[str, ...]) -> str:
-    return first_value(role_text, keys) or "none"
+def project_catalog(root: Path | None, warnings: list[str]) -> list[str]:
+    """Read or create the project index. Return active-project display lines.
+
+    A missing index is generated from project folders. A present index is not
+    rewritten; mismatches are reported with the repair command.
+    """
+    if root is None:
+        return []
+    module = load_session_module()
+    if module is None:
+        warnings.append("Index: session project helper is unavailable.")
+        return []
+    try:
+        rows, created = module.ensure_index(root)
+        mismatches = module.self_check(root, rows)
+    except OSError as exc:
+        warnings.append(f"Index: could not read project index: {exc}")
+        return []
+    if created:
+        warnings.append("Index: created from project folders.")
+    else:
+        for mismatch in mismatches:
+            warnings.append(f"Index: {mismatch}")
+        if mismatches:
+            warnings.append("Index: repair with /project index repair")
+    lines = []
+    for row in module.active_rows(rows):
+        label = row.get("label") or ""
+        suffix = f" ({label})" if label else ""
+        lines.append(f"  - {row['name']}{suffix}")
+    return lines
+
+
+def session_lines() -> tuple[str, str]:
+    """Show this process's session. An unset variable is Free mode, not a guess."""
+    project = os.environ.get("BSMART_SESSION_PROJECT", "").strip()
+    workstream = os.environ.get("BSMART_SESSION_WORKSTREAM", "").strip()
+    if project.lower() in {"", "none", "free"}:
+        project = ""
+    if workstream.lower() in {"", "none"}:
+        workstream = ""
+    if not project:
+        return "Project (session): Free mode", "Workstream: none"
+    return f"Project (session): {project}", f"Workstream: {workstream or 'none'}"
 
 
 def main() -> int:
     configure_output_streams()
     parser = argparse.ArgumentParser(description="Run deterministic bSmart session startup.")
     parser.add_argument("--root", default=str(DEFAULT_WORKSPACE))
-    parser.add_argument("--role", help="select a role for this startup without changing the selector")
+    parser.add_argument("--role", help=argparse.SUPPRESS)
     parser.add_argument("--skip-update", action="store_true")
     parser.add_argument("--skip-integrity", action="store_true")
     args = parser.parse_args()
@@ -311,43 +320,27 @@ def main() -> int:
     agent = first_value(agent_text, ("name",)) or first_value(agent_text, ("agent.name",)) or "unknown"
     operator = first_value(agent_text, ("operator",)) or "there"
     greeting_name = operator.split()[0] if operator not in {"there", "unknown"} else "there"
-    role, role_file, role_notes = ensure_role_bootstrap(system, content)
     if args.role:
-        requested = re.sub(r"[^A-Za-z0-9_-]", "", args.role)
-        candidate = content / "Roles" / f"{requested}_role.md"
-        if candidate.is_file():
-            role, role_file = requested, candidate
-        else:
-            warnings.append(f"Role: requested role not found; using {role}")
-    warnings.extend(role_notes)
-    role_text = role_file.read_text(encoding="utf-8", errors="replace")
-    project = context_value(role_text, ("active_project", "project"))
-    workstream = context_value(role_text, ("active_workstream", "workstream"))
+        warnings.append("Role: /role is deprecated. This session stays in Free mode. Use /project.")
+    if (content / "Roles").exists():
+        warnings.append("Roles: deprecated historical files. They are not this session's project. See bSmart_Protocols/roles-and-concurrency.md.")
     root = project_root(content)
-    project_line = f"Project: {project}"
     context_files = [p for p in (system / "bSmart.md", system / "bSmart_Invariants.md", agent_file,
-                                  content / "bGuardrails.md", role_file) if p.is_file()]
+                                  content / "bGuardrails.md") if p.is_file()]
     loaded_context: list[tuple[Path, str]] = []
     if not agent_file.is_file():
         warnings.append("Agent profile is missing; setup is required.")
+    active_lines: list[str] = []
     if root is None:
-        project_line = "Project: unavailable"
+        project_line = "Project (session): unavailable"
+        workstream_line = "Workstream: none"
         warnings.append("Projects are currently unavailable; the project mount appears to be down.")
     else:
-        project_line = f"Project: {project}"
-        if project != "none":
-            project_dir = root / project
-            project_file = project_dir / "project.md"
-            if project_file.is_file():
-                context_files.append(project_file)
-            else:
-                warnings.append(f"Project: selected project metadata not found: {project_file}")
-            if workstream != "none":
-                workstream_file = project_dir / "workstreams" / workstream / "README.md"
-                if workstream_file.is_file():
-                    context_files.append(workstream_file)
-                else:
-                    warnings.append(f"Workstream: selected workstream metadata not found: {workstream_file}")
+        project_line, workstream_line = session_lines()
+        active_lines = project_catalog(root, warnings)
+        selected = os.environ.get("BSMART_SESSION_PROJECT", "").strip()
+        if selected and selected.lower() not in {"none", "free"} and not (root / selected).is_dir():
+            warnings.append(f"Project {selected} is not in the projects root.")
     for path in context_files:
         try:
             loaded_context.append((path, path.read_text(encoding="utf-8", errors="replace")))
@@ -356,12 +349,18 @@ def main() -> int:
     print(f"Hi, {greeting_name}!")
     print("bSmart — Startup")
     print(f"Agent: {agent}")
-    print(f"Role: {role.title()}")
-    print(f"  Use: /role list | /role set <role> | /role add <role> | /role help")
     print(project_line)
     print("  Use: /project list | /project <project> | /project add <project> | /project help")
-    print(f"Workstream: {workstream}")
+    print(workstream_line)
     print("  Use: /project ws <workstream> | /project add ws <workstream> | /project help")
+    print("Active projects:")
+    if active_lines:
+        for line in active_lines:
+            print(line)
+    else:
+        print("  - none")
+    print("Awareness: In Free mode, casual chat stays casual. When real work, decisions, or knowledge appear, suggest a matching project or creating one. If the topic matches another project's label or aliases, ask once whether to switch or only note it. Never switch silently. If the operator says stay, do not ask again.")
+    print("Tags: After real work, start with one line per scope: bSmart [<scope>]: <ops> - <note of at most 5 words>. Scope is a project label, library, instance, or system. Inside a project report read, write, or delete. Outside a project report only write or delete. Do not tag log or history writes, pure chat, or web lookups.")
     print(git_status(system, "bSmart-System"))
     print(git_status(content, "bSmart-Instance"))
     print(update_line)
@@ -372,9 +371,7 @@ def main() -> int:
     print("Context files:")
     for path in context_files:
         print(f"  - {path}")
-    scoped_paths = {agent_file, content / "bGuardrails.md", role_file}
-    if root is not None:
-        scoped_paths.update(path for path in context_files if path == root or root in path.parents)
+    scoped_paths = {agent_file, content / "bGuardrails.md"}
     for path, text in loaded_context:
         if path in scoped_paths:
             print(f"--- {path} ---")

@@ -3,7 +3,8 @@ Run `python3 bSmart-System/bStart.py` exactly once at the beginning of every new
 Hierarchy:
 - `bSmart-System/bSmart.md`: shared system rules and bStart contract.
 - `bSmart/bSmart_Agent.md`: stable instance identity and access facts.
-- selected role file: current role/project/workstream state.
+- session project: chosen in this conversation; Free mode until then.
+- project handoff and index: durable project state. Historical Roles/ files are not a selector.
 - project files: project-scoped instructions and facts.
 
 Do not duplicate system/project rules here. Do not delete or rewrite this hook for task-specific instructions.

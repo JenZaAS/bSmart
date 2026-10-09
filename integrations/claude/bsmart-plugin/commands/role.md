@@ -1,11 +1,11 @@
 ---
 name: role
-description: List, select, or create bSmart roles.
+description: Roles are deprecated. Show the notice that points to /project.
 ---
 
 # /role
 
-From the workspace root, run the shared bSmart adapter. Reply with its stdout unchanged. Do not summarize it or invent a role.
+From the workspace root, run the shared bSmart adapter. Reply with its stdout unchanged. Do not create a role or change the session project.
 
 ```text
 python3 bSmart-System/integrations/bsmart_client_adapter.py role $ARGUMENTS

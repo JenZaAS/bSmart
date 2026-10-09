@@ -1,7 +1,7 @@
 {
   "name": "bsmart",
   "version": "1.0.0",
-  "description": "bSmart startup, /project, and /role for Cursor. Commands call the shared bSmart engine.",
+  "description": "bSmart startup and /project for Cursor. /role only prints a deprecation notice. Commands call the shared bSmart engine.",
   "author": {
     "name": "bSmart-System"
   },

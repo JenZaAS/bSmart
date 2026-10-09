@@ -107,17 +107,56 @@ def context_text(startup: str, returncode: int, client: str | None = None) -> st
     return text
 
 
-def payload(client: str, text: str) -> dict:
+def session_id_from_payload(data: dict) -> str:
+    raw = ""
+    for key in ("session_id", "conversation_id", "sessionId", "thread_id"):
+        value = data.get(key)
+        if isinstance(value, str) and value.strip():
+            raw = value.strip()
+            break
+    if not raw:
+        return ""
+    return "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in raw).strip("-_")[:80]
+
+
+def payload(client: str, text: str, session_id: str = "") -> dict:
     if client == "cursor":
-        return {"additional_context": text}
-    if client in {"claude", "codex"}:
+        body: dict = {"additional_context": text}
+        # Cursor documents this env map for later hooks. It does not promise the agent shell.
+        if session_id:
+            body["env"] = {"BSMART_SESSION_ID": session_id}
+        return body
+    if client == "claude":
         return {
             "hookSpecificOutput": {
                 "hookEventName": "SessionStart",
                 "additionalContext": text,
             }
         }
+    if client == "codex":
+        hook = {
+            "hookEventName": "SessionStart",
+            "additionalContext": text,
+        }
+        # Do not set CODEX_THREAD_ID; Codex owns that variable and already injects it.
+        if session_id:
+            hook["env"] = {"BSMART_SESSION_ID": session_id}
+        return {"hookSpecificOutput": hook}
     raise ValueError(f"Unknown client: {client}")
+
+
+def publish_session_id(session_id: str) -> None:
+    """Claude Code reads CLAUDE_ENV_FILE into the session's later commands."""
+    if not session_id:
+        return
+    path = os.environ.get("CLAUDE_ENV_FILE", "").strip()
+    if not path:
+        return
+    try:
+        with open(path, "a", encoding="utf-8") as handle:
+            handle.write(f"BSMART_SESSION_ID={session_id}\n")
+    except OSError:
+        return
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -125,6 +164,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--client", required=True, choices=CLIENTS)
     args = parser.parse_args(argv)
     data = read_payload()
+    session_id = session_id_from_payload(data)
+    publish_session_id(session_id)
     workspace = workspace_from(data)
     if workspace is None:
         text = context_text(
@@ -140,7 +181,7 @@ def main(argv: list[str] | None = None) -> int:
         except (OSError, subprocess.SubprocessError) as exc:
             startup, code = f"bStart.py could not be started: {exc}", 1
         text = context_text(startup, code, args.client)
-    sys.stdout.buffer.write(json.dumps(payload(args.client, text), ensure_ascii=False).encode("utf-8"))
+    sys.stdout.buffer.write(json.dumps(payload(args.client, text, session_id), ensure_ascii=False).encode("utf-8"))
     return 0
 
 

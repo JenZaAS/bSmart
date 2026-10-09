@@ -1,8 +1,8 @@
 # bSmart Codex plugin
 
-Codex does not load the Hermes `bsmart-project` plugin, and current Codex builds do not reliably register custom slash commands. This plugin uses skills plus a SessionStart hook. The skills call `integrations/bsmart_client_adapter.py`, which calls the shared `/project` and `/role` engines. Chat text cannot supply paths.
+Codex does not load the Hermes `bsmart-project` plugin, and current Codex builds do not reliably register custom slash commands. This plugin uses skills plus a SessionStart hook. The skills call `integrations/bsmart_client_adapter.py`, which calls the shared `/project` engine. `$bsmart-role` only prints a deprecation notice. Chat text cannot supply paths.
 
-Invoke `$bsmart-project` or `$bsmart-role`, or ask for `/project` or `/role`. The startup hook runs `bStart.py`. Codex does not run plugin hooks until the hook definition is reviewed and trusted. A web install does not deploy the hook script; the script has to exist on the machine.
+Invoke `$bsmart-project`, or ask for `/project`. `$bsmart-role` and `/role` do not select a project. The startup hook runs `bStart.py`. Codex does not run plugin hooks until the hook definition is reviewed and trusted. A web install does not deploy the hook script; the script has to exist on the machine.
 
 ## Local marketplace
 

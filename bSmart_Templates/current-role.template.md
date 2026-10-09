@@ -1,4 +1,12 @@
-# bSmart current role
+# bSmart current role (deprecated)
+
+status: deprecated
+
+Do not install this file. It is a historical shape, not a live template.
+
+Do not create this file. `current_role.md` was the instance-wide role selector. It is not a session's project.
+
+Historical shape:
 
 ```yaml
 role_selection:
@@ -6,4 +14,4 @@ role_selection:
   updated_at_utc: <ISO-8601 UTC timestamp>
 ```
 
-This file is a small selector only. It does not contain project, workstream, focus, task, or handoff state; those belong in the selected role file.
+The active project now lives only in the session. Use `/project`.

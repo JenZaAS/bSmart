@@ -14,19 +14,18 @@ bsmart:
   startup_output:
     greeting: "Hi, <operator-name>!"
     compact_layout: true
-    rule: Do not insert blank lines between Agent, Role, Project, Workstream, or their indented help/status lines.
+    rule: Do not insert blank lines between Agent, Project (session), Workstream, active projects, or their indented help/status lines.
     fields:
       - Agent
-      - Role
-      - Project
+      - Project (session)
       - Workstream
+      - Active projects
     common_commands:
-      role: "/role list | /role set <role> | /role add <role> | /role help"
       project: "/project list | /project <project> | /project add <project> | /project help"
       workstream: "/project ws <workstream> | /project add ws <workstream> | /project help"
     help_commands:
-      role: "/role help shows the complete role command list and short explanations"
       project: "/project help shows the complete project and workstream command list and short explanations"
+      role: "/role prints a deprecation notice and points to /project"
   feature_registry: /workspace/bSmart-System/bSmart_Features.md
 
 path_resolution:
@@ -59,22 +58,20 @@ content_files:
   state_local: ./bSmart/bSmart_State.md
   state_status: legacy_migration_only
   roles: /workspace/bSmart/Roles
-  roles_local: ./bSmart/Roles
-  current_role: /workspace/bSmart/Roles/current_role.md
-  current_role_local: ./bSmart/Roles/current_role.md
-  default_role: general
+  roles_status: deprecated_historical
+  project_index: /projects/INDEX.md
+  project_handoff: /projects/<project>/handoff.md
   todo: /workspace/bSmart/bSmart_TODO.md
   todo_local: ./bSmart/bSmart_TODO.md
   history: /workspace/bSmart/bHistory.md
   history_local: ./bSmart/bHistory.md
   log: /workspace/bSmart/bSmart_Log.md
   log_local: ./bSmart/bSmart_Log.md
-  roles:
-    root: /workspace/bSmart/Roles
-    selector: /workspace/bSmart/Roles/current_role.md
-    selector_local: ./bSmart/Roles/current_role.md
-    default: general
-  role_state: /workspace/bSmart/Roles/<role-id>_role.md
+  session_project:
+    scope: this conversation only
+    shared_selector: false
+    free_mode: no project selected
+    handoff: project handoff.md or workstream handoff.md
   guardrails: /workspace/bSmart/bGuardrails.md
   guardrails_local: ./bSmart/bGuardrails.md
   container_storage: /workspace/bSmart/State/container-storage.yaml
@@ -119,7 +116,7 @@ update_workflow:
     - create only missing standard content
     - verify, refresh, or install the managed /project integration
   first_reply_rule: Preserve the bStart startup and command-help lines in the first reply; instance-specific greetings may precede them but must not replace them.
-  preserve: Never overwrite instance identity, role state, legacy migration files, projects, secrets, or unrelated content.
+  preserve: Never overwrite instance identity, project handoffs, legacy migration files, projects, secrets, or unrelated content.
   profile_migration: Apply known exact bSmart_Agent.md compatibility migrations automatically with a backup and clear report; ask only for ambiguous or broader changes.
 
 deterministic_lookups:
@@ -174,9 +171,9 @@ project_context_scope:
   exception: Listing immediate project names is allowed; do not recursively scan sibling projects.
 
 state_management:
-  protocol: /workspace/bSmart-System/bSmart_Protocols/roles-and-concurrency.md
+  protocol: /workspace/bSmart-System/bSmart_Protocols/projects.md
   legacy_protocol: /workspace/bSmart-System/bSmart_Protocols/state.md
-  rule: Active project, workstream, focus, and role state are owned by exactly one selected role file; bSmart_State.md is migration-only and must not compete as an active source.
+  rule: The active project and workstream belong to the session. Durable focus and handoff belong to the project. bSmart_State.md and Roles/ are migration history, not a selector.
 
 github_ai_access:
   provider_protocol: /workspace/bSmart-System/bSmart_Protocols/github-ai-access.md
@@ -195,10 +192,10 @@ startup_sequence:
   - if bSmart_Agent.md missing, run bSmart_Setup.md
   - read bSmart_Agent.md
   - if startup check reports project storage setup_required, immediately prompt the operator with Telegram buttons using clarify choices from bSmart_Protocols/project-storage.md before the normal TODO prompt
-  - select exactly one role file, defaulting to /workspace/bSmart/Roles/general_role.md
-  - if Roles/ or current_role.md is missing, silently create the directory, selector, and general_role.md from templates
-  - if the selector names a missing role, fall back to general and repair the selector
-  - do not load bSmart_State.md as active state; use it only during explicit role-state migration
+  - start in Free mode unless this process has BSMART_SESSION_PROJECT; do not read Roles/current_role.md, any role file, or State/sessions as this session's project
+  - read projects/INDEX.md and list active projects; if the index is missing, generate it from project folders
+  - if the index disagrees with project folder names, flag the mismatch and offer /project index repair
+  - do not load bSmart_State.md or Roles/ as active state; upgrade migration copies them into project handoffs when unambiguous
   - inspect local Dreaming status after loading instance content
   - if Dreaming status is missing or ask_later, trigger the Dreaming setup prompt before the normal TODO prompt
   - if Dreaming status is enabled, continue without repeating setup; if disabled, do not ask again unless the operator requests Dreaming setup
@@ -235,10 +232,9 @@ visible_action_notes:
 missing_content_behavior:
   bSmart_Agent.md: run setup using bSmart_Templates/bSmart_Agent.template.md
   bGuardrails.md: create from bSmart_Templates/bGuardrails.template.md after approval
-  Roles/: create silently when missing
-  Roles/current_role.md: create silently selecting general when missing
-  Roles/general_role.md: create silently from bSmart_Templates/role.template.md when missing
-  bSmart_State.md: never create; migrate only when explicitly requested
+  Roles/: do not create; historical files stay until the operator removes them
+  Roles/current_role.md: do not create or select; it is not a session project
+  bSmart_State.md: never create; migrate only through bsmart-instance-upgrade
   bSmart_TODO.md: create from template after approval
   bSmart_Log.md: create empty log from template after approval
 
@@ -291,7 +287,7 @@ extensions:
       path: /workspace/bSmart-System/integrations
       optional: true
       packaging: bundled_integration
-      purpose: Cursor, Codex, and Claude adapters for startup, /project, and /role. The Claude plugin is not yet verified in the Claude app.
+      purpose: Cursor, Codex, and Claude adapters for startup and /project. /role is a deprecation notice. The Claude plugin is not yet verified in the Claude app.
 ```
 
 ## Agent instruction

@@ -1,7 +1,7 @@
 {
   "name": "bsmart",
   "version": "1.0.0",
-  "description": "bSmart startup, /project, and /role for Claude. Not yet verified in the Claude app.",
+  "description": "bSmart startup and /project for Claude. /role only prints a deprecation notice. Not yet verified in the Claude app.",
   "author": {
     "name": "bSmart-System"
   }

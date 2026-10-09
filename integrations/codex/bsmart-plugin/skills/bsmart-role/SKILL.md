@@ -1,6 +1,6 @@
 ---
 name: bsmart-role
-description: Run bSmart /role commands. Use when the user types /role, or asks to list, select, or create a bSmart role.
+description: Roles are deprecated. Use when the user types /role. Tell them to use /project. Do not create a role.
 ---
 
 # bSmart role

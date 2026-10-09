@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Deterministic /project and /role entry for Cursor, Codex, and Claude.
+"""Deterministic /project entry for Cursor, Codex, and Claude.
 
-The Hermes plugin remains the chat adapter for Hermes. This script is the
-shared caller for the other clients. It does not implement project or role
-behavior; it resolves trusted paths and calls the Hermes adapter, which calls
-the shared Node engines.
+The Hermes plugin remains the chat adapter for Hermes. This script resolves
+trusted paths and calls that adapter, which calls the shared Node engine.
+/role remains only as a deprecation notice pointing at /project.
+The Hermes adapter persists this client's project under a session id. An
+explicit BSMART_SESSION_PROJECT is this process only. This script does not
+write Roles/current_role.md.
 """
 from __future__ import annotations
 
@@ -71,14 +73,11 @@ def instance_project_root(workspace: Path) -> Path:
 def ensure_environment(workspace: Path) -> None:
     """Fill only unset bSmart path variables. Chat arguments never set these."""
     content = workspace / "bSmart"
-    container_roles = Path("/workspace/bSmart/Roles")
-    roles = container_roles if container_roles.is_dir() else content / "Roles"
     projects = instance_project_root(workspace)
     values = {
         "BSMART_SYSTEM_ROOT": workspace / "bSmart-System",
         "BSMART_PROJECT_ROOT": projects,
-        "BSMART_ROLES_ROOT": roles,
-        "BSMART_ROLE_SELECTOR": roles / "current_role.md",
+        "BSMART_INSTANCE_HOME": content,
         "BSMART_LEGACY_STATE_FILE": content / "bSmart_State.md",
         "BSMART_ARCHIVE_ROOT": content / ".project-archives",
     }
@@ -107,7 +106,14 @@ def quote_token(token: str) -> str:
 
 
 def command_text(kind: str, args: list[str]) -> str:
-    if any(token.startswith("-") or "\n" in token or "\x00" in token for token in args):
+    def rejected(token: str) -> bool:
+        if "\n" in token or "\x00" in token:
+            return True
+        if token == "--all":
+            return False
+        return token.startswith("-")
+
+    if any(rejected(token) for token in args):
         raise ValueError("flags and control characters are not accepted")
     if not args:
         return f"/{kind}"

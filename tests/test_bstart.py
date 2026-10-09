@@ -13,9 +13,13 @@ START = ROOT / "bStart.py"
 
 
 class BStartTests(unittest.TestCase):
-    def run_start(self, workspace: Path) -> str:
+    def run_start(self, workspace: Path, extra_env: dict | None = None) -> str:
         env = dict(__import__("os").environ)
+        env.pop("BSMART_SESSION_PROJECT", None)
+        env.pop("BSMART_SESSION_WORKSTREAM", None)
         env["BSMART_PROJECT_ROOT"] = str(workspace / "projects")
+        if extra_env:
+            env.update(extra_env)
         result = subprocess.run(
             [sys.executable, str(START), "--root", str(workspace), "--skip-update", "--skip-integrity"],
             text=True,
@@ -42,22 +46,25 @@ class BStartTests(unittest.TestCase):
             (projects / "Demo" / "project.md").write_text("# Demo\n", encoding="utf-8")
         return temp
 
-    def test_bootstraps_general_role_and_selector(self):
+    def test_starts_in_free_mode_and_lists_the_index(self):
         workspace = self.make_workspace()
         output = self.run_start(workspace)
-        roles = workspace / "bSmart" / "Roles"
-        self.assertTrue((roles / "current_role.md").is_file())
-        self.assertTrue((roles / "general_role.md").is_file())
+        self.assertFalse((workspace / "bSmart" / "Roles").exists())
+        self.assertTrue((workspace / "projects" / "INDEX.md").is_file())
         self.assertIn("Hi, Test!", output)
         self.assertIn("Agent: TestAgent", output)
-        self.assertIn("Role: General", output)
-        self.assertIn("Project: none", output)
+        self.assertNotIn("Role:", output)
+        self.assertIn("Project (session): Free mode", output)
+        self.assertIn("Workstream: none", output)
+        self.assertIn("- Demo (DEMO)", output)
+        self.assertIn("Never switch silently", output)
+        self.assertIn("bSmart [", output)
         self.assertIn("bSmart-Instance: no Git repository", output)
 
     def test_reports_project_mount_unavailable(self):
         workspace = self.make_workspace(with_projects=False)
         output = self.run_start(workspace)
-        self.assertIn("Project: unavailable", output)
+        self.assertIn("Project (session): unavailable", output)
         self.assertIn("project mount appears to be down", output)
 
     def test_workspace_root_and_system_copies_resolve_the_same_workspace(self):
@@ -74,6 +81,8 @@ class BStartTests(unittest.TestCase):
         shutil.copy(START, system / "bStart.py")
         shutil.copy(START, workspace / "bStart.py")
         env = dict(__import__("os").environ)
+        env.pop("BSMART_SESSION_PROJECT", None)
+        env.pop("BSMART_SESSION_WORKSTREAM", None)
         env["BSMART_PROJECT_ROOT"] = str(workspace / "projects")
         for script in (workspace / "bStart.py", system / "bStart.py"):
             result = subprocess.run(
@@ -91,22 +100,36 @@ class BStartTests(unittest.TestCase):
             self.assertNotIn("update helper unavailable", result.stdout)
             self.assertIn("bSmart system update check: up to date", result.stdout)
 
-    def test_loads_selected_project_metadata(self):
+    def test_role_files_do_not_select_a_project_for_the_session(self):
         workspace = self.make_workspace()
         role_dir = workspace / "bSmart" / "Roles"
         role_dir.mkdir()
-        (role_dir / "current_role.md").write_text(
+        selector = role_dir / "current_role.md"
+        selector.write_text(
             "```yaml\nrole_selection:\n  current_role: developer\n```\n", encoding="utf-8"
         )
+        before = selector.read_bytes()
         (role_dir / "developer_role.md").write_text(
             "```yaml\nstate:\n  active_project: Demo\n  active_workstream: Build\n```\n", encoding="utf-8"
         )
         output = self.run_start(workspace)
-        self.assertIn("Role: Developer", output)
-        self.assertIn("Project: Demo", output)
+        self.assertNotIn("Role:", output)
+        self.assertIn("Project (session): Free mode", output)
+        self.assertIn("Workstream: none", output)
+        self.assertNotIn("# Demo", output)
+        self.assertEqual(selector.read_bytes(), before)
+        self.assertIn("deprecated", output.lower())
+
+    def test_process_session_env_is_shown_and_role_files_are_not_read(self):
+        workspace = self.make_workspace()
+        output = self.run_start(workspace, {
+            "BSMART_SESSION_PROJECT": "Demo",
+            "BSMART_SESSION_WORKSTREAM": "Build",
+        })
+        self.assertIn("Project (session): Demo", output)
         self.assertIn("Workstream: Build", output)
-        self.assertIn("project.md", output)
-        self.assertIn("# Demo", output)
+        self.assertNotIn("# Demo", output)
+        self.assertFalse((workspace / "bSmart" / "State" / "sessions").exists())
 
     def test_startup_uses_the_storage_spec_when_env_is_unset(self):
         workspace = self.make_workspace()
@@ -117,14 +140,8 @@ class BStartTests(unittest.TestCase):
         spec = workspace / "bSmart" / "State" / "container-storage.yaml"
         spec.parent.mkdir(parents=True)
         spec.write_text("project_storage:\n  project_root: ./from-spec\n", encoding="utf-8")
-        role_dir = workspace / "bSmart" / "Roles"
-        role_dir.mkdir()
-        (role_dir / "current_role.md").write_text(
-            "```yaml\nrole_selection:\n  current_role: developer\n```\n", encoding="utf-8"
-        )
-        (role_dir / "developer_role.md").write_text(
-            "```yaml\nstate:\n  active_project: Demo\n  active_workstream: none\n```\n", encoding="utf-8"
-        )
+        (workspace / "projects" / "OnlyLocal").mkdir()
+        (workspace / "projects" / "OnlyLocal" / "project.md").write_text("# Stale local\n", encoding="utf-8")
         env = dict(__import__("os").environ)
         env.pop("BSMART_PROJECT_ROOT", None)
         result = subprocess.run(
@@ -136,7 +153,9 @@ class BStartTests(unittest.TestCase):
             env=env,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("# From spec", result.stdout)
+        self.assertIn("- Demo (", result.stdout)
+        self.assertNotIn("OnlyLocal", result.stdout)
+        self.assertNotIn("# From spec", result.stdout)
         self.assertNotIn("# Stale local", result.stdout)
 
     def test_cp1252_stdout_prints_characters_outside_that_code_page(self):

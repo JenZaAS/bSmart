@@ -2,8 +2,10 @@
 """Finalize a bSmart-System upgrade in an existing workspace.
 
 This is an explicit, reversible repair for instances that already have an old
-HERMES.md/AGENTS.md hook. It updates only startup integration files, preserving
-backups and leaving bSmart instance content untouched.
+HERMES.md/AGENTS.md hook. It updates startup integration files, preserving
+backups. It also backs up Roles/ and legacy bSmart_State.md, then merges
+unambiguous role handoffs into the matching project. Ambiguous roles are
+reported and left unchanged.
 """
 from __future__ import annotations
 
@@ -11,19 +13,40 @@ import argparse
 import datetime as dt
 import hashlib
 import shutil
+import sys
 from pathlib import Path
+
+_SCRIPT_DIR = Path(__file__).absolute().parent
+if str(_SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPT_DIR))
+
+from bsmart_session_projects import migrate_workspace, restore_workspace
 
 HOOKS = ("HERMES.md", "AGENTS.md", "CLAUDE.md")
 PROFILE_REVIEW_MARKER = "## Startup reply behavior"
 PROFILE_RECOMMENDED = """## Startup reply behavior
 - Preserve the compact command lines emitted by bStart.py.
 - Do not replace the bStart startup summary with a generic greeting or reduced status summary.
-- A first reply after `/new` may add a short greeting, but must retain the Role, Project, Workstream, and command-help lines.
+- A first reply after `/new` may add a short greeting, but must retain the Project (session), Workstream, active projects, and command-help lines.
 """
 
 
 def resolve_workspace(value: str | None) -> Path:
-    return Path(value).expanduser().resolve() if value else Path("/workspace").resolve()
+    """Use an explicit workspace, or /workspace only when this process is already inside it."""
+    if value:
+        return Path(value).expanduser().resolve()
+    default = Path("/workspace").resolve()
+    cwd = Path.cwd().resolve()
+    inside = cwd == default
+    if not inside:
+        try:
+            cwd.relative_to(default)
+            inside = True
+        except ValueError:
+            inside = False
+    if not inside:
+        raise ValueError("Refusing to use /workspace because this process is not inside it. Pass --workspace.")
+    return default
 
 
 def sha256(path: Path) -> str:
@@ -46,12 +69,51 @@ def migrate_known_profile(profile: Path, backup: Path, backed_up: list[str]) -> 
     return str(profile)
 
 
+def configure_output_streams() -> None:
+    """Print paths and project names without raising UnicodeEncodeError.
+
+    A pipe on Windows uses the ANSI code page with a strict error handler.
+    UTF-8 keeps those characters. When a stream cannot change encoding, keep
+    its current encoding and escape characters it cannot represent.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="backslashreplace")
+        except (AttributeError, OSError, ValueError):
+            try:
+                reconfigure(errors="backslashreplace")
+            except (AttributeError, OSError, ValueError):
+                continue
+
+
 def main() -> int:
+    configure_output_streams()
     parser = argparse.ArgumentParser(description="Repair bSmart startup integration after a system upgrade.")
-    parser.add_argument("--workspace", help="Workspace root; defaults to /workspace")
+    parser.add_argument("--workspace", help="Workspace root. /workspace is used only when this process is already inside it.")
     parser.add_argument("--backup-root", help="Optional backup directory")
+    parser.add_argument("--restore-session-projects", help="Restore Roles, legacy state, and touched handoffs from a backup directory")
+    parser.add_argument("--projects-root", help="Projects root for role migration and restore")
     args = parser.parse_args()
-    workspace = resolve_workspace(args.workspace)
+    try:
+        workspace = resolve_workspace(args.workspace)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    print(f"workspace: {workspace}")
+    if args.restore_session_projects:
+        backup = Path(args.restore_session_projects).expanduser().resolve()
+        projects = Path(args.projects_root).expanduser().resolve() if args.projects_root else None
+        try:
+            report = restore_workspace(workspace, backup, projects)
+        except (OSError, FileNotFoundError, ValueError) as exc:
+            print(f"role_migration: blocked: {exc}")
+            return 1
+        for line in report:
+            print(line)
+        return 0 if not any(": blocked:" in line for line in report) else 1
     system = workspace / "bSmart-System"
     source_start = system / "bStart.py"
     template = system / "bSmart_Templates" / "AGENTS.md"
@@ -95,6 +157,17 @@ def main() -> int:
         print("profile_migration: applied known startup-reply compatibility update")
         print(f"profile_backup: {backup / 'bSmart_Agent.md'}")
 
+    projects = Path(args.projects_root).expanduser().resolve() if args.projects_root else None
+    try:
+        migration = migrate_workspace(workspace, backup, projects)
+    except (OSError, ValueError) as exc:
+        print(f"role_migration: blocked: {exc}")
+        return 1
+    for line in migration:
+        print(line)
+    if any(line.startswith("role_migration: blocked") for line in migration):
+        return 1
+
     print("bSmart instance upgrade: verified")
     print(f"workspace: {workspace}")
     print(f"system: {system}")
@@ -106,7 +179,7 @@ def main() -> int:
     print(f"backups: {len(backed_up)}")
     for item in backed_up:
         print(f"  backup: {item}")
-    print("instance content: untouched")
+    print("instance content: startup hooks synchronized; role handoffs migrated only when unambiguous")
     return 0
 
 

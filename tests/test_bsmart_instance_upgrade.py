@@ -6,6 +6,7 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "bsmart-instance-upgrade"
@@ -44,9 +45,30 @@ class InstanceUpgradeTests(unittest.TestCase):
             self.assertEqual(len(backups), 1)
             self.assertEqual(backups[0].read_text(), "Read bSmart.md\n")
             self.assertEqual((workspace / "bSmart" / "bSmart_State.md").read_text(), "preserve me\n")
+            self.assertIn(f"workspace: {workspace.resolve()}", output.getvalue())
             self.assertIn("profile_migration: applied known startup-reply compatibility update", output.getvalue())
             self.assertIn("profile_backup:", output.getvalue())
             self.assertIn("Preserve the compact command lines emitted by bStart.py.", (workspace / "bSmart" / "bSmart_Agent.md").read_text())
+
+    def test_refuses_the_default_workspace_when_not_inside_it(self):
+        import sys
+        stderr = io.StringIO()
+        stdout = io.StringIO()
+        old = sys.argv
+        try:
+            sys.argv = [str(SCRIPT)]
+            with patch.object(module["Path"], "cwd", return_value=Path("/tmp/outside-bsmart")):
+                with contextlib.redirect_stderr(stderr), contextlib.redirect_stdout(stdout):
+                    code = module["main"]()
+        finally:
+            sys.argv = old
+        self.assertEqual(code, 2)
+        self.assertIn("Pass --workspace", stderr.getvalue())
+        self.assertNotIn("bSmart instance upgrade: verified", stdout.getvalue())
+
+    def test_accepts_the_default_workspace_when_already_inside_it(self):
+        with patch.object(module["Path"], "cwd", return_value=Path("/workspace/child")):
+            self.assertEqual(module["resolve_workspace"](None), Path("/workspace").resolve())
 
 
 if __name__ == "__main__":

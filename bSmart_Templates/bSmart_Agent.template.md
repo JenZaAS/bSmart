@@ -56,7 +56,8 @@ roots:
   extensions: <extensions-root>
 
 content_files:
-  roles: <content-root>/Roles
+  project_index: <projects-root>/INDEX.md
+  legacy_roles: <content-root>/Roles
   legacy_state: <content-root>/bSmart_State.md
   todo: <content-root>/bSmart_TODO.md
   history: <content-root>/bHistory.md
@@ -74,7 +75,7 @@ The project and sandbox roots are resolved by the project-storage protocol and i
 
 ## Project-specific focus
 
-When a project is selected, load that project's `project.md` and applicable project instructions. A project-specific role focus is scoped to that project and does not replace the global instance identity or safety rules.
+When this session selects a project, load that project's `project.md`, `handoff.md`, and applicable project instructions. That context does not replace the instance identity or safety rules. Do not read `Roles/current_role.md` as the selected project.
 
 ## Optional feature configuration
 
@@ -97,7 +98,7 @@ features:
 - Generic rules: `<system-root>/bSmart.md`
 - Absolute cross-runtime rules: `<system-root>/bSmart_Invariants.md`
 - Protocol index: `<system-root>/bSmart_Protocols/protocols.md`
-- Current project/state: selected role file under `<content-root>/Roles`; legacy migration source: `<content-root>/bSmart_State.md`
+- Current project/state: this session's project, then `<projects-root>/<project>/handoff.md`. `Roles/` and `<content-root>/bSmart_State.md` are historical migration sources, not a selector
 - Current tasks: `<content-root>/bSmart_TODO.md`
 - Completed work: `<content-root>/bHistory.md`
 - Larger instance work: `<content-root>/Workdocs/`

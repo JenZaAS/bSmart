@@ -15,15 +15,28 @@ paths:
     - BSMART_PROJECT_ROOT when set to a readable/writable directory
     - /projects when readable/writable
     - ./projects when readable/writable from the current bSmart/workspace folder
-  state_owner: selected role file under /workspace/bSmart/Roles
+  index: <project-root>/INDEX.md
+  handoff: <project-root>/<project>/handoff.md
+  workstream_handoff: <project-root>/<project>/workstreams/<workstream>/handoff.md
   legacy_state_file: /workspace/bSmart/bSmart_State.md
+  legacy_roles: /workspace/bSmart/Roles
+```
+
+```yaml
+session:
+  scope: this conversation only
+  shared_selector: false
+  empty: Free mode
+  guess: never
+  select: /project <name> or a plain request in the conversation
+  switch: write the old project's handoff first, then print a compact startup block for the new project
 ```
 
 ```yaml
 state_management:
-  protocol: /workspace/bSmart-System/bSmart_Protocols/roles-and-concurrency.md
+  protocol: /workspace/bSmart-System/bSmart_Protocols/projects.md
   legacy_protocol: /workspace/bSmart-System/bSmart_Protocols/state.md
-  rule: Project creation/listing may use the selected role state, but role-owned active project/workstream rules are defined by the roles-and-concurrency protocol.
+  rule: The session holds the active project and workstream. The project holds the handoff. Roles/ and bSmart_State.md are not selectors.
 ```
 
 ```yaml
@@ -99,7 +112,33 @@ project_md_required_fields:
 
 ```yaml
 create_project:
-  default_after_creation: switch active project in the selected role to the newly created project
-  rule: The current `/project add NAME` command updates the selected role file and opens the new project. A future API may explicitly support opt-out, but this runtime does not.
-  state_protocol: /workspace/bSmart-System/bSmart_Protocols/roles-and-concurrency.md
+  default_after_creation: the session that created the project selects it
+  rule: `/project add NAME` creates the project, updates INDEX.md, and selects it in this session only. If this session already has a project, write that project's handoff before switching.
+```
+
+## Project index
+
+`projects/INDEX.md` has one line per project:
+
+```text
+name | label | aliases | description | status
+```
+
+`status` is `active` or `archived`. Only `/project` commands update an existing index: add, rename, retire (archive), delete, and label, description, or alias changes. bStart reads the index and prints active projects. Archived projects stay hidden until `/project list --all`.
+
+If the index is missing, bStart or `/project list` creates it from the project folders and `project.md`. If the index exists but folder names disagree, bStart flags the mismatch and offers `/project index repair`. Repair adds lines for folders the index does not name. It does not delete existing lines.
+
+The label is the short tag used in operation tags, for example `DSW`. A new project gets a provisional label from its name. Change it with `/project label`.
+
+## Project awareness
+
+In Free mode, casual chat stays casual. When real work, a decision, or knowledge appears, suggest placing it in a matching project or creating one. Match on the index name, label, and aliases.
+
+If the conversation drifts to a different project's topic, ask once whether to switch or only note it. Never switch silently. If the operator says to stay, do not ask again in that session.
+
+## Handoff
+
+Selecting a project loads its handoff. Selecting a workstream loads that workstream's handoff. Parallel sessions on the same project use different workstreams so their handoffs stay separate.
+
+On a project change, write a short wrap-up into the old handoff first. Do not replace existing handoff text; append the new note. Then print the new project's compact startup block. Shared writes to the index and to a handoff use `.bLock`.
 ```

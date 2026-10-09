@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import os
 import shutil
@@ -39,28 +40,11 @@ class ProjectPluginTests(unittest.TestCase):
         home = Path(self.tmp.name)
         self.projects = home / "projects"
         self.projects.mkdir()
-        self.roles = home / "roles"
-        self.roles.mkdir()
-        (self.roles / "current_role.md").write_text(
-            "# bSmart current role\n\n```yaml\nrole_selection:\n  current_role: general\n```\n",
-            encoding="utf-8",
-        )
-        (self.roles / "general_role.md").write_text(
-            "# bSmart role\n\n```yaml\nstate:\n  active_project: \"none\"\n  active_workstream: \"none\"\n```\n",
-            encoding="utf-8",
-        )
-        self.state = home / "bSmart_State.md"
-        self.state.write_text(
-            "# bSmart state\n- Mode: `Free Mode`\n- Active project (short name): `none`\n",
-            encoding="utf-8",
-        )
         self.env = {
             "BSMART_SYSTEM_ROOT": str(SYSTEM_ROOT),
             "BSMART_PROJECT_ROOT": str(self.projects),
-            "BSMART_ROLES_ROOT": str(self.roles),
-            "BSMART_ROLE_SELECTOR": str(self.roles / "current_role.md"),
-            "BSMART_LEGACY_STATE_FILE": str(self.state),
             "BSMART_ARCHIVE_ROOT": str(home / "archives"),
+            "BSMART_INSTANCE_HOME": str(home),
         }
         self.plugin = load_plugin()
         self.ctx = FakeContext()
@@ -71,15 +55,33 @@ class ProjectPluginTests(unittest.TestCase):
 
     def call(self, command, args=""):
         with patch.dict(os.environ, self.env, clear=False):
+            for key in (
+                "BSMART_SESSION_ID",
+                "BSMART_SESSION_PROJECT",
+                "BSMART_SESSION_WORKSTREAM",
+                "BSMART_SESSION_HANDOFF",
+                "HERMES_SESSION_KEY",
+                "HERMES_SESSION_ID",
+                "CLAUDE_SESSION_ID",
+                "CURSOR_CONVERSATION_ID",
+                "CURSOR_SESSION_ID",
+                "CODEX_THREAD_ID",
+                "CODEX_SESSION_ID",
+            ):
+                if key not in self.env:
+                    os.environ.pop(key, None)
             return self.ctx.commands[command]["handler"](args)
 
-    def test_registers_project_and_role_and_lists(self):
+    def test_registers_project_and_deprecated_role_and_lists(self):
         self.assertEqual(set(self.ctx.commands), {"project", "role"})
         self.assertIn("Projects:", self.call("project"))
         self.assertIn("Free Mode", self.call("project", "list"))
+        self.assertIn("deprecated", self.call("role", "list").lower())
+        self.assertIn("/project", self.call("role"))
 
     def test_real_cross_process_yes_continuation(self):
         self.assertIn("Project created", self.call("project", "add Alpha"))
+        self.env["BSMART_SESSION_PROJECT"] = "Alpha"
         prompt = self.call("project", "rename Beta")
         self.assertIn("Confirmation required: rename exact target", prompt)
         yes_line = next(line for line in prompt.splitlines() if line.startswith("Yes:"))
@@ -89,8 +91,83 @@ class ProjectPluginTests(unittest.TestCase):
         self.assertTrue((self.projects / "Beta").is_dir())
         self.assertFalse((self.projects / "Alpha").exists())
 
+    def test_two_sessions_do_not_share_a_selector(self):
+        self.call("project", "add Alpha")
+        self.call("project", "add Beta handoff: left Alpha")
+        self.assertFalse((Path(self.tmp.name) / "Roles" / "current_role.md").exists())
+        env_a = dict(self.env)
+        env_b = dict(self.env)
+        env_a["BSMART_SESSION_PROJECT"] = "Alpha"
+        env_b["BSMART_SESSION_PROJECT"] = "Beta"
+        with patch.dict(os.environ, env_a, clear=False):
+            os.environ.pop("BSMART_SESSION_ID", None)
+            listed_a = self.ctx.commands["project"]["handler"]("list")
+        with patch.dict(os.environ, env_b, clear=False):
+            os.environ.pop("BSMART_SESSION_ID", None)
+            listed_b = self.ctx.commands["project"]["handler"]("list")
+        self.assertIn("- Alpha (current)", listed_a)
+        self.assertNotIn("- Beta (current)", listed_a)
+        self.assertIn("- Beta (current)", listed_b)
+        self.assertNotIn("- Alpha (current)", listed_b)
+        self.assertFalse((Path(self.tmp.name) / "Roles" / "current_role.md").exists())
+
+    def test_documented_session_env_names_and_the_shared_fallback(self):
+        keys = (
+            "BSMART_SESSION_ID",
+            "HERMES_SESSION_KEY",
+            "HERMES_SESSION_ID",
+            "CLAUDE_SESSION_ID",
+            "CURSOR_CONVERSATION_ID",
+            "CURSOR_SESSION_ID",
+            "CODEX_THREAD_ID",
+            "CODEX_SESSION_ID",
+        )
+        with patch.dict(os.environ, {"CURSOR_SESSION_ID": "not-a-cursor-id", "CODEX_SESSION_ID": "not-a-codex-id"}, clear=False):
+            for key in keys:
+                if key not in {"CURSOR_SESSION_ID", "CODEX_SESSION_ID"}:
+                    os.environ.pop(key, None)
+            self.assertEqual(self.plugin._channel_session_id(), "channel-client")
+        with patch.dict(os.environ, {"CURSOR_CONVERSATION_ID": "conv-9"}, clear=False):
+            for key in keys:
+                if key != "CURSOR_CONVERSATION_ID":
+                    os.environ.pop(key, None)
+            self.assertEqual(self.plugin._channel_session_id(), "cursor-conversation-id-conv-9")
+        with patch.dict(os.environ, {"CODEX_THREAD_ID": "thread-9"}, clear=False):
+            for key in keys:
+                if key != "CODEX_THREAD_ID":
+                    os.environ.pop(key, None)
+            self.assertEqual(self.plugin._channel_session_id(), "codex-thread-id-thread-9")
+
+    def test_default_workspace_is_named_before_a_hand_run(self):
+        plugin = load_plugin()
+        plugin._default_notice_sent = False
+        stderr = io.StringIO()
+        with patch.dict(os.environ, {}, clear=False):
+            for key in ("BSMART_SYSTEM_ROOT", "BSMART_INSTANCE_HOME", "BSMART_PROJECT_ROOT"):
+                os.environ.pop(key, None)
+            with patch.object(plugin.sys, "stderr", stderr):
+                plugin._announce_default_workspace()
+                second = io.StringIO()
+                plugin.sys.stderr = second
+                plugin._announce_default_workspace()
+        self.assertIn("/workspace/bSmart-System", stderr.getvalue())
+        self.assertIn("/workspace/bSmart", stderr.getvalue())
+        self.assertEqual(second.getvalue(), "")
+
+    def test_select_then_delete_without_a_session_env(self):
+        self.assertIn("Current: Gamma", self.call("project", "add Gamma"))
+        prompt = self.call("project", "delete")
+        self.assertIn("Confirmation required: delete exact target", prompt)
+        pending_id = next(line for line in prompt.splitlines() if line.startswith("Yes:")).rsplit(" ", 1)[1]
+        result = self.call("project", f"yes {pending_id}")
+        self.assertIn("Free Mode", result)
+        self.assertFalse((self.projects / "Gamma").exists())
+        stored = json.loads((Path(self.tmp.name) / "State" / "sessions" / "channel-client.json").read_text(encoding="utf-8"))
+        self.assertIsNone(stored["project"])
+
     def test_real_no_continuation(self):
         self.call("project", "add Keep")
+        self.env["BSMART_SESSION_PROJECT"] = "Keep"
         prompt = self.call("project", "delete")
         pending_id = next(line for line in prompt.splitlines() if line.startswith("No:")).rsplit(" ", 1)[1]
         result = self.call("project", f"no {pending_id}")

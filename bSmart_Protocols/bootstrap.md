@@ -22,9 +22,9 @@ startup_order:
   - /workspace/bSmart-System/bSmart_Invariants.md
   - /workspace/bSmart/bSmart_Agent.md
   - /workspace/bSmart/bGuardrails.md when present
-  - /workspace/bSmart/Roles/current_role.md
-  - selected /workspace/bSmart/Roles/<role-id>_role.md
-  - selected project.md and workstream context when active
+  - projects/INDEX.md active project list
+  - no role selector; the session starts in Free mode
+  - selected project handoff only after this session selects a project
   - relevant_protocols
 ```
 
