@@ -122,14 +122,17 @@ def announce_release(workspace: Path, system: Path) -> int:
             text=True,
             encoding="utf-8",
             errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=30,
             check=False,
         )
     except (OSError, subprocess.TimeoutExpired):
         return 0
     if result.stdout:
-        print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
+        print(result.stdout, end="" if result.stdout.endswith("\n") else "\n", flush=True)
     if result.stderr:
-        print(result.stderr, end="" if result.stderr.endswith("\n") else "\n", file=sys.stderr)
+        print(result.stderr, end="" if result.stderr.endswith("\n") else "\n", file=sys.stderr, flush=True)
     return 0
 
 
