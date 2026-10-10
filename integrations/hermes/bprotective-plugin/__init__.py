@@ -22,7 +22,6 @@ def _core_dir() -> Path:
     for parent in here.parents:
         candidates.append(parent / "integrations" / "bprotective")
         candidates.append(parent / "bSmart-System" / "integrations" / "bprotective")
-    candidates.append(Path("/workspace/bSmart-System/integrations/bprotective"))
     for candidate in candidates:
         if (candidate / "core.py").is_file():
             return candidate
@@ -44,11 +43,19 @@ def _load_core() -> Any:
     return module
 
 
-_core = _load_core()
+_core = None
+_load_error: BaseException | None = None
+try:
+    _core = _load_core()
+except Exception as exc:  # noqa: BLE001 — a missing core must still register a blocking hook
+    _load_error = exc
+    print(f"bProtective core failed to load: {exc}", file=sys.stderr)
 
 
 def evaluate(command: str) -> dict[str, str] | None:
     """Return a Hermes directive for the built-in and instance policy, ignoring the on/off gate."""
+    if _core is None:
+        return {"action": "block", "rule_key": "core-missing", "message": "bProtective core failed to load."}
     config, error = _core.load_config()
     if error:
         return _core.to_hermes(_core.Decision("block", "config-invalid", error))
@@ -56,6 +63,9 @@ def evaluate(command: str) -> dict[str, str] | None:
 
 
 def _handle_command(raw_args: str) -> str:
+    if _core is None:
+        detail = f": {_load_error}" if _load_error else ""
+        return f"bProtective unavailable: core failed to load{detail}."
     args = (raw_args or "").strip().split()
     text, _code = _core.handle_control(args, reply_prefix="/bprotective")
     return text
@@ -68,7 +78,9 @@ def _pre_tool_call(*, tool_name: str = "", args: dict[str, Any] | None = None, *
     command = payload.get("command") or payload.get("cmd") or ""
     if not command:
         return None
-    return _core.to_hermes(_core.guard(str(command)))
+    if _core is None:
+        return {"action": "block", "rule_key": "core-missing", "message": "bProtective core failed to load."}
+    return _core.to_hermes(_core.guard(str(command), via_hook=True))
 
 
 def register(ctx: Any) -> None:

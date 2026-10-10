@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/before_shell.py\" || python \"${CLAUDE_PLUGIN_ROOT}/scripts/before_shell.py\" || py -3 \"${CLAUDE_PLUGIN_ROOT}/scripts/before_shell.py\"",
+            "command": "sh -c 'if command -v python3 >/dev/null 2>&1; then exec python3 \"$CLAUDE_PLUGIN_ROOT/scripts/before_shell.py\"; elif command -v python >/dev/null 2>&1; then exec python \"$CLAUDE_PLUGIN_ROOT/scripts/before_shell.py\"; else exec py -3 \"$CLAUDE_PLUGIN_ROOT/scripts/before_shell.py\"; fi'",
             "timeout": 15
           }
         ]

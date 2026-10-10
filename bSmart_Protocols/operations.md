@@ -164,7 +164,7 @@ bprotective:
 
 bprotective_preflight:
   purpose: Apply the same guard when the assistant has a shell and no pre-execution hook.
-  when: Before any shell command on the operator's machines, and before any destructive command.
+  when: Only while bProtective is on. Check once with bprotective status. While the guard is off, do not run bprotective check before commands.
   check: python3 bSmart-System/scripts/bprotective check --json -- "<exact command>"
   launcher: If python3 is missing or fails, use python, or py -3 on Windows.
   do_not_enable: Do not run bprotective on unless the operator asks. Off is the default.
@@ -184,7 +184,7 @@ bprotective_preflight:
     enable: bprotective on, then the operator runs bprotective yes <ID>
     disable: bprotective off, then the operator runs bprotective yes <ID>
     cancel: bprotective no <ID>
-  hooks: A Cursor, Claude, or Codex bProtective hook enforces the same core when it is installed and trusted. Installation still leaves the guard off. Codex cannot ask in the hook, so an escalation there waits for bprotective yes <ID>.
+  hooks: A Cursor, Claude, or Codex bProtective hook enforces the same core when it is installed and trusted. Installation still leaves the guard off. A shell command that runs bprotective on, off, yes, or no, or that writes, deletes, or moves the state file, is blocked. Codex PreToolUse denies blocks and escalations without an approval token. Codex PermissionRequest denies blocks and leaves escalations on the operator prompt. The agent never receives a confirmation token from those hooks.
 
 ```
 

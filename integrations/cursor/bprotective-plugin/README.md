@@ -2,7 +2,7 @@
 
 Optional Cursor `beforeShellExecution` adapter for the shared bProtective core. It is not live-tested in Cursor.
 
-The hook command tries `python3 ./scripts/before_shell.py`, then `python`, then `py -3`. Point Cursor at:
+The hook command runs the first interpreter it finds (`python3`, then `python`, then `py -3`) and does not run a second interpreter when the hook exits non-zero. `failClosed` is set. `BPROTECTIVE_CORE` can point at the directory that contains `hook.py` if this plugin is copied out of the checkout. Point Cursor at:
 
 `bSmart-System/integrations/cursor/bprotective-plugin`
 

@@ -46,9 +46,9 @@ class CorePolicyTests(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def guard(self, command: str):
+    def guard(self, command: str, **kwargs):
         with patch.dict(os.environ, self.env, clear=False):
-            return self.core.guard(command)
+            return self.core.guard(command, **kwargs)
 
     def control(self, args: list[str], prefix: str = "bprotective"):
         with patch.dict(os.environ, self.env, clear=False):
@@ -163,16 +163,16 @@ class CorePolicyTests(unittest.TestCase):
 
     def test_protected_windows_path_and_extra_pattern(self):
         self.config.write_text(
-            "protected_paths:\n  - E:\\VPS\\share\nextra_block:\n  - key: custom-wipe\n    pattern: \"Invoke-CustomWipe\"\n    reason: custom wipe\n",
+            "protected_paths:\n  - E:\\demo\\data\nextra_block:\n  - key: custom-wipe\n    pattern: \"Invoke-CustomWipe\"\n    reason: custom wipe\n",
             encoding="utf-8",
         )
         self.enable()
-        self.assertEqual(self.guard("Remove-Item -Recurse -Force E:\\VPS\\share").action, "block")
-        self.assertEqual(self.guard("Remove-Item -Recurse -Force E:/VPS/share").action, "block")
-        self.assertEqual(self.guard("rd /s /q E:\\VPS\\share\\nested").action, "block")
-        self.assertEqual(self.guard("Remove-Item E:\\VPS\\share\\notes.txt").action, "escalate")
-        self.assertEqual(self.guard("Get-Content E:\\VPS\\share\\notes.txt").action, "allow")
-        self.assertEqual(self.guard("Remove-Item -Recurse E:\\VPS\\share2").action, "allow")
+        self.assertEqual(self.guard("Remove-Item -Recurse -Force E:\\demo\\data").action, "block")
+        self.assertEqual(self.guard("Remove-Item -Recurse -Force E:/demo/data").action, "block")
+        self.assertEqual(self.guard("rd /s /q E:\\demo\\data\\nested").action, "block")
+        self.assertEqual(self.guard("Remove-Item E:\\demo\\data\\notes.txt").action, "escalate")
+        self.assertEqual(self.guard("Get-Content E:\\demo\\data\\notes.txt").action, "allow")
+        self.assertEqual(self.guard("Remove-Item -Recurse E:\\demo\\data2").action, "allow")
         self.assertEqual(self.guard("Invoke-CustomWipe").rule_key, "custom-wipe")
 
     def test_invalid_config_fails_closed_only_while_enabled(self):
@@ -198,20 +198,25 @@ class CorePolicyTests(unittest.TestCase):
         status = json.loads(self._capture(["status", "--json"]))
         self.assertEqual(status, {"enabled": True, "pending": False})
 
-    def test_codex_escalate_is_deny_until_one_confirmation(self):
+    def test_codex_escalate_denies_without_a_token(self):
         self.enable()
         payload = {"tool_name": "Bash", "tool_input": {"command": "Set-ExecutionPolicy Bypass"}}
         with patch.dict(os.environ, self.env, clear=False):
             first = self.hook.respond("codex", payload, self.core)
+            permission = self.hook.respond_permission(payload, self.core)
+            blocked = self.hook.respond_permission(
+                {"tool_name": "Bash", "tool_input": {"command": "rm -rf /"}},
+                self.core,
+            )
+        encoded = json.dumps(first)
         self.assertEqual(first["hookSpecificOutput"]["permissionDecision"], "deny")
-        token = first["hookSpecificOutput"]["permissionDecisionReason"].rsplit(" ", 1)[-1]
-        self.assertIn("will allow that command once", self.control(["yes", token])[0])
+        self.assertNotIn("bprotective yes", encoded)
+        self.assertIsNone(permission)
+        self.assertEqual(blocked["hookSpecificOutput"]["decision"]["behavior"], "deny")
+        self.assertNotIn("bprotective yes", json.dumps(blocked))
         with patch.dict(os.environ, self.env, clear=False):
             second = self.hook.respond("codex", payload, self.core)
-        self.assertIsNone(second)
-        with patch.dict(os.environ, self.env, clear=False):
-            third = self.hook.respond("codex", payload, self.core)
-        self.assertEqual(third["hookSpecificOutput"]["permissionDecision"], "deny")
+        self.assertEqual(second["hookSpecificOutput"]["permissionDecision"], "deny")
 
     def test_cursor_and_claude_hook_shapes(self):
         self.enable()
@@ -231,6 +236,36 @@ class CorePolicyTests(unittest.TestCase):
         self.assertEqual(claude["hookSpecificOutput"]["permissionDecision"], "deny")
         self.assertEqual(claude["hookSpecificOutput"]["hookEventName"], "PreToolUse")
         self.assertIsNone(ignored)
+
+    def test_copied_plugin_uses_bprotective_core_env(self):
+        self.enable()
+        copied = self.home / "cache" / "scripts"
+        copied.mkdir(parents=True)
+        shutil.copy(
+            SYSTEM / "integrations/cursor/bprotective-plugin/scripts/before_shell.py",
+            copied / "before_shell.py",
+        )
+        env = {**os.environ, **self.env, "BPROTECTIVE_CORE": str(SYSTEM / "integrations" / "bprotective")}
+        found = subprocess.run(
+            [sys.executable, str(copied / "before_shell.py")],
+            input=json.dumps({"command": "rm -rf /"}),
+            text=True,
+            capture_output=True,
+            env=env,
+            check=False,
+        )
+        self.assertEqual(found.returncode, 0, found.stderr)
+        self.assertEqual(json.loads(found.stdout)["permission"], "deny")
+        missing = subprocess.run(
+            [sys.executable, str(copied / "before_shell.py")],
+            input=json.dumps({"command": "git status"}),
+            text=True,
+            capture_output=True,
+            env={key: value for key, value in env.items() if key != "BPROTECTIVE_CORE"},
+            check=False,
+        )
+        self.assertEqual(missing.returncode, 2)
+        self.assertEqual(json.loads(missing.stdout)["permission"], "deny")
 
     def test_hook_script_reads_stdin(self):
         self.enable()
@@ -252,7 +287,7 @@ class CorePolicyTests(unittest.TestCase):
         (system / "scripts").mkdir(parents=True)
         content.mkdir(parents=True)
         shutil.copy(SYSTEM / "scripts" / "bsmart_instance.py", system / "scripts" / "bsmart_instance.py")
-        (content / "bprotective.yaml").write_text("protected_paths:\n  - E:\\VPS\\share\n", encoding="utf-8")
+        (content / "bprotective.yaml").write_text("protected_paths:\n  - E:\\demo\\data\n", encoding="utf-8")
         env = {
             "BSMART_SYSTEM_ROOT": str(system),
             "BPROTECTIVE_STATE_FILE": str(self.state),
@@ -263,7 +298,7 @@ class CorePolicyTests(unittest.TestCase):
             os.environ.pop("BSMART_WORKSPACE", None)
             loaded, error = self.core.load_config()
         self.assertIsNone(error)
-        self.assertEqual(loaded.protected_paths, ("E:\\VPS\\share",))
+        self.assertEqual(loaded.protected_paths, ("E:\\demo\\data",))
 
     def test_cli_check_survives_cp1252_strict(self):
         marker = "\u2610"
@@ -291,6 +326,61 @@ class CorePolicyTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2, stderr)
         self.assertNotIn("UnicodeEncodeError", stderr)
         self.assertIn(marker, result.stdout.decode("utf-8"))
+
+    def test_review_commands(self):
+        self.enable()
+        cases = {
+            "rm -fr /": "block",
+            "rm -r -f /": "block",
+            "rm --recursive --force /": "block",
+            "rm -rf --no-preserve-root /": "block",
+            "rm -rf -- /": "block",
+            'rm -rf "/"': "block",
+            "rm -rf '/'": "block",
+            "rm -rf /tmp/x /": "block",
+            'bash -c "rm -rf /"': "block",
+            "rm -rf ${HOME}": "block",
+            "find / -delete": "block",
+            "cd / && rm -rf *": "block",
+            "rm -rf /etc": "block",
+            "rm -rf /usr": "block",
+            "rm -rf /home": "block",
+            "shred /dev/sda": "block",
+            "> /dev/sda": "block",
+            "vssadmin delete shadows": "block",
+            "chmod -R 777 /": "block",
+            "docker system prune -a --volumes": "block",
+            "git reset --hard": "escalate",
+            "git clean -fdx": "escalate",
+            'git commit -m "make tests pass"': "allow",
+            "grep pass": "allow",
+            "pytest -k pass": "allow",
+            "pytest -k": "allow",
+            "git push --force-with-lease origin feature": "escalate",
+            'echo "rm -rf / is dangerous"': "allow",
+            'rg "docker"': "allow",
+            "service-account create": "allow",
+            "bprotective off": "block",
+            "bprotective yes abcdef": "block",
+            "rm bSmart/State/bprotective.json": "block",
+            "mv bSmart/State/bprotective.json /tmp/saved.json": "block",
+            "echo x > bSmart/State/bprotective.json": "block",
+        }
+        for command, action in cases.items():
+            with self.subTest(command=command):
+                self.assertEqual(self.guard(command).action, action, command)
+
+    def test_deleted_state_file_fails_closed(self):
+        self.enable()
+        self.state.unlink()
+        decision = self.guard("git status")
+        self.assertEqual(decision.action, "block")
+        self.assertEqual(decision.rule_key, "state-invalid")
+
+    def test_hook_blocks_guard_control_while_off(self):
+        decision = self.guard("bprotective off", via_hook=True)
+        self.assertEqual(decision.action, "block")
+        self.assertEqual(self.guard("git status", via_hook=True).action, "allow")
 
     def test_script_entrypoint(self):
         completed = subprocess.run(

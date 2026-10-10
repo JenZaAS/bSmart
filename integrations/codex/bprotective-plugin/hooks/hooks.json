@@ -6,9 +6,24 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${PLUGIN_ROOT}/scripts/before_shell.py\" || python \"${PLUGIN_ROOT}/scripts/before_shell.py\" || py -3 \"${PLUGIN_ROOT}/scripts/before_shell.py\"",
+            "command": "sh -c 'if command -v python3 >/dev/null 2>&1; then exec python3 \"$PLUGIN_ROOT/scripts/before_shell.py\"; elif command -v python >/dev/null 2>&1; then exec python \"$PLUGIN_ROOT/scripts/before_shell.py\"; else exec py -3 \"$PLUGIN_ROOT/scripts/before_shell.py\"; fi'",
+            "commandWindows": "if (Get-Command py -ErrorAction SilentlyContinue) { py -3 (Join-Path $env:PLUGIN_ROOT 'scripts/before_shell.py'); exit $LASTEXITCODE } elseif (Get-Command python -ErrorAction SilentlyContinue) { python (Join-Path $env:PLUGIN_ROOT 'scripts/before_shell.py'); exit $LASTEXITCODE } else { python3 (Join-Path $env:PLUGIN_ROOT 'scripts/before_shell.py'); exit $LASTEXITCODE }",
             "timeout": 15,
             "statusMessage": "Checking bProtective"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'if command -v python3 >/dev/null 2>&1; then exec python3 \"$PLUGIN_ROOT/scripts/before_shell.py\" --event permission; elif command -v python >/dev/null 2>&1; then exec python \"$PLUGIN_ROOT/scripts/before_shell.py\" --event permission; else exec py -3 \"$PLUGIN_ROOT/scripts/before_shell.py\" --event permission; fi'",
+            "commandWindows": "if (Get-Command py -ErrorAction SilentlyContinue) { py -3 (Join-Path $env:PLUGIN_ROOT 'scripts/before_shell.py') --event permission; exit $LASTEXITCODE } elseif (Get-Command python -ErrorAction SilentlyContinue) { python (Join-Path $env:PLUGIN_ROOT 'scripts/before_shell.py') --event permission; exit $LASTEXITCODE } else { python3 (Join-Path $env:PLUGIN_ROOT 'scripts/before_shell.py') --event permission; exit $LASTEXITCODE }",
+            "timeout": 15,
+            "statusMessage": "Checking bProtective approval"
           }
         ]
       }

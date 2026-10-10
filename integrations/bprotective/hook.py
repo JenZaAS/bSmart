@@ -61,7 +61,7 @@ def respond(adapter: str, payload: dict[str, Any], core: Any | None = None) -> d
     if command is None or not command.strip():
         return {"permission": "allow"} if adapter == "cursor" else None
     try:
-        decision = core.guard(command)
+        decision = core.guard(command, via_hook=True)
     except Exception as exc:  # noqa: BLE001 — a hook crash must still return a decision
         decision = core.Decision("block", "hook-error", f"bProtective hook failed: {exc}")
     if decision.action == "allow":
@@ -73,16 +73,34 @@ def respond(adapter: str, payload: dict[str, Any], core: Any | None = None) -> d
         permission = "deny" if decision.action == "block" else "ask"
         return _tool_decision(permission, decision.message)
     if adapter == "codex":
-        message = decision.message
-        if decision.action == "escalate":
-            try:
-                token = core.request_command_approval(command)
-            except OSError:
-                token = ""
-            if token:
-                message = f"{decision.message} Reply: bprotective yes {token}"
-        return _tool_decision("deny", message)
+        # The reason is model-visible. It must not carry an approval token.
+        return _tool_decision("deny", decision.message)
     raise ValueError(f"Unknown bProtective adapter: {adapter}")
+
+
+def respond_permission(payload: dict[str, Any], core: Any | None = None) -> dict[str, Any] | None:
+    """Codex PermissionRequest. Never auto-allow, and never return a token.
+
+    A block or a shell attempt to change the guard is denied. An escalation
+    returns no decision so Codex keeps the operator prompt. An allow returns
+    no decision so this hook does not skip Codex's own approval prompt.
+    """
+    core = core or load_core()
+    command = command_from("codex", payload)
+    if command is None or not command.strip():
+        return None
+    try:
+        decision = core.guard(command, via_hook=True)
+    except Exception as exc:  # noqa: BLE001
+        decision = core.Decision("block", "hook-error", f"bProtective hook failed: {exc}")
+    if decision.action == "block":
+        return {
+            "hookSpecificOutput": {
+                "hookEventName": "PermissionRequest",
+                "decision": {"behavior": "deny", "message": decision.message},
+            }
+        }
+    return None
 
 
 def _tool_decision(permission: str, message: str) -> dict[str, Any]:
@@ -99,6 +117,7 @@ def main(argv: list[str] | None = None) -> int:
     load_core().configure_output_streams()
     parser = argparse.ArgumentParser(description="bProtective pre-execution hook.")
     parser.add_argument("--adapter", required=True, choices=("cursor", "claude", "codex"))
+    parser.add_argument("--event", default="pretool", choices=("pretool", "permission"))
     args = parser.parse_args(argv)
     raw = sys.stdin.read()
     try:
@@ -107,7 +126,10 @@ def main(argv: list[str] | None = None) -> int:
         payload = {}
     if not isinstance(payload, dict):
         payload = {}
-    result = respond(args.adapter, payload)
+    if args.event == "permission":
+        result = respond_permission(payload)
+    else:
+        result = respond(args.adapter, payload)
     if result is not None:
         sys.stdout.write(json.dumps(result, ensure_ascii=True))
     return 0
