@@ -215,7 +215,6 @@ class BSmartLookupTests(unittest.TestCase):
         self.assertIn("hermes-runtime-onboarding.md", card)
         self.assertIn("incident-only", card)
         version = (ROOT / "bSmart_Version.md").read_text(encoding="utf-8")
-        self.assertIn("current_version: 0.1.45.1-draft", version)
         self.assertIn("## 0.1.45.1-draft", version)
 
     def test_missing_entries_are_not_fabricated(self):

@@ -135,8 +135,10 @@ tool_approval_model:
   setup_note: During init, ask the operator whether to keep manual framework approvals, use smart/low-friction approvals, or disable framework approvals only in explicitly trusted environments.
 
 bprotective:
-  purpose: Add a deterministic Hermes terminal-command guard as defense in depth.
+  purpose: Deterministic command guard for Hermes and for other shell-capable assistants.
   default: disabled
+  core: integrations/bprotective/
+  cli: scripts/bprotective
   hermes_integration: integrations/hermes/bprotective-plugin/
   commands:
     status: /bprotective status
@@ -144,16 +146,49 @@ bprotective:
     disable_request: /bprotective off
     approve: /bprotective yes <ID>
     reject: /bprotective no <ID>
+    cli_status: bprotective status
+    cli_check: bprotective check --json -- "<command>"
   approval_rules:
     - turning bProtective on requires explicit confirmation
     - turning bProtective off requires explicit confirmation
-    - risky commands escalate to Hermes's existing human approval gate
+    - risky commands escalate to the harness approval gate, or to the operator in chat when no gate exists
     - catastrophic commands are blocked deterministically
+    - setup and startup must not turn the guard on
   state:
     default: off
-    local_file: ~/.hermes/bprotective.json
+    resolution: BPROTECTIVE_STATE_FILE, else State/bprotective.json under the per-instance content root from bsmart_instance.default_content_root, else an existing ~/.hermes/bprotective.json
+    armed_record: ~/.bprotective/armed.json, or BPROTECTIVE_ARMED_FILE. This file is outside the instance State directory.
     confirmation_expiry_seconds: 300
-  boundary: This guard does not replace OS, container, Docker, or host-level security controls.
+  instance_config: State/bprotective.yaml under that same content root
+  instance_config_rule: Optional protected paths and extra patterns only. The file cannot enable the guard. The directory is the per-instance content root from bsmart_instance.default_content_root.
+  boundary: bProtective protects against accidental catastrophic commands. It does not protect against a deliberately adversarial agent, and it does not replace OS, container, Docker, or host-level security controls.
+
+bprotective_preflight:
+  purpose: Apply the same guard when the assistant has a shell and no pre-execution hook.
+  when: Only while bProtective is on. Check once with bprotective status. While the guard is off, do not run bprotective check before commands.
+  check: python3 bSmart-System/scripts/bprotective check --json -- "<exact command>"
+  launcher: If python3 is missing or fails, use python, or py -3 on Windows.
+  do_not_enable: Do not run bprotective on unless the operator asks. Off is the default.
+  operation_tag: A pre-flight check is not tagged. Tag only work that already happened, as "bSmart [<scope>]: <ops> - <note of at most 5 words>". Inside a project report the read, write, and delete that happened. Outside a project report write and delete only. A blocked or not-run command is not a write or delete. Do not tag log or history writes, pure chat, web lookups, or the check itself.
+  results:
+    allow:
+      exit: 0
+      action: The guard is off or the command is allowed. Follow the normal bSmart approval rules.
+    escalate:
+      exit: 1
+      action: Do not run the command. Quote the reason and ask the operator in chat. After they explicitly approve that exact command, run it. Do not treat a later check as a veto of that approval.
+    block:
+      exit: 2
+      action: Refuse. Do not run the command and do not ask for an override.
+  controls:
+    status: bprotective status
+    enable: The operator runs both `bprotective on` and `bprotective yes <ID>` in their own terminal. Agent hooks block those commands, so the agent cannot confirm them.
+    disable: The operator runs both `bprotective off` and `bprotective yes <ID>` in their own terminal. Agent hooks block those commands.
+    cancel: bprotective no <ID>, also from the operator's own terminal
+    recover: When the state file is missing and the armed marker or the outside armed record is still present, the operator runs `bprotective recover` and then `bprotective yes <ID>` in their own terminal. That writes a clean off state. Agent hooks block `recover` as well.
+  missing_core: A missing core blocks terminal commands. Hermes returns core-missing. Cursor, Claude, and Codex hook entries exit 2 with a deny payload, and Cursor sets failClosed. A hook launcher that cannot find Python exits 0 without a deny, so a missing interpreter does not block every command while protection is off.
+  hooks: A Cursor, Claude, or Codex bProtective hook enforces the same core when it is installed and trusted. Installation still leaves the guard off. A shell command that runs bprotective on, off, yes, no, or recover, or that names the bProtective CLI, scripts path, or State directory together with a write-capable tool, is blocked. File-edit hooks deny Write, Edit, MultiEdit, Cursor Write/Delete, and Codex apply_patch when the path is the state file, the local armed marker, or the outside armed record. Codex PreToolUse denies blocks and returns no decision for escalations, so PermissionRequest can prompt. It does not return ask, and it never includes a token. PermissionRequest denies blocks and leaves escalations on the operator prompt. Codex full-auto mode, which has no approval prompt, can run ask-class commands such as git push, pip install, docker, and gh pr. The agent never receives a confirmation token from those hooks. Once the guard has been armed, a state file that reads off without a recorded operator-confirmed off fails closed, and a missing state file fails closed while the outside armed record or the local marker remains.
+
 ```
 
 ```yaml

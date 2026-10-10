@@ -284,10 +284,12 @@ extensions:
       source_path: /workspace/bSmart-System/bSmart-Extensions/bQAbuild
       purpose: Question-driven scoping, decision capture, and implementation-brief generation before building.
     bProtective:
-      path: /workspace/bSmart-System/integrations/hermes/bprotective-plugin
+      path: /workspace/bSmart-System/integrations/bprotective
       optional: true
       packaging: bundled_integration
-      purpose: Approval-gated deterministic command protection for Hermes terminal actions.
+      purpose: Optional command guard shared by Hermes, Cursor, Claude, Codex, and generic shell assistants. Off until the operator confirms it.
+      protocol: /workspace/bSmart-System/bSmart_Protocols/operations.md
+      preflight: While bProtective is on, follow bprotective_preflight before a shell command on the operator's machines. While it is off, do not run that check. The check uses python3, then python, or py -3 on Windows. The check is not an operation tag. Do not turn the guard on unless the operator asks.
     bSmartClientPlugins:
       path: /workspace/bSmart-System/integrations
       optional: true

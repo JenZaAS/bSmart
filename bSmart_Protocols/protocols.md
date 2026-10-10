@@ -11,7 +11,7 @@ protocol_index:
 |---|---|---|
 | `bootstrap.md` | Session startup order, fresh-agent bootstrap, and verification | Starting, installing, or repairing bSmart |
 | `startup-hooks.md` | AGENTS.md/HERMES.md hook content and hook helper behavior | Creating or troubleshooting startup hooks |
-| `operations.md` | Safe action cadence, approvals, secrets, and traceability | Any action with safety or approval implications |
+| `operations.md` | Safe action cadence, approvals, secrets, traceability, and the bProtective pre-flight check | Any action with safety or approval implications |
 | `state.md` | Legacy `bSmart_State.md` and role-file migration rules | Migrating an older instance off role files |
 | `projects.md` | Project structure, project focus, and project-context boundaries | Creating, listing, selecting, or opening projects |
 - `project-commands.md` | Shared `/project` command behavior and Hermes, Cursor, Codex, and Claude adapters | Using or testing `/project` commands |

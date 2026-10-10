@@ -1,0 +1,12 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "bprotective",
+  "version": "0.2.0",
+  "description": "Optional bProtective PreToolUse guard. Off until the operator confirms it. Not yet live-tested in Codex.",
+  "license": "See the bSmart-System repository",
+  "extensions": {
+    "com.openai": {
+      "hooks": "./hooks/hooks.json"
+    }
+  }
+}

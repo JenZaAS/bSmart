@@ -1,0 +1,9 @@
+{
+  "name": "bprotective",
+  "version": "0.2.0",
+  "description": "Optional bProtective PreToolUse guard. Off until the operator confirms it. Not yet live-tested in Codex.",
+  "author": {
+    "name": "bSmart-System"
+  },
+  "hooks": "./hooks/hooks.json"
+}

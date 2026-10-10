@@ -1,0 +1,8 @@
+{
+  "name": "bprotective",
+  "version": "0.2.0",
+  "description": "Optional bProtective PreToolUse guard for Bash and PowerShell. Off until the operator confirms it. Not yet verified in the Claude app.",
+  "author": {
+    "name": "bSmart-System"
+  }
+}

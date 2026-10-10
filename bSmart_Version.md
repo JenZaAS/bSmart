@@ -1,10 +1,47 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.45.1-draft
-updated: 2026-10-10 08:50 UTC
+current_version: 0.1.46-draft
+updated: 2026-10-10 12:00 UTC
 status: draft
 ```
+
+## 0.1.46-draft
+
+```yaml
+release_type: harness_independent_bprotective
+scope:
+  - move bProtective policy, on/off state, and confirmation gating into one dependency-free Python core
+  - cover POSIX shells and Windows PowerShell/cmd, including protected instance paths
+  - add scripts/bprotective check, status, and confirmed on/off
+  - keep the Hermes plugin on the same decisions and confirmation text
+  - add a short pre-flight protocol for assistants that cannot hook the shell
+  - add Cursor, Claude Code, and Codex hook adapters without enabling protection by default
+  - read instance config and state from the per-instance content root via bsmart_instance.default_content_root
+  - keep Windows icacls state privacy in that shared core
+  - keep CLI and hook output encoding-safe for a cp1252 console
+  - fit the pre-flight text to the operation-tag convention and the python3, python, py -3 launcher fallback
+  - bProtective does not read role files; protection stays off until the operator confirms it
+  - block shell control of on/off/yes/no and writes, deletes, or moves of the state file
+  - keep a missing state file fail-closed after protection was enabled
+  - parse rm flags and block the reviewed catastrophic commands, and stop blocking ordinary pass, force-with-lease, and quoted mentions
+  - deny Codex blocks without an agent-visible token, and let escalations reach PermissionRequest
+  - fail closed when the core cannot load, with Cursor failClosed and BPROTECTIVE_CORE
+  - grant Windows state-file ACLs to a SID or DOMAIN\\user, and use Codex commandWindows
+  - stop a single & from hanging the tokenizer, and fail closed on a scan size or time limit
+  - keep an armed record outside State, and fail closed when that record disagrees with an off or missing state file unless the operator confirmed off
+  - add bprotective recover for a missing state file, and require the operator to run on and yes in their own terminal
+  - deny Claude Write/Edit/MultiEdit, Cursor Write/Delete, and Codex apply_patch on the state and armed-record paths
+  - start Cursor and Claude hooks from run_hook.cmd so Windows does not need sh
+  - block wrapped rm, bash -lc, xargs rm of a root, python shutil.rmtree of a root, chmod -R 000 /, chown -R of /, and git push of +main or --delete main
+  - state plainly that bProtective is for accidental catastrophic commands, not a deliberately adversarial agent
+verification:
+  - existing Hermes bProtective tests pass, including Windows commands and the Windows ACL write
+  - core and CLI tests cover Windows commands, protected paths, confirmation, hook response shapes, and the sibling content root
+  - Cursor, Claude, and Codex adapters were checked against vendor hook docs and were not live-tested
+  - python and node tests pass on Linux, Windows, and macOS for Python 3.11 and 3.12
+```
+
 
 ## 0.1.45.1-draft
 

@@ -17,7 +17,7 @@ bSmart is a lightweight **AI harness**: an operating layer around an AI assistan
 - [Setup](#setup) — bootstrap and maintain the system/content/extension folder structure.
 - [Extensions](#extensions) — add optional packs such as Fabric, bSearch, or Graphify.
 - [Features](#features) — show the feature list and drill into details from chat.
-- [bProtective](#bprotective) — optionally protect Hermes terminal actions with deterministic blocks and approval escalation.
+- [bProtective](#bprotective) — optionally block catastrophic commands and escalate risky ones. Off until the operator confirms it.
 
 ```yaml
 name: bSmart-System
@@ -491,19 +491,28 @@ Features is the user-facing registry. In chat, the agent can show a short featur
 
 ### bProtective
 
-bProtective is an optional, disabled-by-default Hermes plugin for terminal-command defense in depth. It blocks catastrophic command patterns, sends risky commands through Hermes's existing approval gate, and requires explicit confirmation both to turn protection on and to turn it off.
+bProtective is an optional command guard. It stays off until the operator confirms it. The policy core in `integrations/bprotective/` blocks catastrophic POSIX and Windows commands, escalates risky ones, and requires a separate confirmation to turn protection on or off.
 
-Commands:
+Hermes keeps `/bprotective` and sends escalations through Hermes's approval gate. Other assistants use:
 
 ```text
-/bprotective status
-/bprotective on
-/bprotective off
-/bprotective yes <ID>
-/bprotective no <ID>
+python3 bSmart-System/scripts/bprotective check --json -- "<command>"
 ```
 
-Install the plugin from `integrations/hermes/bprotective-plugin/`, validate it with `hermes plugins doctor`, enable the plugin, and start a new Hermes session. Installation does not activate protection; `/bprotective on` must be confirmed separately.
+If `python3` is missing or fails, use `python`, or `py -3` on Windows. Exit `0` is allow, `1` is escalate (ask the operator in chat; do not run it yet), and `2` is block (refuse). The check itself is not an operation tag. Cursor, Claude Code, and Codex packages under `integrations/<harness>/bprotective-plugin/` call the same core from a pre-execution hook. Those three hook adapters are not live-tested; see `integrations/bprotective/README.md`. Installing a plugin does not activate protection.
+
+```text
+bprotective status
+bprotective on
+bprotective yes <ID>
+bprotective off
+bprotective no <ID>
+bprotective recover
+```
+
+The operator runs both `bprotective on` and `bprotective yes <ID>` in their own terminal. Agent hooks block those commands. `bprotective recover`, then `bprotective yes <ID>`, is the operator command when the state file is missing and the armed record remains. A missing core blocks terminal commands. bProtective protects against accidental catastrophic commands, not against a deliberately adversarial agent.
+
+Optional protected paths belong in `State/bprotective.yaml` under the per-instance content root from `scripts/bsmart_instance.py`, in the instance next to the checkout. That file cannot turn the guard on. Run the pre-flight check only while protection is on.
 
 ## Update rule
 
