@@ -549,7 +549,11 @@ class CorePolicyTests(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(windows.returncode, 0, windows.stderr)
-            self.assertEqual(json.loads(windows.stdout)["permission"], "allow")
+            self.assertEqual(
+                json.loads(windows.stdout)["permission"],
+                "allow",
+                windows.stdout,
+            )
 
     def test_hook_blocks_guard_control_while_off(self):
         decision = self.guard("bprotective off", via_hook=True)

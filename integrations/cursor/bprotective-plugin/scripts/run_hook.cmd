@@ -1,4 +1,3 @@
-#!/bin/sh
 : << 'BATCH'
 @echo off
 setlocal EnableExtensions
