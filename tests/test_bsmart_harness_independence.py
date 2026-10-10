@@ -11,6 +11,35 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _privacy():
+    if not hasattr(_privacy, "module"):
+        import importlib.machinery
+        import importlib.util
+
+        loader = importlib.machinery.SourceFileLoader(
+            "bsmart_lookup_privacy", str(ROOT / "tests" / "test_bsmart_lookup.py")
+        )
+        spec = importlib.util.spec_from_loader(loader.name, loader)
+        module = importlib.util.module_from_spec(spec)
+        assert spec is not None and spec.loader is not None
+        spec.loader.exec_module(module)
+        _privacy.module = module
+    return _privacy.module
+
+
+def _load_bootstrap():
+    import importlib.machinery
+    import importlib.util
+
+    path = ROOT / "scripts" / "bsmart-bootstrap-workspace"
+    loader = importlib.machinery.SourceFileLoader("bsmart_bootstrap_workspace", str(path))
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    module = importlib.util.module_from_spec(spec)
+    assert spec is not None and spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
 INTEGRATION = ROOT / "scripts" / "bsmart-project-integration-check"
 UPDATE = ROOT / "scripts" / "bsmart-update"
 STARTUP = ROOT / "scripts" / "bsmart-startup-check"
@@ -181,14 +210,14 @@ class HermesIntegrationTests(unittest.TestCase):
 
     def test_windows_hermes_command_is_a_single_comspec_string(self):
         module = runpy.run_path(str(INTEGRATION))
-        hermes = r"C:\Users\Erling Jensen\bin\hermes.cmd"
+        hermes = r"C:\Users\Test User\bin\hermes.cmd"
         comspec = r"C:\Windows\System32\cmd.exe"
         command = module["windows_hermes_command"](
             hermes, ["plugins", "enable", "bsmart-project"], comspec
         )
         self.assertIsInstance(command, str)
         self.assertIn("/d /s /c", command)
-        self.assertIn("Erling Jensen", command)
+        self.assertIn("Test User", command)
         self.assertNotIn('\\"', command)
         self.assertTrue(command.startswith(f'"{comspec}"'))
 
@@ -196,7 +225,7 @@ class HermesIntegrationTests(unittest.TestCase):
     def test_install_enables_when_hermes_directory_contains_a_space(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            bin_dir = root / "Erling Jensen" / "bin"
+            bin_dir = root / "Test User" / "bin"
             log = root / "hermes.log"
             write_fake_hermes(bin_dir)
             home = root / "hermes-home"
@@ -390,6 +419,9 @@ class ProjectStorageTests(unittest.TestCase):
         module["infer_workspace_host_path"].__globals__["run"] = missing
         self.assertIsNone(module["infer_workspace_host_path"]())
         self.assertIsNone(module["infer_sandbox_host_path"]())
+        self.assertIsNone(module["infer_sandbox_host_path"]("/tmp/example-share/agent"))
+        source = STORAGE.read_text(encoding="utf-8")
+        self.assertEqual(_privacy().private_digest_hits(source), [])
 
     def test_relative_spec_resolves_against_the_workspace_at_read_time(self):
         module = runpy.run_path(str(STORAGE))
@@ -617,6 +649,198 @@ class TwoInstanceTests(unittest.TestCase):
         self.assertIn("Agent: GrokAdmin", result.stdout)
         self.assertTrue((self.nested / "bSmart" / "State" / "bsmart-system-update.yaml").is_file())
         self.assert_main_untouched()
+
+
+class BootstrapWorkspacePathTests(unittest.TestCase):
+    def test_explicit_workspace_is_used_and_no_private_host_default_exists(self):
+        script = ROOT / "scripts" / "bsmart-bootstrap-workspace"
+        source = script.read_text(encoding="utf-8")
+        self.assertEqual(_privacy().private_digest_hits(source), [])
+        self.assertIn("follow_symlinks=False", source)
+        self.assertIn("lchown", source)
+        missing = subprocess.run(
+            [sys.executable, str(script), "--agent-name", "Example"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertNotEqual(missing.returncode, 0)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            origin = root / "origin"
+            origin.mkdir()
+            env = os.environ.copy()
+            env["GIT_AUTHOR_NAME"] = "Test"
+            env["GIT_AUTHOR_EMAIL"] = "test@example.com"
+            env["GIT_COMMITTER_NAME"] = "Test"
+            env["GIT_COMMITTER_EMAIL"] = "test@example.com"
+            subprocess.run(["git", "init", "-b", "main", str(origin)], check=True, env=env, stdout=subprocess.PIPE)
+            (origin / "README.md").write_text("origin\n", encoding="utf-8")
+            subprocess.run(["git", "-C", str(origin), "add", "README.md"], check=True, env=env, stdout=subprocess.PIPE)
+            subprocess.run(
+                ["git", "-C", str(origin), "commit", "-m", "origin"],
+                check=True,
+                env=env,
+                stdout=subprocess.PIPE,
+            )
+            workspace = root / "explicit-workspace"
+            host_projects = root / "explicit-share" / "agent"
+            host_sandboxes = root / "explicit-agent" / "sandboxes"
+            command = [
+                sys.executable,
+                str(script),
+                "--workspace",
+                str(workspace),
+                "--agent-name",
+                "Example",
+                "--repo-url",
+                str(origin),
+                "--host-project-root",
+                str(host_projects),
+                "--host-sandbox-root",
+                str(host_sandboxes),
+                "--content-git",
+                "none",
+            ]
+            if hasattr(os, "getuid"):
+                command.extend(["--uid", str(os.getuid()), "--gid", str(os.getgid())])
+            result = subprocess.run(
+                command,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            spec = (workspace / "bSmart" / "State" / "container-storage.yaml").read_text(encoding="utf-8")
+            self.assertIn(str(host_projects), spec)
+            self.assertIn(str(host_sandboxes), spec)
+            self.assertTrue((workspace / "bSmart-System" / ".git").exists())
+            self.assertEqual(sorted(path.name for path in root.iterdir()), ["explicit-workspace", "origin"])
+
+    @unittest.skipUnless(hasattr(os, "lchown"), "POSIX only")
+    def test_chown_tree_does_not_follow_symlink_outside_the_tree(self):
+        module = _load_bootstrap()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            outside = root / "outside"
+            outside.mkdir()
+            target = outside / "target"
+            target.write_text("leave-me", encoding="utf-8")
+            before = target.stat()
+            workspace = root / "workspace"
+            workspace.mkdir()
+            (workspace / "real.txt").write_text("inside", encoding="utf-8")
+            (workspace / "planted").symlink_to(target)
+            (workspace / "dirlink").symlink_to(outside, target_is_directory=True)
+            recorded: list[Path] = []
+            followed: list[str] = []
+            real_lchown = os.lchown
+            real_chown = os.chown
+
+            def spy_lchown(path, uid, gid):
+                recorded.append(Path(path))
+                return real_lchown(path, uid, gid)
+
+            def spy_chown(path, uid, gid, *, follow_symlinks=True):
+                if follow_symlinks and Path(path).is_symlink():
+                    followed.append(str(path))
+                recorded.append(Path(path))
+                return real_chown(path, uid, gid, follow_symlinks=follow_symlinks)
+
+            os.lchown = spy_lchown
+            os.chown = spy_chown
+            try:
+                report = module.OwnerReport()
+                module.chown_tree(workspace, os.getuid(), os.getgid(), report)
+            finally:
+                os.lchown = real_lchown
+                os.chown = real_chown
+            self.assertEqual(followed, [])
+            self.assertGreater(len(recorded), 0)
+            for raw in recorded:
+                self.assertFalse(raw.is_symlink(), raw)
+                self.assertTrue(raw.resolve().is_relative_to(workspace.resolve()), raw)
+            after = target.stat()
+            self.assertEqual(before.st_uid, after.st_uid)
+            self.assertEqual(before.st_gid, after.st_gid)
+            self.assertGreater(report.skipped_symlinks, 0)
+
+    @unittest.skipUnless(hasattr(os, "geteuid") and os.geteuid() not in (0, 1), "unprivileged POSIX")
+    def test_requested_ownership_failure_is_reported(self):
+        script = ROOT / "scripts" / "bsmart-bootstrap-workspace"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            origin = root / "origin"
+            origin.mkdir()
+            env = os.environ.copy()
+            env["GIT_AUTHOR_NAME"] = "Test"
+            env["GIT_AUTHOR_EMAIL"] = "test@example.com"
+            env["GIT_COMMITTER_NAME"] = "Test"
+            env["GIT_COMMITTER_EMAIL"] = "test@example.com"
+            subprocess.run(["git", "init", "-b", "main", str(origin)], check=True, env=env, stdout=subprocess.PIPE)
+            (origin / "README.md").write_text("origin\n", encoding="utf-8")
+            subprocess.run(["git", "-C", str(origin), "add", "README.md"], check=True, env=env, stdout=subprocess.PIPE)
+            subprocess.run(["git", "-C", str(origin), "commit", "-m", "origin"], check=True, env=env, stdout=subprocess.PIPE)
+            workspace = root / "workspace"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(script),
+                    "--workspace",
+                    str(workspace),
+                    "--agent-name",
+                    "Example",
+                    "--repo-url",
+                    str(origin),
+                    "--content-git",
+                    "none",
+                    "--uid",
+                    "1",
+                    "--gid",
+                    "1",
+                ],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("could not be applied", result.stderr)
+            self.assertIn("WARNING:", result.stderr)
+
+    def test_ownership_report_fails_when_nothing_was_applied(self):
+        module = _load_bootstrap()
+        report = module.OwnerReport()
+        report.attempts = 2
+        report.failures = ["one: denied", "two: denied"]
+        self.assertEqual(module.emit_ownership_report(report, 1, 1), 1)
+        skipped = module.OwnerReport()
+        skipped.platform_without_chown = True
+        self.assertEqual(module.emit_ownership_report(skipped, 1, 1), 0)
+
+    def test_missing_chown_is_skipped(self):
+        module = _load_bootstrap()
+        saved = {name: getattr(os, name, None) for name in ("chown", "lchown")}
+        for name in saved:
+            if hasattr(os, name):
+                delattr(os, name)
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / "file"
+                path.write_text("x", encoding="utf-8")
+                report = module.OwnerReport()
+                module.apply_owner(path, 1, 1, report)
+        finally:
+            for name, value in saved.items():
+                if value is not None:
+                    setattr(os, name, value)
+        self.assertTrue(report.platform_without_chown)
+        self.assertEqual(report.attempts, 0)
+        self.assertEqual(module.emit_ownership_report(report, 1, 1), 0)
 
 
 if __name__ == "__main__":

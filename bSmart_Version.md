@@ -1,9 +1,31 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.45-draft
-updated: 2026-10-09 13:56 UTC
+current_version: 0.1.45.1-draft
+updated: 2026-10-10 08:50 UTC
 status: draft
+```
+
+## 0.1.45.1-draft
+
+```yaml
+release_type: containerized_hermes_protocol
+scope:
+  - add a Hermes runtime protocol for every host, with Compose, pull_policy, image build, and s6 limited to orchestrated Docker
+  - keep host blueprint, built image, live Compose, and the running container distinct, and require an allowlisted update harness when the host provides one
+  - require pull_policy never as a service-level sibling of image for every host-local image; next-line placement is a readability convention because Compose ignores key order, and separate image-build, sanity-container, and runtime success
+  - keep bSmart system and instance updates from being treated as an image rebuild or a live Compose change
+  - keep state.db corruption in an incident-only section: recover from a stopped copy, use recover --output, convert the copy with journal_mode=DELETE, and move state.db with its wal and shm aside before placing that single file as the container user
+  - chown a bootstrapped workspace without following symlinks, and fail when requested ownership cannot be applied
+  - use <host-agent-root> and <host-share-root> placeholders in public install and secret-mount examples
+  - link the protocol from the protocol index, system map, feature registry, setup, startup manifest, and README
+  - stop the project-storage helper from inventing a host sandbox path out of a share folder name, and print the container uid and gid as placeholders the operator confirms
+safety:
+  - the protocol is generic and contains no site agent names, credentials, or host-specific helper paths
+  - no deployment, image build, or orchestrator change is performed by this version
+verification:
+  - lookup tests confirm the protocol is indexed and retrievable through bMap and the Setup feature card
+  - python and node tests pass on Linux, Windows, and macOS for Python 3.11 and 3.12
 ```
 
 ## 0.1.45-draft
