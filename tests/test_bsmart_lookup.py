@@ -80,6 +80,42 @@ class BSmartLookupTests(unittest.TestCase):
         self.assertIn("same change/commit", map_text)
         self.assertIn("roles-and-concurrency.md", map_text)
 
+    def test_containerized_hermes_protocol_is_indexed(self):
+        protocol_path = ROOT / "bSmart_Protocols" / "containerized-hermes-agent-onboarding.md"
+        protocol = protocol_path.read_text(encoding="utf-8")
+        self.assertIn("bsmart-protocol-summary:", protocol)
+        self.assertIn("id: containerized-hermes-agent-onboarding", protocol)
+        self.assertIn("pull_policy: never", protocol)
+        self.assertIn("messages_fts_trigram", protocol)
+        self.assertIn("repair.lock", protocol)
+        for banned in ("Unity", "DigTech", "Digtech", "Hugo", "JenZa", "Grimne", "SuperAdmin", "SschwAdmin"):
+            self.assertNotIn(banned, protocol)
+        self.assertIn(
+            "containerized-hermes-agent-onboarding.md",
+            (ROOT / "bSmart_Protocols" / "protocols.md").read_text(encoding="utf-8"),
+        )
+        map_text = (ROOT / "bSmart_Map.md").read_text(encoding="utf-8")
+        self.assertIn("containerized-hermes-agent-onboarding.md", map_text)
+        self.assertIn(
+            "containerized-hermes-agent-onboarding.md",
+            (ROOT / "README.md").read_text(encoding="utf-8"),
+        )
+        self.assertIn(
+            "containerized-hermes-agent-onboarding.md",
+            (ROOT / "bSmart_Setup.md").read_text(encoding="utf-8"),
+        )
+        features = (ROOT / "bSmart_Features.md").read_text(encoding="utf-8")
+        self.assertIn("containerized-hermes-agent-onboarding.md", features)
+        bmap = load_script("bMap")
+        entry = bmap.extract_entry(map_text, "containerized-hermes-agent-onboarding")
+        self.assertIsNotNone(entry)
+        self.assertIn("pull policy", entry)
+        card = load_script("bFeature").extract_feature(features, "Setup")
+        self.assertIn("containerized-hermes-agent-onboarding.md", card)
+        version = (ROOT / "bSmart_Version.md").read_text(encoding="utf-8")
+        self.assertIn("current_version: 0.1.45.1-draft", version)
+        self.assertIn("## 0.1.45.1-draft", version)
+
     def test_missing_entries_are_not_fabricated(self):
         bmap = load_script("bMap")
         bfeature = load_script("bFeature")

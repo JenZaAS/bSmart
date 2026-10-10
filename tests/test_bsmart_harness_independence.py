@@ -390,6 +390,10 @@ class ProjectStorageTests(unittest.TestCase):
         module["infer_workspace_host_path"].__globals__["run"] = missing
         self.assertIsNone(module["infer_workspace_host_path"]())
         self.assertIsNone(module["infer_sandbox_host_path"]())
+        self.assertIsNone(module["infer_sandbox_host_path"]("/mnt/share/Example"))
+        source = STORAGE.read_text(encoding="utf-8")
+        for banned in ("JenZa", "jenza", "SschwAdmin", "sschwadmin"):
+            self.assertNotIn(banned, source)
 
     def test_relative_spec_resolves_against_the_workspace_at_read_time(self):
         module = runpy.run_path(str(STORAGE))

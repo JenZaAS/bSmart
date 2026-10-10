@@ -216,20 +216,22 @@ bsmart_startup_checks:
 ```
 
 ```yaml
-dokploy_compose_visibility:
-  problem: SschwAdmin can see image-source blueprint compose but not necessarily live Dokploy compose stored in Dokploy UI/database.
-  risk: Copying stale blueprint compose into Dokploy can overwrite operator-made Dokploy changes.
-  preferred_solution: narrow read-only helper exposed to SschwAdmin, e.g. /usr/local/ai-bin/dokploy-compose-read <service>
+orchestrator_compose_visibility:
+  protocol: /workspace/bSmart-System/bSmart_Protocols/containerized-hermes-agent-onboarding.md
+  problem: A host blueprint is visible from the agent more often than the orchestrator's live Compose. Live Compose is authoritative.
+  risk: Copying a stale blueprint over live Compose overwrites orchestrator-side changes. A hash match shows the texts match; it does not show that the container is healthy.
+  inspection: Prefer a narrow read-only helper when the host provides one. That helper is an optional host pattern, not a bSmart-System command, and it must not be assumed to exist at a fixed path.
   helper_constraints:
     - read-only
     - exact service lookup or allowlist
-    - no deploy/edit/delete operations
-    - avoid printing secrets where possible
-    - timeout and clear errors if API/token unavailable
+    - no deploy, edit, or delete operations
+    - avoid printing secrets
+    - timeout and a clear error when the orchestrator cannot be read
+  mutation: Build, sync, redeploy, and restart go through the containerized Hermes protocol and an allowlisted update harness when the host has one. Unrestricted docker is not the update path.
   reconciliation_sources:
     - /workspace/bSmart/State/container-storage.yaml
-    - /opt/image-sources/<instance>/docker-compose.yml blueprint
-    - live Dokploy compose via read-only helper when available
+    - the host blueprint Compose
+    - the orchestrator's live Compose
 ```
 
 ```yaml

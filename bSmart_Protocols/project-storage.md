@@ -131,17 +131,16 @@ sandbox_storage:
     - local/non-container agents should use local sandboxes without writing heavy runtime files into project source or Git
     - BSMART_SANDBOX_ROOT gives operators and wrappers an explicit cross-framework override
   setup_visibility: do not explain sandbox details during project-storage setup unless operator asks
-  compose_recommendation: /opt/docker-workspace/<instance>/sandboxes:/sandboxes:rw
+  compose_recommendation: <host-sandbox-folder>:/sandboxes:rw
   predeploy_prepare:
     rule: create and permission the host sandbox folder before suggesting/adding the /sandboxes volume; do not tell the operator to add the volume until the folder creation command has succeeded
     default_inference:
       - infer host path backing /workspace using findmnt -T /workspace -n -o SOURCE
       - if the backing path ends with /workspace, use its sibling path named sandboxes
-      - when configuring a different instance from a mounted project path like /mnt/share/JenZa, infer /opt/docker-workspace/ai/jenza/sandboxes from the project folder name when it follows known VPS naming conventions
-      - example: /opt/docker-workspace/ai/jenza/workspace -> /opt/docker-workspace/ai/jenza/sandboxes
-      - example: /mnt/share/JenZa -> /opt/docker-workspace/ai/jenza/sandboxes
+      - do not infer a sandbox path from another agent's name or from a share folder name
+      - example: <host-workspace-path> -> the sibling sandboxes directory on that same host
       - only fall back to <host-sandbox-folder> when the host path cannot be inferred
-    host_command_template: sudo install -d -o 10000 -g 10000 -m 0775 /opt/docker-workspace/<instance>/sandboxes
+    host_command_template: sudo install -d -o <runtime-uid> -g <runtime-gid> -m 0775 <host-sandbox-folder>
     docker_bind_mount_pitfall: if a host bind-mount source does not exist when Compose/Dokploy starts the service, Docker can create it as root:root; the container then sees /sandboxes mounted but cannot write to it
 
 ```
@@ -196,7 +195,7 @@ startup_check_behavior:
 ```yaml
 compose_boundary:
   bsmart_role: record desired storage and produce volume-line guidance
-  user_role: apply Compose/Dokploy changes and redeploy
-  sschwadmin_role: reconcile storage spec, image-source blueprint compose, and live Dokploy compose when readable
-  dokploy_visibility_goal: provide SschwAdmin a narrow read-only helper for live Dokploy compose inspection
+  deployment_protocol: /workspace/bSmart-System/bSmart_Protocols/containerized-hermes-agent-onboarding.md
+  user_role: apply Compose changes through the orchestrator, using an allowlisted update harness when the host provides one
+  rule: A storage spec or host blueprint is not the live service definition. Sync and redeploy only through the containerized Hermes protocol. A host-local image in that live Compose needs pull_policy never directly under image.
 ```

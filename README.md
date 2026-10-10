@@ -118,6 +118,8 @@ Bundled optional extensions may also ship inside the system repo under:
 
 For a separate, operator-triggered local workstation process that provisions named host/Docker agents, see [`bSmart_Protocols/local-agent-onboarding.md`](bSmart_Protocols/local-agent-onboarding.md). It is intentionally separate from this instance's bSmart onboarding and is local-only; it does not cover VPS, Dokploy, EPS, or cloud deployment.
 
+For a Hermes agent that runs in Docker under a VPS or Dokploy-style orchestrator, see [`bSmart_Protocols/containerized-hermes-agent-onboarding.md`](bSmart_Protocols/containerized-hermes-agent-onboarding.md). That protocol owns image build, live Compose, redeploy, and `state.db` recovery. Cloning this repo into the workspace does not build an image or change the orchestrator.
+
 ## Install into a Hermes container workspace
 
 Use this when a Hermes container already has a persistent `/workspace` mount and should start loading bSmart on new sessions.
@@ -162,7 +164,7 @@ sudo python3 /tmp/bsmart-bootstrap-workspace \
   --content-git none
 ```
 
-Required Compose/Dokploy defaults for every bSmart-enabled AI:
+Required Compose/Dokploy defaults for every bSmart-enabled AI. This snippet is not a live service definition. Paths are examples; the containerized Hermes protocol uses placeholders such as `<host-workspace-path>` and `<host-data-path>`, and `/opt/data` is the in-container Hermes home.
 
 ```yaml
 working_dir: /workspace
@@ -174,6 +176,8 @@ volumes:
   - /opt/docker-workspace/ai/<slug>/hermes-data:/opt/data
   - /opt/docker-workspace/ai/<slug>/secrets:/run/secrets:ro
 ```
+
+When the service image is built on the host, the orchestrator's live Compose must set `pull_policy: never` directly under that service's `image:` key. A blueprint file on disk does not apply the key. Audit every host-local image in live Compose, not only the agent being installed. Create, update, and redeploy follow [`bSmart_Protocols/containerized-hermes-agent-onboarding.md`](bSmart_Protocols/containerized-hermes-agent-onboarding.md).
 
 Recommended image/start-wrapper pattern:
 
@@ -424,16 +428,12 @@ if [ "$APPLY_GROUP_PERMS" = "yes" ]; then
 fi
 
 echo "bSmart installed for ${SERVICE}."
-echo "Next: restart the container, send /new to the bot, then send: Hi"
-echo "Restart command, if Docker container name matches SERVICE: sudo docker restart ${SERVICE}"
+echo "Next: redeploy through the orchestrator or the host's allowlisted update harness, then send /new and Hi."
+echo "Do not use an unrestricted docker restart as the update path. See bSmart_Protocols/containerized-hermes-agent-onboarding.md."
 BASH
 ```
 
-After running the block, restart the Hermes container. Example when the container name equals the prompted service name:
-
-```bash
-sudo docker restart <service-name>
-```
+After running the block, redeploy the Hermes service through the orchestrator, or through the host's allowlisted update harness when one exists. An unrestricted `docker restart` is not the update path. Follow [`bSmart_Protocols/containerized-hermes-agent-onboarding.md`](bSmart_Protocols/containerized-hermes-agent-onboarding.md), then confirm the container was recreated and the gateway is connected.
 
 Then in the bot/chat for that Hermes instance:
 

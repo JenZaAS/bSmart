@@ -143,7 +143,7 @@ def infer_workspace_host_path() -> str | None:
     source = proc.stdout.strip()
     if not source:
         return None
-    # Overlay/bind output can look like: /dev/sda1[/opt/docker-workspace/x/workspace]
+    # Overlay/bind output can look like: /dev/sda1[<host-workspace-path>]
     if "[" in source and source.endswith("]"):
         return source.rsplit("[", 1)[1][:-1]
     if source.startswith("/"):
@@ -151,21 +151,14 @@ def infer_workspace_host_path() -> str | None:
     return None
 
 
-def infer_sandbox_host_path(project_host_folder: str | None = None) -> str | None:
-    """Infer the host sandboxes path.
+def infer_sandbox_host_path(_project_host_folder: str | None = None) -> str | None:
+    """Infer a host sandboxes directory as a sibling of this container's workspace.
 
-    Prefer project-host folder patterns such as `/mnt/share/JenZa` so a dry run
-    in SschwAdmin can still produce the right target for a different instance.
-    Fall back to a sibling of the host path backing this container's /workspace.
+    A project or share folder name is not a sandbox path. Pass
+    --host-sandbox-folder when the sibling cannot be read from the workspace mount.
+    The optional argument is accepted so older callers keep working; it is not
+    used to invent a host layout.
     """
-    if project_host_folder:
-        project = Path(project_host_folder)
-        if len(project.parts) >= 3 and project.parts[1] == "mnt" and project.parts[2] == "share":
-            slug = project.name.lower()
-            special = {"jenza": "ai/jenza", "sschwaadmin": "hermes-admin", "sschwadmin": "hermes-admin"}
-            scope = special.get(slug, f"hermes-{slug}")
-            return f"/opt/docker-workspace/{scope}/sandboxes"
-
     workspace_host = infer_workspace_host_path()
     if not workspace_host:
         return None
@@ -192,9 +185,10 @@ def print_predeploy_commands(host_project_folder: str, host_sandbox_folder: str 
     print(f"  sudo mkdir -p {quote_shell(host_project_folder)}")
     if host_sandbox_folder:
         q = quote_shell(host_sandbox_folder)
-        print(f"  sudo install -d -o 10000 -g 10000 -m 0775 {q}")
+        print(f"  sudo install -d -o <runtime-uid> -g <runtime-gid> -m 0775 {q}")
     else:
-        print("  sudo install -d -o 10000 -g 10000 -m 0775 <host-sandbox-folder>")
+        print("  sudo install -d -o <runtime-uid> -g <runtime-gid> -m 0775 <host-sandbox-folder>")
+    print("  # Replace <runtime-uid> and <runtime-gid> with the container user's ids.")
     print("")
 
 

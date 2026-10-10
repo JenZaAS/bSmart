@@ -62,6 +62,7 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | `./bSmart-System/bSmart_Setup.md` | Setup and repair procedure | low | setup only |
 | `./bSmart-System/bSmart_Protocols/` | Detailed operational protocols | low | need to know |
 | `./bSmart-System/bSmart_Protocols/protocols.md` | Compact protocol index and ownership map | low | compact startup |
+| `./bSmart-System/bSmart_Protocols/containerized-hermes-agent-onboarding.md` | Create and update orchestrated Docker Hermes agents, including live Compose, host-local image pull policy, and state.db recovery guardrails | low | operator-triggered container setup or update |
 | `./bSmart-System/bSmart_Protocols/roles-and-concurrency.md` | Deprecated roles, session-scoped projects, and `.bLock` file concurrency | low | concurrency or old role files |
 | `./bSmart-System/bSmart_Templates/` | Templates for instance and project files | low | generation only |
 | `./bSmart-System/bSmart_Templates/role.template.md` | Historical role-file shape. Roles are deprecated | low | reading old instance data |

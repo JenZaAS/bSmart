@@ -11,10 +11,11 @@ protocol:
     - local Docker Desktop agents need isolated homes, workspaces, and launchers
   scope: local workstation only
   excludes:
-    - VPS, Dokploy, EPS, or cloud deployment
+    - VPS, Dokploy, EPS, or cloud deployment; use containerized-hermes-agent-onboarding.md
     - bSmart instance-content onboarding
     - automatic publication or remote Git setup
   related_protocols:
+    - containerized-hermes-agent-onboarding
     - bootstrap
     - instance-git-onboarding
     - project-storage

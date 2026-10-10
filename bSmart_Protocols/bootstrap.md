@@ -32,6 +32,8 @@ startup_order:
 new_agent_bootstrap_standard:
   assumption: all newly initialized AI agents should run bSmart
   stale_image_rule: do not bake bSmart-System into the Docker image
+  container_deployment: image build, pull_policy, live Compose, and redeploy belong to bSmart_Protocols/containerized-hermes-agent-onboarding.md
+  update_does_not_redeploy: pulling or pushing bSmart-System or instance content does not rebuild an image and does not change live Compose
   image_allowed_hook:
     - a tiny generic first-run startup hook is allowed
     - hook may fetch/run scripts/bsmart-bootstrap-workspace against the mounted /workspace

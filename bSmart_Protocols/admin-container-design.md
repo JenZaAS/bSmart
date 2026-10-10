@@ -1,14 +1,16 @@
 # bSmart Protocol: admin/container design
 
-This document captures reusable SschwAdmin lessons that should apply when initializing another bSmart-aware admin or work container. It is optional system guidance: normal bSmart instances can ignore it unless they are being set up as an admin/work container on a Docker/Dokploy VPS.
+This document records design boundaries for an admin or work container. Creating, updating, redeploying, and recovering the container is owned by `containerized-hermes-agent-onboarding.md`. Normal bSmart instances can ignore this file unless they are being set up as an admin or work container on a Docker or Dokploy-style VPS.
 
 ## Scope
 
-Use this when creating or reviewing a containerized Hermes/bSmart instance such as:
+Use this when reviewing the privilege boundary of a containerized Hermes/bSmart instance:
 
-- VPS admin assistant containers.
-- Constrained work containers like `hermes-jenza` or `hermes-digtech`.
-- Future bSmart-enabled containers that need private GitHub access and project storage.
+- an operator admin container, which may receive narrow host mounts only when that access is explicit;
+- a work container, which should receive only its own data, workspace, secrets, and the project mounts selected later;
+- a container that needs private GitHub access and project storage.
+
+Creating, updating, or recovering the container belongs to `containerized-hermes-agent-onboarding.md`.
 
 For the detailed GitHub credential/repo-access workflow, see `/workspace/bSmart-System/bSmart_Protocols/github-ai-access.md`.
 
@@ -21,18 +23,18 @@ Prefer least privilege by role.
 - Admin container: may receive narrow host blueprint/helper/runtime mounts when explicitly intended.
 - Work container: should normally receive only its own persistent data/workspace, its own secrets directory, optional shared read-only tools, and project/storage mounts selected through the bSmart project-storage workflow.
 - Do not mount the Docker socket by default.
-- Do not copy the SschwAdmin persona into non-admin containers.
+- Do not copy one admin instance's persona into other containers.
 
 ## Persistent paths
 
-Recommended baseline for a work container:
+Recommended baseline for a work container. Host paths are placeholders. `/opt/data` is the in-container Hermes home.
 
 ```yaml
 volumes:
-  - /opt/docker-workspace/<scope>/data-or-hermes-data:/opt/data
-  - /opt/docker-workspace/<scope>/workspace:/workspace
-  - /opt/docker-workspace/<scope>/secrets:/run/secrets:ro
-  - /opt/shared-tools:/host-tools/shared-tools:ro
+  - <host-data-path>:/opt/data
+  - <host-workspace-path>:/workspace
+  - <host-secrets-path>:/run/secrets:ro
+  - <host-shared-tools-path>:/host-tools/shared-tools:ro
 ```
 
 For bSmart project storage, let the bSmart project-storage workflow select and verify `/projects` and `/sandboxes` instead of hard-coding a one-off exchange path.
@@ -42,13 +44,13 @@ For bSmart project storage, let the bSmart project-storage workflow select and v
 Store per-container secrets in the container's own host secrets directory:
 
 ```text
-/opt/docker-workspace/<scope>/secrets/
+<host-secrets-path>/
 ```
 
 Mount the whole directory read-only:
 
 ```yaml
-- /opt/docker-workspace/<scope>/secrets:/run/secrets:ro
+- <host-secrets-path>:/run/secrets:ro
 ```
 
 Do not add separate file-level mounts below `/run/secrets` when the directory is already mounted read-only. Docker may fail because it cannot create the nested mountpoint inside a read-only mount.
@@ -61,15 +63,15 @@ For GitHub SSH access, put these files in the per-container secrets directory:
 github_known_hosts
 ```
 
-The private key must be readable by the non-root container user. For Hermes containers on this VPS, that is usually UID/GID `10000:10000`:
+The private key must be readable by the container's non-root user. Confirm that uid and gid from the image. Do not assume a host default.
 
 ```bash
-sudo chown 10000:10000 /opt/docker-workspace/<scope>/secrets/<container>_container_ed25519 \
-  /opt/docker-workspace/<scope>/secrets/<container>_container_ed25519.pub \
-  /opt/docker-workspace/<scope>/secrets/github_known_hosts
-sudo chmod 600 /opt/docker-workspace/<scope>/secrets/<container>_container_ed25519
-sudo chmod 644 /opt/docker-workspace/<scope>/secrets/<container>_container_ed25519.pub \
-  /opt/docker-workspace/<scope>/secrets/github_known_hosts
+sudo chown <runtime-uid>:<runtime-gid> <host-secrets-path>/<container>_container_ed25519 \
+  <host-secrets-path>/<container>_container_ed25519.pub \
+  <host-secrets-path>/github_known_hosts
+sudo chmod 600 <host-secrets-path>/<container>_container_ed25519
+sudo chmod 644 <host-secrets-path>/<container>_container_ed25519.pub \
+  <host-secrets-path>/github_known_hosts
 ```
 
 Use strict host checking with a pinned `github_known_hosts` file:

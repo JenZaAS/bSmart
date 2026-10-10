@@ -26,6 +26,7 @@ steps:
   - run_or_offer_streamlined_workspace_bootstrap_helper
   - verify_system_root_public_https_git
   - verify_compose_defaults_working_dir_terminal_cwd_and_safe_root
+  - container_image_and_live_compose_follow_containerized_hermes_protocol
   - configure_secret_provider_if_needed_or_requested
   - configure_instance_git_only_if_operator_wants_content_git
   - configure_optional_shared_group
@@ -63,6 +64,24 @@ python3 ./bSmart-System/scripts/bsmart-content-upgrade --create-missing
 `bsmart-instance-upgrade` prints `workspace:` before it changes anything. With no `--workspace`, it uses `/workspace` only when the process is already inside that directory. From anywhere else, pass `--workspace`.
 
 For an existing instance, `bsmart-update` is the standard post-pull finalization command. It deliberately does not pull Git: it backs up differing startup hooks, installs the workspace `bStart.py`, synchronizes the canonical hooks, creates only missing standard content, refreshes or installs the managed `/project` integration, and reports when Hermes must restart. It automatically applies only known exact instance-profile compatibility migrations with a backup and clear report; ambiguous or broader changes still require a question. `bsmart-instance-upgrade` and `bsmart-content-upgrade` remain available as focused helpers.
+
+## Containerized Hermes agents
+
+```yaml
+containerized_hermes:
+  protocol: /workspace/bSmart-System/bSmart_Protocols/containerized-hermes-agent-onboarding.md
+  applies_when: the Hermes agent runs in Docker under a VPS or Dokploy-style orchestrator
+  setup_does_not:
+    - rebuild images
+    - edit the orchestrator's live Compose
+    - redeploy or restart the container
+  layers: a system pull or an instance push changes bSmart files only
+  host_local_images: live Compose must set pull_policy never directly under image for every host-local image, before the agent is created or updated
+  mutation: use the host's allowlisted update harness when one exists; unrestricted docker is not the update path
+  paths: /opt/data is the in-container Hermes home; the host directory mounted there is <host-data-path>
+```
+
+`bSmart_Setup.md` still owns instance questions. Image build, Compose sync, redeploy, and `state.db` recovery stay in the protocol above.
 
 ## Required operator inputs
 
@@ -108,7 +127,7 @@ secret_provider:
     - manual
   guidance:
     - bSmart-System defines provider types and prompt flow only; it must not include site-local secrets, account names, endpoints, or mandatory provider choices
-    - instance-local defaults may suggest a provider/profile and can be pushed into the instance by an admin tool such as SschwAdmin
+    - instance-local defaults may suggest a provider/profile and can be copied into the instance by an operator-approved admin process
     - never store secret values in /workspace/bSmart-System, /workspace/bSmart, project folders, logs, workdocs, or chat
     - external secret providers are optional and must be allowed by their terms; local file/deployer secrets are the default portable path
 
@@ -187,7 +206,7 @@ project_storage:
     per_project_template: /sandboxes/<project-slug>
     user_prompt: do not mention during initial project-storage setup unless operator asks
     host_prep_required_before_compose: true
-    host_prep_command_template: "sudo install -d -o 10000 -g 10000 -m 0775 <host-sandbox-folder>"
+    host_prep_command_template: "sudo install -d -o <runtime-uid> -g <runtime-gid> -m 0775 <host-sandbox-folder>"
     safety_note: "Create and permission the host sandbox folder before adding the /sandboxes bind mount; otherwise Docker/Dokploy may auto-create the missing source as root:root and the container will see /sandboxes mounted but unwritable."
 
 hermes_project_integration:

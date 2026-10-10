@@ -576,6 +576,7 @@ files:
   - /workspace/bSmart-System/bSmart_Setup.md
   - /workspace/bSmart-System/bSmart_Templates/
   - /workspace/bSmart-System/bSmart_Protocols/
+  - /workspace/bSmart-System/bSmart_Protocols/containerized-hermes-agent-onboarding.md
   - /workspace/bSmart/
 description: Creates, verifies, and repairs the local bSmart structure, including folders, templates, local state files, bootstrap behavior, content-root separation, optional instance Git, secret-provider configuration, and protocol discovery.
 commands:
@@ -594,6 +595,7 @@ included_capabilities:
 notes:
   - Keep local content out of bSmart-System unless the operator explicitly asks for examples or templates.
   - Protocols are internal operating instructions and should usually appear under Setup, Safety, or the relevant user-facing feature.
+  - Containerized Hermes create, update, redeploy, and state.db recovery stay in containerized-hermes-agent-onboarding.md. Setup does not rebuild images or edit live Compose.
 ```
 
 ### Extensions
