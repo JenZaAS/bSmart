@@ -110,7 +110,9 @@ _POSIX_ROOTS = (
     "/libexec",
 )
 _HOME_OPERANDS = {"~", "~/", "~/*", "$home", "${home}", "$home/*", "${home}/*"}
-_MAX_COMMAND_CHARS = 100_000
+# About 16k, under the 15s hook timeout. A quadratic scan of a longer
+# command used to outlive that timeout, and Claude and Codex then ran it.
+_MAX_COMMAND_CHARS = 16_000
 _MAX_TOKENS = 20_000
 _MAX_SCAN_SECONDS = 0.5
 _WRAPPERS = {"sudo", "command", "exec", "env", "nice", "nohup", "timeout", "busybox"}
@@ -144,32 +146,18 @@ _DEVICE_REDIRECT = re.compile(
     r"(?:^|[\s;&|])>{1,2}\s*(/dev/(?:sd|nvme|vd|xvd|mmcblk|disk)\S*)",
     re.I,
 )
-_CONTROL_RE = re.compile(
-    r"""(?ix)
-    (?:^|[;&|\n]\s*|(?:python(?:3)?|py)\s+(?:-3\s+)?)
-    (?:\S*[/\\])?
-    (?:/?bprotective(?:[/\\]cli\.py)?|scripts[/\\]bprotective)
-    \s+(on|off|yes|no|recover)\b
-    """
+_GUARD_REDIRECT_RE = re.compile(
+    r"(?:^|[\s;&|])>{1,2}|\b(?:set-content|out-file|tee)\b",
+    re.I,
 )
-_STATE_NAME_RE = re.compile(r"(?i)bprotective\.json(?:\.armed)?")
+_CONTROL_VERBS = frozenset({"on", "off", "yes", "no", "recover"})
+_STATE_FILE_NAMES = frozenset({"bprotective.json", "bprotective.json.armed"})
 _WRITE_TOOL_RE = re.compile(
     r"""(?ix)
     (?:^|[;&|\n]\s*)
     (?:(?:sudo|command|exec|env|nice|nohup|timeout|busybox)\s+)*
     (?:python(?:3)?|py|perl|sed|ruby|node|dd|git|find|rm|mv|cp|tee|truncate|shred|unlink|ln|rsync|install|busybox)
     (?:\.exe)?(?![\w-])
-    """
-)
-_GUARD_PATH_RE = re.compile(
-    r"""(?ix)
-    bprotective[/\\]cli\.py
-    | scripts[/\\]bprotective\b
-    | integrations[/\\]bprotective\b
-    | bprotective\.json(?:\.armed)?
-    | \.bprotective[/\\]armed\.json
-    | (?:^|[\s'"=])(?:\./|\.\\)?state(?:[/\\\s'"]|$)
-    | [/\\]state(?:[/\\]|$)
     """
 )
 _STATE_MUTATE_RE = re.compile(
@@ -619,26 +607,11 @@ def write_state(value: dict[str, Any], *, operator_off: bool = False) -> None:
 
 
 def path_targets_guard(path: str) -> bool:
-    """True when a file-edit path is the state file, its marker, or the outside armed record."""
+    """True when a file edit targets the state file, its marker, or ~/.bprotective."""
     text = path.strip().strip("\"'")
     if not text:
         return False
-    name = text.replace("\\", "/").rstrip("/").rsplit("/", 1)[-1].lower()
-    if name in {"bprotective.json", "bprotective.json.armed"}:
-        return True
-    try:
-        candidate = os.path.normcase(os.path.normpath(str(Path(text).expanduser().absolute())))
-    except OSError:
-        return False
-    guarded = (
-        state_path(),
-        _armed_path(state_path()),
-        armed_record_path(),
-    )
-    for item in guarded:
-        if os.path.normcase(os.path.normpath(str(item.absolute()))) == candidate:
-            return True
-    return False
+    return _token_is_guard(text, _guard_path_keys())
 
 
 def _config_candidates() -> list[Path]:
@@ -777,8 +750,8 @@ def _basename(word: str) -> str:
     return name.lower()
 
 
-def _unwrap_sudo(argv: list[str]) -> list[str]:
-    """Drop wrappers and the values their flags take. ``/bin/rm`` becomes ``rm``."""
+def _drop_wrappers(argv: list[str]) -> list[str]:
+    """Drop wrappers and the values their flags take. The command path stays intact."""
     words = list(argv)
     while words:
         name = _basename(words[0])
@@ -796,6 +769,12 @@ def _unwrap_sudo(argv: list[str]) -> list[str]:
                 words.pop(0)
         if name == "timeout" and words and words[0][:1].isdigit():
             words.pop(0)
+    return words
+
+
+def _unwrap_sudo(argv: list[str]) -> list[str]:
+    """Drop wrappers and the values their flags take. ``/bin/rm`` becomes ``rm``."""
+    words = _drop_wrappers(argv)
     if words:
         words[0] = _basename(words[0])
     return words
@@ -810,6 +789,13 @@ def _posix_root_operand(value: str, cwd: str | None) -> bool:
         return True
     for root in _POSIX_ROOTS:
         if value in {root, root + "/", root + "/*"}:
+            return True
+    if value.startswith("/home/"):
+        rest = value[len("/home/") :]
+        if rest.endswith("/*"):
+            rest = rest[:-2]
+        rest = rest.rstrip("/")
+        if rest and "/" not in rest and rest not in {".", ".."}:
             return True
     if value.lower() in _HOME_OPERANDS:
         return True
@@ -1004,25 +990,221 @@ def _redirect_block(surface: str) -> Decision | None:
     return None
 
 
-def _channel_block(command: str) -> Decision | None:
-    """Block shell control of the guard and writes that name its files.
+def _split_statements(text: str) -> list[str]:
+    """Split on statement separators. One pass, no nested quantifiers."""
+    parts: list[str] = []
+    buf: list[str] = []
+    i = 0
+    n = len(text)
+    while i < n:
+        if text.startswith("&&", i) or text.startswith("||", i):
+            parts.append("".join(buf))
+            buf = []
+            i += 2
+            continue
+        if text[i] in ";&|\n":
+            parts.append("".join(buf))
+            buf = []
+            i += 1
+            continue
+        buf.append(text[i])
+        i += 1
+    parts.append("".join(buf))
+    return parts
 
-    This is a heuristic for accidental commands. It is not a complete list of
-    every way to edit a file. The armed record outside State is what fails
-    closed after a tamper the heuristic missed.
+
+def _is_cli_word(word: str) -> bool:
+    slash = word.replace("\\", "/")
+    if slash.startswith("./"):
+        slash = slash[2:]
+    if slash.endswith("/cli.py") and "bprotective/cli.py" in slash:
+        return True
+    if slash in {"bprotective", "scripts/bprotective"}:
+        return True
+    if slash.endswith("/bprotective"):
+        return True
+    if slash.endswith("/scripts/bprotective") or slash == "scripts/bprotective":
+        return True
+    return False
+
+
+def _argv_is_control(words: list[str]) -> bool:
+    if len(words) < 2 or words[1] not in _CONTROL_VERBS:
+        return False
+    return _is_cli_word(words[0])
+
+
+def _statement_is_control(statement: str) -> bool:
+    words = _drop_wrappers(statement.split())
+    if not words:
+        return False
+    if words[0] in {"python", "python3", "py"}:
+        rest = words[1:]
+        if rest and rest[0] == "-3":
+            rest = rest[1:]
+        return _argv_is_control(rest)
+    return _argv_is_control(words)
+
+
+def _is_control_command(surface: str) -> bool:
+    """True for a shell command that runs bprotective on, off, yes, no, or recover.
+
+    The scan is a straight walk. It does not use a nested ``\\S*`` pattern,
+    which backtracked on long runs of ``&`` and ``;``.
+    """
+    lowered = surface.lower()
+    if "bprotective" not in lowered:
+        return False
+    statements = _split_statements(lowered)
+    if any(_statement_is_control(statement) for statement in statements):
+        return True
+    # `B=scripts/bprotective; python3 $B off` names the launcher, then the verb.
+    if "scripts/bprotective" not in lowered and "scripts\\bprotective" not in lowered:
+        if "bprotective/cli.py" not in lowered and "bprotective\\cli.py" not in lowered:
+            return False
+    for statement in statements:
+        words = _drop_wrappers(statement.split())
+        if not words or words[0] not in {"python", "python3", "py"}:
+            continue
+        rest = words[1:]
+        if rest and rest[0] == "-3":
+            rest = rest[1:]
+        if any(word in _CONTROL_VERBS for word in rest):
+            return True
+    return False
+
+
+def _path_key(path: Path) -> str:
+    return os.path.normcase(os.path.normpath(str(path.expanduser().absolute())))
+
+
+def _guard_path_keys() -> set[str]:
+    """Absolute paths of the state file, its marker, the armed record, and State/."""
+    keys = {
+        _path_key(state_path()),
+        _path_key(_armed_path(state_path())),
+        _path_key(armed_record_path()),
+        _path_key(Path.home() / ".bprotective"),
+        _path_key(Path.home() / ".bprotective" / "armed.json"),
+    }
+    content = content_root()
+    if content is not None:
+        keys.add(_path_key(content / "State"))
+    return keys
+
+
+def _command_tokens(surface: str) -> list[str]:
+    tokens: list[str] = []
+    buf: list[str] = []
+    for ch in surface:
+        if ch in " \t\r\n;&|<>":
+            if buf:
+                tokens.append("".join(buf))
+                buf = []
+            continue
+        buf.append(ch)
+    if buf:
+        tokens.append("".join(buf))
+    return tokens
+
+
+def _token_is_guard(token: str, keys: set[str]) -> bool:
+    """True when this one path is a real guard path, not any folder named state."""
+    raw = token.strip().strip("'\"")
+    if not raw or raw in {".", ".."}:
+        return False
+    slash = raw.replace("\\", "/")
+    lower = slash.lower()
+    if (
+        lower == ".bprotective"
+        or lower.startswith(".bprotective/")
+        or lower.startswith("~/.bprotective")
+        or "/.bprotective" in "/" + lower
+    ):
+        return True
+    base = lower.rstrip("/").rsplit("/", 1)[-1]
+    if base in _STATE_FILE_NAMES:
+        return True
+    parts = [part for part in slash.split("/") if part not in {"", "."}]
+    for index in range(len(parts) - 1):
+        if parts[index] == "bSmart" and parts[index + 1] == "State":
+            return True
+    if slash in {"State", "./State"} or slash.startswith("State/") or slash.startswith("./State/"):
+        return True
+    try:
+        candidate = _path_key(Path(raw))
+    except OSError:
+        return False
+    return candidate in keys
+
+
+def _might_name_guard(surface: str) -> bool:
+    """Cheap reject for commands that cannot name a guard path."""
+    if "bprotective.json" in surface.lower() or ".bprotective" in surface.lower():
+        return True
+    if "bSmart/State" in surface or "bSmart\\State" in surface or "State" in surface:
+        return True
+    return "/" in surface or "\\" in surface
+
+
+def _mentions_guard_path(surface: str, keys: set[str]) -> bool:
+    return any(_token_is_guard(token, keys) for token in _command_tokens(surface))
+
+
+def _channel_block(command: str) -> Decision | None:
+    """Block shell control of the guard and writes that name its real files.
+
+    Quoted text is removed before the path check, so a commit message that
+    says "state" is not a path. The match is the state file, its ``.armed``
+    marker, ``~/.bprotective``, and the content-root ``State`` folder. It is
+    not every path piece named state, and it is not the ``integrations/bprotective``
+    source tree. This is a heuristic for accidental commands. The armed record
+    outside State is what fails closed after a tamper the heuristic missed.
     """
     surface = _strip_quotes(command)
-    if _CONTROL_RE.search(surface):
+    if _is_control_command(surface):
         return Decision("block", "guard-control", "changing bProtective from a shell command")
-    if _WRITE_TOOL_RE.search(surface) and _GUARD_PATH_RE.search(command):
-        return Decision("block", "state-file", "write, delete, or move of the bProtective state file")
-    if not _STATE_NAME_RE.search(command):
+    names_file = "bprotective.json" in command.lower()
+    if not names_file and not _might_name_guard(surface):
         return None
-    if re.search(r"(?i)(?:>{1,2}|set-content|out-file|tee)\s+\S*bprotective\.json", surface):
-        return Decision("block", "state-file", "write, delete, or move of the bProtective state file")
-    if _STATE_MUTATE_RE.search(surface):
+    if not (
+        _WRITE_TOOL_RE.search(surface)
+        or _STATE_MUTATE_RE.search(surface)
+        or _GUARD_REDIRECT_RE.search(surface)
+    ):
+        return None
+    if names_file or _mentions_guard_path(surface, _guard_path_keys()):
         return Decision("block", "state-file", "write, delete, or move of the bProtective state file")
     return None
+
+
+def _interpreter_exec_block(argv: list[str]) -> Decision | None:
+    """Block ``perl -e 'system("rm -rf /")'`` and the same shape in other interpreters."""
+    if not argv or argv[0] not in {"perl", "ruby", "node", "php", "python", "python3", "py"}:
+        return None
+    body: str | None = None
+    for index, arg in enumerate(argv):
+        if arg in {"-e", "-c"} and index + 1 < len(argv):
+            body = argv[index + 1]
+            break
+    if not body:
+        return None
+    lowered = body.lower()
+    marker = "rm -rf "
+    start = 0
+    while True:
+        index = lowered.find(marker, start)
+        if index < 0:
+            return None
+        rest = body[index + len(marker) :].lstrip()
+        operand: list[str] = []
+        for ch in rest:
+            if ch in " \t\r\n\"');|&":
+                break
+            operand.append(ch)
+        if _posix_root_operand("".join(operand), None):
+            return Decision("block", "root-recursive-delete", "recursive deletion of a protected root or home path")
+        start = index + len(marker)
 
 
 def _python_rmtree_block(argv: list[str]) -> Decision | None:
@@ -1059,10 +1241,11 @@ def _xargs_rm_block(statements: list[list[str]], tokens: list[str], cwd: str | N
     return None
 
 
-def _structured_decision(command: str, tokens: list[str]) -> Decision | None:
-    channel = _channel_block(command)
-    if channel is not None:
-        return channel
+def _structured_decision(command: str, tokens: list[str], *, _skip_channel: bool = False) -> Decision | None:
+    if not _skip_channel:
+        channel = _channel_block(command)
+        if channel is not None:
+            return channel
     surface = _strip_quotes(command)
     redirect = _redirect_block(surface)
     if redirect is not None:
@@ -1089,6 +1272,7 @@ def _structured_decision(command: str, tokens: list[str]) -> Decision | None:
             _docker_prune_block(argv),
             _git_decision(argv),
             _python_rmtree_block(argv),
+            _interpreter_exec_block(argv),
         )
         for decision in checks:
             if decision is None:
@@ -1105,6 +1289,7 @@ def policy_decision(
     config: Config | None = None,
     _depth: int = 0,
     _deadline: float | None = None,
+    _skip_channel: bool = False,
 ) -> Decision:
     """Return allow, escalate, or block from the command text. Ignores on/off state."""
     if _depth > 3:
@@ -1119,7 +1304,7 @@ def policy_decision(
     except ScanLimit as exc:
         return Decision("block", "scan-limit", str(exc))
     active = config or EMPTY_CONFIG
-    structured = _structured_decision(command, tokens)
+    structured = _structured_decision(command, tokens, _skip_channel=_skip_channel)
     if structured is not None and structured.action == "block":
         return structured
     surface = _strip_quotes(command)
@@ -1185,16 +1370,19 @@ def guard(command: str, *, via_hook: bool = False) -> Decision:
     state = read_state()
     if state.get("error"):
         return Decision("block", "state-invalid", str(state["error"]))
-    if via_hook:
+    enabled = bool(state.get("enabled"))
+    # One channel check per call. via_hook still blocks guard control while off.
+    # A direct check while off does not, so `bprotective check` stays quiet.
+    if via_hook or enabled:
         channel = _channel_block(command)
         if channel is not None:
             return channel
-    if not state.get("enabled"):
+    if not enabled:
         return Decision("allow", "disabled", "bProtective is off")
     config, error = load_config()
     if error:
         return Decision("block", "config-invalid", error)
-    decision = policy_decision(command, config)
+    decision = policy_decision(command, config, _skip_channel=True)
     if decision.action == "block":
         return decision
     allowed = state.get("allow_once")
@@ -1395,7 +1583,8 @@ def _mentions_windows_root(command: str) -> bool:
         (?:^|[\s"'=`])
         (?:\\\\\?\\)?
         (?:
-            [a-z]:(?:\\(?:\*|windows|users|program\ files(?:\ \(x86\))?)?)?
+            [a-z]:\\users\\[^\\\s"'`]+\\?\*?
+            | [a-z]:(?:\\(?:\*|windows|users|program\ files(?:\ \(x86\))?)?)?
             | %(?:systemdrive|systemroot|userprofile|homedrive)%\\?\*?
             | \$(?:env:)?(?:systemdrive|systemroot|userprofile|home)\\?\*?
             | ~\\?\*?

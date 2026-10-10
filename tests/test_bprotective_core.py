@@ -402,6 +402,19 @@ class CorePolicyTests(unittest.TestCase):
             "rm -f State/bprot*": "block",
             "find State -name '*.json' -delete": "block",
             "bprotective recover": "block",
+            "perl -e 'system(\"rm -rf /\")'": "block",
+            "perl -e 'print 1'": "allow",
+            "rm -rf /home/alice": "block",
+            "rm -rf /home/alice/": "block",
+            "rm -rf /home/alice/*": "block",
+            "rm -rf /home/alice/projects": "allow",
+            "Remove-Item -Recurse C:\\Users\\alice\\Documents": "allow",
+            "Remove-Item -Recurse C:\\Users\\alice": "block",
+            "rm -rf C:\\Users\\alice": "block",
+            "rm -rf ~/.bprotective": "block",
+            "rm -rf ~/.bprotective/armed.json": "block",
+            "mv ~/.bprotective/armed.json /tmp/saved.json": "block",
+            "echo x > ~/.bprotective/armed.json": "block",
         }
         for command, action in cases.items():
             with self.subTest(command=command):
@@ -429,6 +442,59 @@ class CorePolicyTests(unittest.TestCase):
             timed = self.guard("echo hi")
         self.assertEqual(timed.rule_key, "scan-limit")
         self.assertIn("time limit", timed.message)
+        calls = {"n": 0}
+        original = self.core._channel_block
+
+        def _count(command: str):
+            calls["n"] += 1
+            return original(command)
+
+        with patch.object(self.core, "_channel_block", _count):
+            self.guard("git status", via_hook=True)
+        self.assertEqual(calls["n"], 1)
+
+    def test_ordinary_state_words_are_allowed_on_and_off(self):
+        commands = (
+            'git commit -m "fix state handling"',
+            "git add src/state/store.ts",
+            "git diff state",
+            "rm -rf src/state",
+            "mv state old_state",
+            "cp a.ts src/state/",
+            "rsync -a state/ backup/",
+            "python3 -m pytest tests/state",
+            "node scripts/state/build.js",
+            "git add integrations/bprotective/core.py",
+        )
+        for enabled in (False, True):
+            if enabled:
+                self.enable()
+            for command in commands:
+                for via_hook in (False, True):
+                    with self.subTest(command=command, enabled=enabled, via_hook=via_hook):
+                        decision = self.guard(command, via_hook=via_hook)
+                        self.assertEqual(decision.action, "allow", command)
+
+    def test_long_ampersand_runs_stay_inside_the_hook_timeout(self):
+        under = "&" * (self.core._MAX_COMMAND_CHARS - 1)
+        started = time.monotonic()
+        off = self.guard(under, via_hook=True)
+        self.assertLess(time.monotonic() - started, 1.0)
+        self.assertEqual(off.action, "allow")
+        self.enable()
+        started = time.monotonic()
+        on = self.guard(under, via_hook=True)
+        self.assertLess(time.monotonic() - started, 1.0)
+        self.assertNotEqual(on.rule_key, "scan-limit")
+        semicolons = ";" * (self.core._MAX_COMMAND_CHARS - 1)
+        started = time.monotonic()
+        self.guard(semicolons, via_hook=True)
+        self.assertLess(time.monotonic() - started, 1.0)
+        for size in (self.core._MAX_COMMAND_CHARS + 1, 99_000):
+            started = time.monotonic()
+            limited = self.guard("&" * size, via_hook=True)
+            self.assertLess(time.monotonic() - started, 0.5)
+            self.assertEqual(limited.rule_key, "scan-limit")
 
     def test_tamper_without_operator_off_fails_closed(self):
         self.enable()
@@ -498,8 +564,23 @@ class CorePolicyTests(unittest.TestCase):
                 {"tool_name": "Edit", "tool_input": {"file_path": "README.md", "old_string": "a", "new_string": "b"}},
                 self.core,
             )
+            home_record = self.hook.respond(
+                "claude",
+                {
+                    "tool_name": "Write",
+                    "tool_input": {"file_path": "~/.bprotective/armed.json", "content": "{}"},
+                },
+                self.core,
+            )
+            home_dir = self.hook.respond(
+                "cursor",
+                {"tool_name": "Delete", "tool_input": {"path": "~/.bprotective"}},
+                self.core,
+            )
         self.assertEqual(cursor["permission"], "deny")
         self.assertIsNone(untouched)
+        self.assertEqual(home_record["hookSpecificOutput"]["permissionDecision"], "deny")
+        self.assertEqual(home_dir["permission"], "deny")
 
     def test_hook_launchers_do_not_call_sh(self):
         cursor_hooks = json.loads(
@@ -554,11 +635,61 @@ class CorePolicyTests(unittest.TestCase):
                 "allow",
                 windows.stdout,
             )
+        for launcher in (
+            SYSTEM / "integrations/cursor/bprotective-plugin/scripts/run_hook.cmd",
+            SYSTEM / "integrations/claude/bprotective-plugin/scripts/run_hook.cmd",
+        ):
+            payload = launcher.read_bytes()
+            self.assertIn(b"\r\n", payload, launcher)
+            self.assertNotIn(b"\n", payload.replace(b"\r\n", b""), launcher)
+        if os.name != "nt":
+            hidden = self.home / "bin"
+            hidden.mkdir()
+            os.symlink("/usr/bin/dirname", hidden / "dirname")
+            missing_env = {**env, "PATH": str(hidden)}
+            cursor_missing = subprocess.run(
+                ["/bin/sh", str(SYSTEM / "integrations/cursor/bprotective-plugin/scripts/run_hook.cmd")],
+                input=json.dumps({"command": "echo hi"}),
+                text=True,
+                capture_output=True,
+                env=missing_env,
+                check=False,
+            )
+            self.assertEqual(cursor_missing.returncode, 0, cursor_missing.stderr)
+            self.assertIn("bProtective could not run", cursor_missing.stderr)
+            cursor_payload = json.loads(cursor_missing.stdout)
+            self.assertEqual(cursor_payload["permission"], "allow")
+            self.assertIn("bProtective could not run", cursor_payload["agent_message"])
+            self.assertIn("bProtective could not run", cursor_payload["user_message"])
+            claude_missing = subprocess.run(
+                ["/bin/sh", str(SYSTEM / "integrations/claude/bprotective-plugin/scripts/run_hook.cmd")],
+                input=json.dumps({"command": "echo hi"}),
+                text=True,
+                capture_output=True,
+                env=missing_env,
+                check=False,
+            )
+            self.assertEqual(claude_missing.returncode, 0, claude_missing.stderr)
+            self.assertIn("bProtective could not run", claude_missing.stderr)
+            self.assertEqual(claude_missing.stdout.strip(), "")
 
     def test_hook_blocks_guard_control_while_off(self):
         decision = self.guard("bprotective off", via_hook=True)
         self.assertEqual(decision.action, "block")
         self.assertEqual(self.guard("git status", via_hook=True).action, "allow")
+        home_commands = (
+            "rm -rf ~/.bprotective",
+            "rm -f ~/.bprotective/armed.json",
+            "mv ~/.bprotective /tmp/saved-bprotective",
+            "echo x > ~/.bprotective/armed.json",
+        )
+        for command in home_commands:
+            with self.subTest(command=command, enabled=False):
+                self.assertEqual(self.guard(command, via_hook=True).action, "block", command)
+        self.enable()
+        for command in home_commands:
+            with self.subTest(command=command, enabled=True):
+                self.assertEqual(self.guard(command, via_hook=True).action, "block", command)
 
     def test_script_entrypoint(self):
         completed = subprocess.run(
