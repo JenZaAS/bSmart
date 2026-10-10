@@ -25,7 +25,7 @@ protocol_index:
 | `secret-provider-onboarding.md` | Credential-provider choices and secret boundaries | Configuring a feature that needs credentials |
 | `github-ai-access.md` | Generic GitHub access and AI-account patterns | Configuring or troubleshooting GitHub access |
 | `local-agent-onboarding.md` | Explicit local-agent onboarding for host/Docker agents | Starting local-agent onboarding |
-| `containerized-hermes-agent-onboarding.md` | Create and update orchestrated Docker Hermes agents | Creating, updating, redeploying, or recovering a VPS or Dokploy-style Hermes agent |
+| `hermes-runtime-onboarding.md` | Hermes runtime setup and update on any host. Orchestrated Docker rules are a separate section | Setting up or updating Hermes. Compose, pull_policy, image build, and s6 apply only to orchestrated Docker |
 | `admin-container-design.md` | Design boundaries for admin/container instances | Designing an admin AI container |
 | `security-watch.md` | Read-only security drift monitoring and ownership | Configuring or running Security Watch |
 | `bAccountant-onboarding.md` | Optional bAccountant setup and boundaries | Enabling or configuring bAccountant |

@@ -65,23 +65,20 @@ python3 ./bSmart-System/scripts/bsmart-content-upgrade --create-missing
 
 For an existing instance, `bsmart-update` is the standard post-pull finalization command. It deliberately does not pull Git: it backs up differing startup hooks, installs the workspace `bStart.py`, synchronizes the canonical hooks, creates only missing standard content, refreshes or installs the managed `/project` integration, and reports when Hermes must restart. It automatically applies only known exact instance-profile compatibility migrations with a backup and clear report; ambiguous or broader changes still require a question. `bsmart-instance-upgrade` and `bsmart-content-upgrade` remain available as focused helpers.
 
-## Containerized Hermes agents
+## Hermes runtime
 
 ```yaml
-containerized_hermes:
-  protocol: /workspace/bSmart-System/bSmart_Protocols/containerized-hermes-agent-onboarding.md
-  applies_when: the Hermes agent runs in Docker under a VPS or Dokploy-style orchestrator
-  setup_does_not:
-    - rebuild images
-    - edit the orchestrator's live Compose
-    - redeploy or restart the container
-  layers: a system pull or an instance push changes bSmart files only
-  host_local_images: live Compose must set pull_policy never directly under image for every host-local image, before the agent is created or updated
-  mutation: use the host's allowlisted update harness when one exists; unrestricted docker is not the update path
-  paths: /opt/data is the in-container Hermes home; the host directory mounted there is <host-data-path>
+hermes_runtime:
+  protocol: /workspace/bSmart-System/bSmart_Protocols/hermes-runtime-onboarding.md
+  everywhere: a system pull or an instance push changes bSmart files only. It does not restart Hermes or rebuild an image.
+  orchestrated_docker_only:
+    - live Compose
+    - pull_policy never directly under image for every host-local image
+    - image build, Compose sync, and redeploy through an allowlisted update harness when the host has one
+  paths: /opt/data is the in-container Hermes home for the official image. The host directory mounted there is <host-data-path>. Native homes are in the protocol's incident section and are not used here.
 ```
 
-`bSmart_Setup.md` still owns instance questions. Image build, Compose sync, redeploy, and `state.db` recovery stay in the protocol above.
+`bSmart_Setup.md` still owns instance questions. `state.db` corruption is an incident-only section of the runtime protocol, not a setup step.
 
 ## Required operator inputs
 
@@ -190,7 +187,7 @@ project_storage:
 
       Enter host-project-folder, e.g.
 
-      /mnt/share/MyAI
+      <host-share-root>/<agent>
     compose_line_template: "- <host-project-folder>:/projects:rw"
     helper_command: "python3 /workspace/bSmart-System/scripts/bsmart-project-storage-check --configure-mounted --host-project-folder <host-project-folder>"
     helper_command_local: "python3 ./bSmart-System/scripts/bsmart-project-storage-check --configure-mounted --host-project-folder <host-project-folder>"
@@ -365,7 +362,7 @@ operating_policy:
   secret_storage:
     preferred:
       - native deployer secrets mounted read-only
-      - /opt/docker-workspace/<service>/secrets mounted as /run/secrets:ro
+      - <host-agent-root>/secrets mounted as /run/secrets:ro
     avoid:
       - /workspace/secrets
       - bSmart repos/content folders

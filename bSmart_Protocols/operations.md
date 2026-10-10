@@ -93,7 +93,7 @@ secret_storage:
   protocol: /workspace/bSmart-System/bSmart_Protocols/secret-provider-onboarding.md
   provider_modes:
     - deployer/native secret objects mounted read-only into the container
-    - service-level host secret directories mounted read-only, e.g. /opt/docker-workspace/<service>/secrets -> /run/secrets:ro
+    - service-level host secret directories mounted read-only, e.g. <host-agent-root>/secrets -> /run/secrets:ro
     - environment variables only when the operator accepts wider runtime exposure
     - external vault/provider integrations when configured locally and allowed by their terms
     - manual operator-managed credentials
@@ -217,7 +217,7 @@ bsmart_startup_checks:
 
 ```yaml
 orchestrator_compose_visibility:
-  protocol: /workspace/bSmart-System/bSmart_Protocols/containerized-hermes-agent-onboarding.md
+  protocol: /workspace/bSmart-System/bSmart_Protocols/hermes-runtime-onboarding.md
   problem: A host blueprint is visible from the agent more often than the orchestrator's live Compose. Live Compose is authoritative.
   risk: Copying a stale blueprint over live Compose overwrites orchestrator-side changes. A hash match shows the texts match; it does not show that the container is healthy.
   inspection: Prefer a narrow read-only helper when the host provides one. That helper is an optional host pattern, not a bSmart-System command, and it must not be assumed to exist at a fixed path.

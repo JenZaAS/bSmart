@@ -1,6 +1,6 @@
 # bSmart Protocol: admin/container design
 
-This document records design boundaries for an admin or work container. Creating, updating, redeploying, and recovering the container is owned by `containerized-hermes-agent-onboarding.md`. Normal bSmart instances can ignore this file unless they are being set up as an admin or work container on a Docker or Dokploy-style VPS.
+This document records design boundaries for an admin or work container. Creating, updating, and redeploying the container is the orchestrated-Docker section of `hermes-runtime-onboarding.md`. Normal bSmart instances can ignore this file unless they are being set up as an admin or work container on a Docker or Dokploy-style VPS.
 
 ## Scope
 
@@ -10,7 +10,7 @@ Use this when reviewing the privilege boundary of a containerized Hermes/bSmart 
 - a work container, which should receive only its own data, workspace, secrets, and the project mounts selected later;
 - a container that needs private GitHub access and project storage.
 
-Creating, updating, or recovering the container belongs to `containerized-hermes-agent-onboarding.md`.
+Creating, updating, or redeploying the container belongs to `hermes-runtime-onboarding.md`.
 
 For the detailed GitHub credential/repo-access workflow, see `/workspace/bSmart-System/bSmart_Protocols/github-ai-access.md`.
 

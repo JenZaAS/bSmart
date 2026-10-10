@@ -80,38 +80,52 @@ class BSmartLookupTests(unittest.TestCase):
         self.assertIn("same change/commit", map_text)
         self.assertIn("roles-and-concurrency.md", map_text)
 
-    def test_containerized_hermes_protocol_is_indexed(self):
-        protocol_path = ROOT / "bSmart_Protocols" / "containerized-hermes-agent-onboarding.md"
+    def test_hermes_runtime_protocol_is_indexed(self):
+        protocol_path = ROOT / "bSmart_Protocols" / "hermes-runtime-onboarding.md"
         protocol = protocol_path.read_text(encoding="utf-8")
+        self.assertFalse((ROOT / "bSmart_Protocols" / "containerized-hermes-agent-onboarding.md").exists())
         self.assertIn("bsmart-protocol-summary:", protocol)
-        self.assertIn("id: containerized-hermes-agent-onboarding", protocol)
+        self.assertIn("id: hermes-runtime-onboarding", protocol)
+        self.assertIn("orchestrated_docker_only:", protocol)
         self.assertIn("pull_policy: never", protocol)
+        self.assertIn("## Incident only: state.db corruption", protocol)
         self.assertIn("messages_fts_trigram", protocol)
         self.assertIn("repair.lock", protocol)
-        for banned in ("Unity", "DigTech", "Digtech", "Hugo", "JenZa", "Grimne", "SuperAdmin", "SschwAdmin"):
+        self.assertIn("--output", protocol)
+        self.assertIn("hermes sessions repair --check-only", protocol)
+        self.assertIn("%LOCALAPPDATA%\\hermes", protocol)
+        self.assertIn("~/.hermes/state.db", protocol)
+        self.assertIn("/opt/data/state.db", protocol)
+        self.assertIn("not the installer default", protocol)
+        self.assertLess(protocol.index("## Everywhere"), protocol.index("## Orchestrated Docker only"))
+        self.assertLess(protocol.index("## Orchestrated Docker only"), protocol.index("## Incident only:"))
+        for banned in ("Unity", "DigTech", "Digtech", "Hugo", "JenZa", "Grimne", "SuperAdmin", "SschwAdmin", "Hermes uses pm"):
             self.assertNotIn(banned, protocol)
         self.assertIn(
-            "containerized-hermes-agent-onboarding.md",
+            "hermes-runtime-onboarding.md",
             (ROOT / "bSmart_Protocols" / "protocols.md").read_text(encoding="utf-8"),
         )
         map_text = (ROOT / "bSmart_Map.md").read_text(encoding="utf-8")
-        self.assertIn("containerized-hermes-agent-onboarding.md", map_text)
-        self.assertIn(
-            "containerized-hermes-agent-onboarding.md",
-            (ROOT / "README.md").read_text(encoding="utf-8"),
-        )
-        self.assertIn(
-            "containerized-hermes-agent-onboarding.md",
-            (ROOT / "bSmart_Setup.md").read_text(encoding="utf-8"),
-        )
+        self.assertIn("hermes-runtime-onboarding.md", map_text)
+        self.assertNotIn("state.db recovery", map_text)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        setup = (ROOT / "bSmart_Setup.md").read_text(encoding="utf-8")
+        operations = (ROOT / "bSmart_Protocols" / "operations.md").read_text(encoding="utf-8")
+        self.assertIn("hermes-runtime-onboarding.md", readme)
+        self.assertIn("hermes-runtime-onboarding.md", setup)
+        self.assertNotIn("/opt/docker-workspace", readme)
+        self.assertNotIn("/opt/docker-workspace", setup)
+        self.assertNotIn("/opt/docker-workspace", operations)
         features = (ROOT / "bSmart_Features.md").read_text(encoding="utf-8")
-        self.assertIn("containerized-hermes-agent-onboarding.md", features)
+        self.assertIn("hermes-runtime-onboarding.md", features)
         bmap = load_script("bMap")
-        entry = bmap.extract_entry(map_text, "containerized-hermes-agent-onboarding")
+        entry = bmap.extract_entry(map_text, "hermes-runtime-onboarding")
         self.assertIsNotNone(entry)
         self.assertIn("pull policy", entry)
+        self.assertNotIn("state.db", entry)
         card = load_script("bFeature").extract_feature(features, "Setup")
-        self.assertIn("containerized-hermes-agent-onboarding.md", card)
+        self.assertIn("hermes-runtime-onboarding.md", card)
+        self.assertIn("incident-only", card)
         version = (ROOT / "bSmart_Version.md").read_text(encoding="utf-8")
         self.assertIn("current_version: 0.1.45.1-draft", version)
         self.assertIn("## 0.1.45.1-draft", version)

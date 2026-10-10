@@ -164,9 +164,9 @@ project_storage:
   compose_change_required_for_projects: only when the operator chooses a mounted volume; internal ./projects needs no Compose change
   internal_storage_helper: python3 ./bSmart-System/scripts/bsmart-project-storage-check --configure-internal
 
-containerized_hermes:
-  protocol: /workspace/bSmart-System/bSmart_Protocols/containerized-hermes-agent-onboarding.md
-  rule: Load when creating, updating, redeploying, or recovering a Hermes agent under orchestrated Docker. bSmart setup and instance sync do not rebuild images or edit live Compose.
+hermes_runtime:
+  protocol: /workspace/bSmart-System/bSmart_Protocols/hermes-runtime-onboarding.md
+  rule: Load when setting up or updating a Hermes runtime on any host. Apply the orchestrated-Docker section only when an orchestrator stores live Compose. bSmart setup and instance sync do not change the Hermes runtime. The state.db section is incident-only.
 
 project_context_scope:
   default: active_project_only
@@ -206,7 +206,7 @@ startup_sequence:
   - use bHistory.md on request or when a recent completion summary needs historical context; do not load the full diary by default
   - scan bSmart_Protocols summaries and load relevant protocols
   - when the operator explicitly asks to start local-agent onboarding, load /workspace/bSmart-System/bSmart_Protocols/local-agent-onboarding.md
-  - when the operator asks to create, update, redeploy, or recover a Hermes agent that runs under Docker on a VPS or Dokploy-style orchestrator, load /workspace/bSmart-System/bSmart_Protocols/containerized-hermes-agent-onboarding.md
+  - when the operator asks to set up or update a Hermes runtime, load /workspace/bSmart-System/bSmart_Protocols/hermes-runtime-onboarding.md and use only the sections that match that host. The state.db section is incident-only
   - first visible assistant reply starts with the bStart greeting: "Hi, <operator-name>!"
   - then show the compact bStart startup summary
   - include one short help line: "Info keywords: help, features, setup, projects, tasks, safety."

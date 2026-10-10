@@ -57,7 +57,7 @@ mounted_volume_flow:
 
     Enter host-project-folder, e.g.
 
-    /mnt/share/MyAI
+    <host-share-root>/<agent>
 
   save:
     mode: mounted
@@ -195,7 +195,7 @@ startup_check_behavior:
 ```yaml
 compose_boundary:
   bsmart_role: record desired storage and produce volume-line guidance
-  deployment_protocol: /workspace/bSmart-System/bSmart_Protocols/containerized-hermes-agent-onboarding.md
+  deployment_protocol: /workspace/bSmart-System/bSmart_Protocols/hermes-runtime-onboarding.md
   user_role: apply Compose changes through the orchestrator, using an allowlisted update harness when the host provides one
-  rule: A storage spec or host blueprint is not the live service definition. Sync and redeploy only through the containerized Hermes protocol. A host-local image in that live Compose needs pull_policy never directly under image.
+  rule: A storage spec or host blueprint is not the live service definition. Sync and redeploy only through the orchestrated-Docker section of the Hermes runtime protocol. A host-local image in that live Compose needs pull_policy never directly under image.
 ```

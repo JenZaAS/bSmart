@@ -623,5 +623,71 @@ class TwoInstanceTests(unittest.TestCase):
         self.assert_main_untouched()
 
 
+class BootstrapWorkspacePathTests(unittest.TestCase):
+    def test_explicit_workspace_is_used_and_no_private_host_default_exists(self):
+        script = ROOT / "scripts" / "bsmart-bootstrap-workspace"
+        source = script.read_text(encoding="utf-8")
+        self.assertNotIn("/opt/docker-workspace", source)
+        self.assertNotIn("/mnt/share", source)
+        missing = subprocess.run(
+            [sys.executable, str(script), "--agent-name", "Example"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertNotEqual(missing.returncode, 0)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            origin = root / "origin"
+            origin.mkdir()
+            env = os.environ.copy()
+            env["GIT_AUTHOR_NAME"] = "Test"
+            env["GIT_AUTHOR_EMAIL"] = "test@example.com"
+            env["GIT_COMMITTER_NAME"] = "Test"
+            env["GIT_COMMITTER_EMAIL"] = "test@example.com"
+            subprocess.run(["git", "init", "-b", "main", str(origin)], check=True, env=env, stdout=subprocess.PIPE)
+            (origin / "README.md").write_text("origin\n", encoding="utf-8")
+            subprocess.run(["git", "-C", str(origin), "add", "README.md"], check=True, env=env, stdout=subprocess.PIPE)
+            subprocess.run(
+                ["git", "-C", str(origin), "commit", "-m", "origin"],
+                check=True,
+                env=env,
+                stdout=subprocess.PIPE,
+            )
+            workspace = root / "explicit-workspace"
+            host_projects = root / "explicit-share" / "agent"
+            host_sandboxes = root / "explicit-agent" / "sandboxes"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(script),
+                    "--workspace",
+                    str(workspace),
+                    "--agent-name",
+                    "Example",
+                    "--repo-url",
+                    str(origin),
+                    "--host-project-root",
+                    str(host_projects),
+                    "--host-sandbox-root",
+                    str(host_sandboxes),
+                    "--content-git",
+                    "none",
+                ],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            spec = (workspace / "bSmart" / "State" / "container-storage.yaml").read_text(encoding="utf-8")
+            self.assertIn(str(host_projects), spec)
+            self.assertIn(str(host_sandboxes), spec)
+            self.assertTrue((workspace / "bSmart-System" / ".git").exists())
+            self.assertFalse((root / "opt" / "docker-workspace").exists())
+
+
 if __name__ == "__main__":
     unittest.main()
