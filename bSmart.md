@@ -115,7 +115,7 @@ update_workflow:
     - back up and synchronize HERMES.md, AGENTS.md, and CLAUDE.md
     - create only missing standard content
     - verify, refresh, or install the managed /project integration
-    - show user-facing release news once, for versions flagged in bSmart_Version.md since this instance last updated
+    - print a preview of user-facing release news without marking it seen; interactive bStart records that news once
   first_reply_rule: Preserve the bStart startup and command-help lines in the first reply; instance-specific greetings may precede them but must not replace them. If startup prints a bSmart news block, relay that news briefly in the first reply, once, and do not repeat it later.
   preserve: Never overwrite instance identity, project handoffs, legacy migration files, projects, secrets, or unrelated content.
   profile_migration: Apply known exact bSmart_Agent.md compatibility migrations automatically with a backup and clear report; ask only for ambiguous or broader changes.

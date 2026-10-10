@@ -3,36 +3,46 @@
 
 bSmart_Version.md is the changelog. A version is announced only when its yaml
 block contains a news paragraph. The instance record lives in
-bSmart/State/bsmart-release-notice.yaml. A missing record is a fresh install
-only when the instance has no upgrade signal. Roles/, legacy state, the
-role-migration marker, any other State file, or the pre-pull Git version
-means an existing instance, and it still receives unseen news.
+bSmart/State/bsmart-release-notice.yaml. That file has existed since 0.1.20
+as last_announced_version only. A file with no seen_news key has not shown
+news for that version yet, so the window includes it. A fresh install is
+baselined by bootstrap (or by bStart when no strong signal exists). Roles/,
+legacy bSmart_State.md, and State/role-migration.json are the only signals
+that a missing record is an existing instance. Other State files and ORIG_HEAD
+are not.
+
+Only --record marks news seen. Interactive bStart passes it. Upgrade and
+startup check use --preview and leave the record alone.
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import re
-import subprocess
 import sys
+import time
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).absolute().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from bsmart_instance import default_content_root, git_safe_directory
+from bsmart_instance import default_content_root
 
 SYSTEM_ROOT = SCRIPT_DIR.parent
 DEFAULT_CONTENT_ROOT = default_content_root(SYSTEM_ROOT)
 STATE_NAME = "bsmart-release-notice.yaml"
+LOCK_NAME = "bsmart-release-notice.lock"
 NEWS_HEADER = "bSmart news:"
 NEWS_INSTRUCTION = "Relay this briefly to the user in your next reply. Say it once."
 VERSION_HEADING = re.compile(
     r"^## (\d+\.\d+(?:\.\d+)*(?:-[A-Za-z0-9.]+)?)\s*$",
     re.MULTILINE,
 )
+VERSION_TOKEN = re.compile(r"^(\d+\.\d+(?:\.\d+)*)(?:-([A-Za-z0-9.]+))?$")
 BLOCK_MARKERS = {"|", ">", "|-", ">-", "|+", ">+"}
+STALE_LOCK_SECONDS = 30.0
 
 
 def configure_output_streams() -> None:
@@ -60,8 +70,25 @@ def current_version(text: str) -> str:
     return match.group(1) if match else "unknown"
 
 
+def version_key(version: str) -> tuple | None:
+    """Numeric order. Heading order in the changelog is not authoritative.
+
+    0.1.19-draft is listed above 0.1.31-draft in bSmart_Version.md. A final
+    version sorts after the same number with a draft suffix. None means the
+    string is not a version and must not be treated as older than everything.
+    """
+    match = VERSION_TOKEN.fullmatch(version.strip())
+    if not match:
+        return None
+    numbers = tuple(int(part) for part in match.group(1).split("."))
+    suffix = match.group(2)
+    if suffix:
+        return (numbers, 0, suffix)
+    return (numbers, 1, "")
+
+
 def version_sections(text: str) -> list[tuple[str, str]]:
-    """Return (version, body) pairs, newest first, as written in the file."""
+    """Return (version, body) pairs in file order."""
     matches = list(VERSION_HEADING.finditer(text))
     sections: list[tuple[str, str]] = []
     for index, match in enumerate(matches):
@@ -107,32 +134,45 @@ def extract_news(section: str) -> str:
     return indicator.strip()
 
 
-def pending_news(text: str, previous: str, current: str) -> list[tuple[str, str]]:
-    """Flagged news after previous, through current, oldest first.
+def pending_news(
+    text: str,
+    previous: str,
+    current: str,
+    *,
+    include_previous: bool = False,
+    all_through_current: bool = False,
+) -> list[tuple[str, str]]:
+    """Flagged news through current, oldest first by version number.
 
-    previous is excluded. A previous version that is not in the changelog is
-    treated as older than every listed version. A downgrade yields nothing.
+    A new-format record excludes previous. An old-format record includes it
+    ("that version and later"). A previous version that does not parse is not
+    a window. A parsed version missing from the changelog is compared by
+    number, not treated as older than every entry. A downgrade yields nothing.
     """
-    parsed = version_sections(text)
-    names = [name for name, _section in parsed]
-    if current not in names:
+    current_key = version_key(current)
+    if current_key is None:
         return []
-    current_index = names.index(current)
-    if previous and previous in names:
-        last_index = names.index(previous)
-        if last_index <= current_index:
-            return []
-        window = parsed[current_index:last_index]
-    elif previous:
-        window = parsed[current_index:]
-    else:
+    previous_key = None if all_through_current else version_key(previous) if previous else None
+    if previous and previous_key is None and not all_through_current:
         return []
-    items: list[tuple[str, str]] = []
-    for name, section in reversed(window):
+    if previous_key is not None and previous_key > current_key:
+        return []
+    ranked: list[tuple[tuple, str, str]] = []
+    for name, section in version_sections(text):
+        key = version_key(name)
+        if key is None or key > current_key:
+            continue
+        if previous_key is not None:
+            if include_previous:
+                if key < previous_key:
+                    continue
+            elif key <= previous_key:
+                continue
         message = extract_news(section)
         if message:
-            items.append((name, message))
-    return items
+            ranked.append((key, name, message))
+    ranked.sort(key=lambda item: item[0])
+    return [(name, message) for _key, name, message in ranked]
 
 
 def format_news(items: list[tuple[str, str]]) -> str:
@@ -147,11 +187,15 @@ def state_path(content_root: Path) -> Path:
     return content_root / "State" / STATE_NAME
 
 
-def read_state(path: Path) -> tuple[str, list[str]]:
+def read_state(path: Path) -> tuple[str, list[str] | None]:
+    """Return (version, seen). seen is None when the file has no seen_news key.
+
+    That old format means news for the recorded version has not been shown.
+    """
     if not path.is_file():
-        return "", []
+        return "", None
     version = ""
-    seen: list[str] = []
+    seen: list[str] | None = None
     in_seen = False
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         if line.startswith("last_announced_version:"):
@@ -159,12 +203,16 @@ def read_state(path: Path) -> tuple[str, list[str]]:
             in_seen = False
             continue
         if line.startswith("seen_news:"):
+            if seen is None:
+                seen = []
             in_seen = True
             rest = line.split(":", 1)[1].strip()
             if rest and rest != "[]":
                 seen.append(rest.lstrip("-").strip())
             continue
         if in_seen and line.strip().startswith("- "):
+            if seen is None:
+                seen = []
             seen.append(line.strip()[2:].strip())
             continue
         if line.strip():
@@ -173,6 +221,7 @@ def read_state(path: Path) -> tuple[str, list[str]]:
 
 
 def write_state(path: Path, version: str, seen: list[str], fresh: bool) -> None:
+    """Replace the record atomically so a reader never sees a partial file."""
     path.parent.mkdir(parents=True, exist_ok=True)
     lines = [f"last_announced_version: {version}"]
     if seen:
@@ -182,171 +231,242 @@ def write_state(path: Path, version: str, seen: list[str], fresh: bool) -> None:
         lines.append("seen_news: []")
     if fresh:
         lines.append("baseline: fresh")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
-VERSION_TOKEN = re.compile(r"(\d+\.\d+(?:\.\d+)*(?:-[A-Za-z0-9.]+)?)")
-RECORDED_VERSION_KEYS = ("last_announced_version", "bsmart_version", "system_version")
-
-
-def oldest_version(text: str, versions: list[str]) -> str:
-    """Prefer a changelog version, and among those the oldest one."""
-    names = [name for name, _section in version_sections(text)]
-    known = [version for version in versions if version in names]
-    pool = known or versions
-
-    def rank(version: str) -> int:
-        if version in names:
-            return names.index(version)
-        return len(names) + 1
-
-    return max(pool, key=rank)
-
-
-def recorded_state_versions(content_root: Path) -> list[str]:
-    """Versions an older instance already wrote under bSmart/State/."""
-    state = content_root / "State"
-    if not state.is_dir():
-        return []
-    found: list[str] = []
-    for path in state.rglob("*"):
-        if not path.is_file() or path.name == STATE_NAME:
-            continue
-        if path.suffix.lower() not in {".yaml", ".yml", ".json", ".md", ".txt"}:
-            continue
-        try:
-            body = path.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            continue
-        for line in body.splitlines():
-            stripped = line.strip().lstrip("-").strip().strip('"')
-            for key in RECORDED_VERSION_KEYS:
-                if not stripped.startswith(key + ":"):
-                    continue
-                match = VERSION_TOKEN.search(stripped.split(":", 1)[1])
-                if match:
-                    found.append(match.group(1))
-    return found
-
-
-def orig_head_version(system_root: Path) -> str | None:
-    """Version at Git's pre-pull ORIG_HEAD, when this checkout has one."""
-    if not (system_root / ".git").exists():
-        return None
+    payload = "\n".join(lines) + "\n"
+    temporary = path.parent / f".{path.name}.{os.getpid()}.tmp"
     try:
-        proc = subprocess.run(
-            [
-                "git",
-                "-c",
-                f"safe.directory={git_safe_directory(system_root)}",
-                "show",
-                "ORIG_HEAD:bSmart_Version.md",
-            ],
-            cwd=str(system_root),
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=15,
-            check=False,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-    if proc.returncode != 0 or not proc.stdout.strip():
-        return None
-    found = current_version(proc.stdout)
-    return None if found == "unknown" else found
+        temporary.write_text(payload, encoding="utf-8")
+        os.replace(temporary, path)
+    except Exception:
+        try:
+            temporary.unlink()
+        except OSError:
+            pass
+        raise
 
 
-def has_upgrade_signal(content_root: Path) -> bool:
-    """True when this content root already belonged to an instance.
+class NoticeLock:
+    """One exclusive file so two startups do not both print the same news."""
 
-    bHistory.md is not a signal: startup creates it in the same run, before
-    the notice, on a brand-new workspace.
+    def __init__(self, directory: Path) -> None:
+        self.path = directory / LOCK_NAME
+        self.held = False
+
+    def acquire(self) -> bool:
+        try:
+            wait = float(os.environ.get("BSMART_NOTICE_LOCK_WAIT", "2"))
+        except ValueError:
+            wait = 2.0
+        deadline = time.monotonic() + max(wait, 0.0)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        while True:
+            try:
+                fd = os.open(str(self.path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            except FileExistsError:
+                stale = False
+                try:
+                    stale = time.time() - self.path.stat().st_mtime > STALE_LOCK_SECONDS
+                except OSError:
+                    stale = False
+                if stale:
+                    try:
+                        self.path.unlink()
+                    except OSError:
+                        return False
+                    continue
+                if time.monotonic() >= deadline:
+                    return False
+                time.sleep(0.05)
+                continue
+            try:
+                os.write(fd, str(os.getpid()).encode("ascii", "replace"))
+            finally:
+                os.close(fd)
+            self.held = True
+            return True
+
+    def release(self) -> None:
+        if not self.held:
+            return
+        self.held = False
+        try:
+            self.path.unlink()
+        except OSError:
+            pass
+
+
+def has_strong_signal(content_root: Path) -> bool:
+    """True only for an instance that already had roles or legacy state.
+
+    container-storage.yaml, the system-update cache, and other State files are
+    written during bootstrap and the first startup, before this notice. They
+    are not evidence of an older instance. ORIG_HEAD is not either.
     """
     if not content_root.is_dir():
         return False
     if (content_root / "Roles").exists() or (content_root / "bSmart_State.md").is_file():
         return True
-    state = content_root / "State"
-    if not state.is_dir():
-        return False
-    for path in state.rglob("*"):
-        if path.is_file() and path.name != STATE_NAME:
-            return True
-    return False
+    return (content_root / "State" / "role-migration.json").is_file()
 
 
-def inferred_previous(system_root: Path, content_root: Path, text: str, current: str) -> str | None:
-    """Last-seen version when the notice file does not exist yet.
-
-    None means a fresh install. ``0`` is older than every changelog entry, so
-    every flagged news item through current is shown once.
-    """
-    found = recorded_state_versions(content_root)
-    git_version = orig_head_version(system_root)
-    if git_version:
-        found.append(git_version)
-    older = [version for version in found if version != current]
-    if older:
-        return oldest_version(text, older)
-    if found:
-        return current
-    if has_upgrade_signal(content_root):
-        return "0"
-    return None
-
-
-def announce(system_root: Path, content_root: Path, quiet: bool) -> int:
+def load_changelog(system_root: Path) -> tuple[str, str] | None:
     version_file = system_root / "bSmart_Version.md"
     if not version_file.is_file():
-        return 0
+        return None
     try:
         text = version_file.read_text(encoding="utf-8", errors="replace")
     except OSError as exc:
         print(f"bSmart release notice: could not read version file - {exc}", file=sys.stderr)
-        return 1
+        return None
     current = current_version(text)
     if current == "unknown":
         print("bSmart release notice: current_version is missing", file=sys.stderr)
+        return None
+    return text, current
+
+
+def record_baseline(system_root: Path, content_root: Path) -> int:
+    """Store the current version for a new instance and print nothing.
+
+    Bootstrap calls this after it creates bSmart_State.md. An existing record
+    is left untouched, so a later bootstrap does not clear seen news.
+    """
+    loaded = load_changelog(system_root)
+    if loaded is None:
+        version_file = system_root / "bSmart_Version.md"
+        if not version_file.is_file():
+            return 0
         return 1
+    _text, current = loaded
     path = state_path(content_root)
-    seen: list[str] = []
     if path.is_file():
-        previous, seen = read_state(path)
-        if not previous:
-            previous = inferred_previous(system_root, content_root, text, current)
-    else:
-        previous = inferred_previous(system_root, content_root, text, current)
-    if previous is None:
+        return 0
+    lock = NoticeLock(path.parent)
+    if not lock.acquire():
+        return 0
+    try:
+        if path.is_file():
+            return 0
         try:
             write_state(path, current, [], fresh=True)
         except OSError as exc:
             print(f"bSmart release notice: could not record notice state - {exc}", file=sys.stderr)
             return 1
+    finally:
+        lock.release()
+    return 0
+
+
+def announce(system_root: Path, content_root: Path, quiet: bool, record: bool) -> int:
+    loaded = load_changelog(system_root)
+    if loaded is None:
+        version_file = system_root / "bSmart_Version.md"
+        if not version_file.is_file():
+            return 0
+        return 1
+    text, current = loaded
+    path = state_path(content_root)
+    if record:
+        lock = NoticeLock(path.parent)
+        if not lock.acquire():
+            return 0
+    else:
+        lock = None
+    try:
+        return _announce_unlocked(text, current, path, content_root, quiet, record)
+    finally:
+        if lock is not None:
+            lock.release()
+
+
+def _announce_unlocked(
+    text: str,
+    current: str,
+    path: Path,
+    content_root: Path,
+    quiet: bool,
+    record: bool,
+) -> int:
+    include_previous = False
+    all_through_current = False
+    seen: list[str] = []
+    previous = ""
+    if path.is_file():
+        previous, seen_or_none = read_state(path)
+        if seen_or_none is None:
+            include_previous = True
+            seen = []
+        else:
+            seen = seen_or_none
+        if not previous:
+            if has_strong_signal(content_root):
+                all_through_current = True
+            else:
+                return _fresh(path, current, record)
+    elif has_strong_signal(content_root):
+        all_through_current = True
+    else:
+        return _fresh(path, current, record)
+
+    if previous and version_key(previous) is None and not all_through_current:
         return 0
-    if previous == current:
-        if not path.is_file():
-            try:
-                write_state(path, current, seen, fresh=False)
-            except OSError as exc:
-                print(f"bSmart release notice: could not record notice state - {exc}", file=sys.stderr)
-                return 1
+    previous_key = version_key(previous) if previous else None
+    current_key = version_key(current)
+    if (
+        previous_key is not None
+        and current_key is not None
+        and previous_key > current_key
+        and not all_through_current
+    ):
+        return 0
+    if (
+        path.is_file()
+        and not include_previous
+        and not all_through_current
+        and previous == current
+    ):
         if not quiet:
             print(f"bSmart release notice: {current} already announced")
         return 0
-    items = [(version, message) for version, message in pending_news(text, previous, current) if version not in seen]
-    if items:
-        print(format_news(items), end="")
-    elif not quiet:
-        print(f"bSmart release notice: {current} has no user-facing news")
+
+    items = [
+        item
+        for item in pending_news(
+            text,
+            previous,
+            current,
+            include_previous=include_previous,
+            all_through_current=all_through_current,
+        )
+        if item[0] not in seen
+    ]
+    if not record:
+        if items:
+            print(format_news(items), end="")
+        elif not quiet:
+            print(f"bSmart release notice: {current} has no user-facing news")
+        return 0
+
     updated = list(seen)
     for version, _message in items:
         if version not in updated:
             updated.append(version)
     try:
         write_state(path, current, updated, fresh=False)
+    except OSError as exc:
+        print(f"bSmart release notice: could not record notice state - {exc}", file=sys.stderr)
+        return 1
+    if items:
+        print(format_news(items), end="")
+    elif not quiet:
+        print(f"bSmart release notice: {current} has no user-facing news")
+    return 0
+
+
+def _fresh(path: Path, current: str, record: bool) -> int:
+    if not record:
+        return 0
+    try:
+        write_state(path, current, [], fresh=True)
     except OSError as exc:
         print(f"bSmart release notice: could not record notice state - {exc}", file=sys.stderr)
         return 1
@@ -359,8 +479,16 @@ def main() -> int:
     parser.add_argument("--content-root", default=str(DEFAULT_CONTENT_ROOT))
     parser.add_argument("--system-root", default=str(SYSTEM_ROOT))
     parser.add_argument("--quiet", action="store_true", help="suppress healthy or already-announced output")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--record", action="store_true", help="mark the news seen; interactive bStart only")
+    mode.add_argument("--preview", action="store_true", help="print unseen news without recording it")
+    mode.add_argument("--baseline", action="store_true", help="record the current version for a fresh install and print nothing")
     args = parser.parse_args()
-    return announce(Path(args.system_root).expanduser(), Path(args.content_root).expanduser(), args.quiet)
+    system_root = Path(args.system_root).expanduser()
+    content_root = Path(args.content_root).expanduser()
+    if args.baseline:
+        return record_baseline(system_root, content_root)
+    return announce(system_root, content_root, args.quiet, record=args.record)
 
 
 if __name__ == "__main__":

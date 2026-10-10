@@ -206,7 +206,7 @@ bsmart_startup_checks:
     - project/sandbox storage spec via bsmart-project-storage-check
     - standard instance content via bsmart-content-upgrade (quiet; every /new)
     - Hermes /project adapter presence via bsmart-project-integration-check (quiet; every /new; skipped when Hermes is not installed)
-    - user-facing release news via bsmart-release-notice (every /new and the first bStart after a version change; once per instance)
+    - user-facing release news via bsmart-release-notice (a preview on startup check; bStart marks it seen once per instance)
   important_behavior:
     - missing container-storage.yaml is reported as setup_required
     - when the hermes CLI and an existing Hermes profile are both absent, the integration check reports skipped/not applicable and does not create a Hermes home
@@ -214,7 +214,7 @@ bsmart_startup_checks:
     - before any startup helper call that may update or repair local state, use a plain-language action note naming the intended bSmart operation; do not rely on the framework's generic execute_code approval reason
     - on CIFS/SMB-backed workspaces executable bits may not be honored; run Python helpers with python3 <script> instead of executing the script path directly
     - the helper does not create the spec or change Compose/Dokploy unless an explicit configure subcommand is run
-    - bsmart-release-notice prints only versions flagged with a news paragraph; other changelog entries stay tracked and are not announced; a missing notice file on an instance with Roles/, role-migration state, other State files, or a pre-pull version is an upgrade and still shows unseen news; only a fresh install records the current version and prints nothing
+    - bsmart-release-notice prints only versions flagged with a news paragraph; other changelog entries stay tracked and are not announced; an old notice file with no seen_news key includes that version; Roles/, legacy bSmart_State.md, and the role-migration marker are the only missing-file signals; bootstrap records a fresh baseline; only bStart marks news seen
 ```
 
 ```yaml

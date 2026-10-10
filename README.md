@@ -427,6 +427,12 @@ if [ "$APPLY_GROUP_PERMS" = "yes" ]; then
   fi
 fi
 
+python3 "$WS/bSmart-System/scripts/bsmart-release-notice" \
+  --baseline \
+  --content-root "$WS/bSmart" \
+  --system-root "$WS/bSmart-System" \
+  || echo "WARNING: could not record a fresh release-news baseline" >&2
+
 echo "bSmart installed for ${SERVICE}."
 echo "Next: redeploy through the orchestrator or the host's allowlisted update harness, then send /new and Hi."
 echo "Do not use an unrestricted docker restart as the update path. See bSmart_Protocols/hermes-runtime-onboarding.md."

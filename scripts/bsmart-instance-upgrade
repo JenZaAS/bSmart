@@ -93,35 +93,44 @@ def configure_output_streams() -> None:
 
 
 def announce_release(workspace: Path, system: Path) -> int:
-    """Show flagged news once. A missing version file is not an upgrade failure."""
+    """Print flagged news without marking it seen.
+
+    bStart is the interactive startup that records the news. A cron, script,
+    or harness running this upgrade must not consume it. A notice failure
+    must not turn a successful upgrade into a failed exit.
+    """
     script = Path(__file__).absolute().parent / "bsmart-release-notice"
     if not script.is_file() or not (system / "bSmart_Version.md").is_file():
         return 0
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONUTF8"] = "1"
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(script),
-            "--quiet",
-            "--content-root",
-            str(workspace / "bSmart"),
-            "--system-root",
-            str(system),
-        ],
-        cwd=str(workspace),
-        env=env,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(script),
+                "--quiet",
+                "--preview",
+                "--content-root",
+                str(workspace / "bSmart"),
+                "--system-root",
+                str(system),
+            ],
+            cwd=str(workspace),
+            env=env,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return 0
     if result.stdout:
         print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
     if result.stderr:
         print(result.stderr, end="" if result.stderr.endswith("\n") else "\n", file=sys.stderr)
-    return result.returncode
+    return 0
 
 
 def main() -> int:

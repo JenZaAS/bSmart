@@ -298,8 +298,11 @@ def release_notice_script() -> Path | None:
 def release_news_lines(system: Path, content: Path) -> list[str]:
     """News since this instance last updated. Empty for a fresh install.
 
-    scripts/bsmart-release-notice records the seen version in instance state.
+    This is the only caller that marks news seen. Upgrade and startup check
+    may print a preview and must leave the record for this session.
     A failure here must not abort startup; the next start tries again.
+    Call this before the update check writes State, so that cache is not
+    mistaken for an existing instance.
     """
     script = release_notice_script()
     if script is None or not (system / "bSmart_Version.md").is_file():
@@ -313,6 +316,7 @@ def release_news_lines(system: Path, content: Path) -> list[str]:
                 sys.executable,
                 str(script),
                 "--quiet",
+                "--record",
                 "--content-root",
                 str(content),
                 "--system-root",
@@ -356,6 +360,9 @@ def main() -> int:
     workspace = Path(args.root).expanduser().absolute()
     system, content = resolve_paths(workspace)
     warnings: list[str] = []
+    # Before safe_system_update writes bsmart-system-update.yaml. A State cache
+    # from this same startup is not an older instance.
+    news_lines = release_news_lines(system, content)
     updated, update_line = safe_system_update(system, content, args.skip_update)
     integrity: list[str] = []
     if updated and not args.skip_integrity:
@@ -396,7 +403,7 @@ def main() -> int:
             warnings.append(f"Context: could not read {path}: {exc}")
     print(f"Hi, {greeting_name}!")
     print("bSmart — Startup")
-    for line in release_news_lines(system, content):
+    for line in news_lines:
         print(line)
     print(f"Agent: {agent}")
     print(project_line)
