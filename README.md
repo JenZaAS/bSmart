@@ -177,7 +177,7 @@ volumes:
   - <host-agent-root>/secrets:/run/secrets:ro
 ```
 
-When the service image is built on the host, the orchestrator's live Compose must set `pull_policy: never` directly under that service's `image:` key. A blueprint file on disk does not apply the key. Audit every host-local image in live Compose, not only the agent being installed. Create, update, and redeploy of an orchestrated container follow [`bSmart_Protocols/hermes-runtime-onboarding.md`](bSmart_Protocols/hermes-runtime-onboarding.md).
+When the service image is built on the host, the orchestrator's live Compose must set `pull_policy: never` as a sibling of that service's `image:` key. Putting the key on the next line is a readability convention; Compose ignores key order. Do not nest the key under `image:`. A blueprint file on disk does not apply the key. Audit every host-local image in live Compose, not only the agent being installed. Create, update, and redeploy of an orchestrated container follow [`bSmart_Protocols/hermes-runtime-onboarding.md`](bSmart_Protocols/hermes-runtime-onboarding.md).
 
 Recommended image/start-wrapper pattern:
 

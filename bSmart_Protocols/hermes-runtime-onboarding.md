@@ -208,12 +208,12 @@ Not a setup or update step. Use this only when `state.db` reports corruption. Th
 Where the live file is, from upstream docs:
 
 - Linux, macOS, and WSL: `~/.hermes/state.db`, unless `HERMES_HOME` points somewhere else. [Windows (Native)](https://hermes-agent.nousresearch.com/docs/user-guide/windows-native) says WSL data lives under `~/.hermes`.
-- Windows native: the installer sets `HERMES_HOME` to `%LOCALAPPDATA%\hermes`, so the file is `%LOCALAPPDATA%\hermes\state.db`. `%USERPROFILE%\.hermes` is only the location when `HERMES_HOME` was set to that path, which is the documented way to match a Linux or WSL layout. It is not the installer default.
+- Windows native: `%LOCALAPPDATA%\hermes` is the platform default, so the file is `%LOCALAPPDATA%\hermes\state.db`. The installer offers `-HermesHome` to choose another data directory. `HERMES_HOME`, when set, overrides that default. [Windows (Native)](https://hermes-agent.nousresearch.com/docs/user-guide/windows-native).
 - Official Docker image, including Docker Desktop: `/opt/data/state.db` inside the container. [Docker](https://hermes-agent.nousresearch.com/docs/user-guide/docker) maps `/opt/data` from the host's `~/.hermes` in the quickstart. An orchestrated host may mount another directory. Read the mount. Do not guess it. On the host, the same three files are under that mount, `<host-data-path>`.
 
 How to stop, and leave it stopped until the new file is in place:
 
-- Native Windows, Linux, or macOS: `hermes gateway stop` for that profile. Quit the Desktop app and stop the dashboard or cron if they are running. On Windows this also stops the scheduled task.
+- Native Windows, Linux, or macOS: `hermes gateway stop` for that profile. It writes a planned-stop marker and stops the running gateway. It does not disable the Windows logon Scheduled Task; `hermes gateway uninstall` removes that task. Quit the Desktop app and stop the dashboard or cron if they are running. Leave the agent stopped until the new file is in place.
 - Container, including one supervised by s6: stop the container and do not start it again until promotion is finished. A container restart brings the gateway back unless `hermes gateway stop` had recorded it stopped. Do not start a second `hermes gateway` while s6 supervises one.
 
 Then:
@@ -229,6 +229,6 @@ HERMES_HOME=<recovery-workspace> hermes sessions recover --source <recovery-work
 
 `--output` is not the copied source and not the live `state.db`. `hermes sessions repair --check-only` on that copy is an inspection alternative. `hermes sessions repair` without `--check-only` writes and is not the first step. Restoring the newest snapshot from `state-snapshots/` is the other alternative. `repair.lock` is not a backup. A `*.malformed-backup` file is damaged; do not copy it over the live database.
 
-4. On the recovered file, read-only, run `PRAGMA integrity_check` and count sessions and messages. Checkpoint it with `PRAGMA wal_checkpoint(TRUNCATE)` until it is one file with no wal and no shm beside it.
-5. Move the live `state.db`, `state.db-wal`, and `state.db-shm` together into one forensic directory. If a sidecar is already absent, record that. Do not leave a sidecar that is present. Confirm the live directory no longer contains any of the three names. Only then place the checkpointed file as `state.db`. SQLite replays a leftover `state.db-wal` into whatever `state.db` sits beside it.
+4. On the recovered copy, not the live database, run `PRAGMA integrity_check` and count sessions and messages. Convert that copy to one file with `PRAGMA journal_mode=DELETE`. That checkpoint runs on the copy. Confirm no wal and no shm remain beside it.
+5. Move the live `state.db`, `state.db-wal`, and `state.db-shm` together into one forensic directory. If a sidecar is already absent, record that. Do not leave a sidecar that is present. Confirm the live directory no longer contains any of the three names. Only then place that single file as `state.db`. On a container host, the placed file needs the container user's owner and permissions. SQLite replays a leftover `state.db-wal` into whatever `state.db` sits beside it.
 6. Start the agent the way it normally starts: one native gateway or Desktop app, or the container through its orchestrator. Then run `hermes doctor`.

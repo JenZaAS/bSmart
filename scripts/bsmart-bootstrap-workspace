@@ -59,34 +59,122 @@ def write_if_missing(path: Path, content: str) -> bool:
     return True
 
 
-def apply_owner(path: Path, uid: int | None, gid: int | None) -> None:
-    if uid is None and gid is None:
-        return
+class OwnerReport:
+    def __init__(self) -> None:
+        self.platform_without_chown = False
+        self.attempts = 0
+        self.applied = 0
+        self.skipped_symlinks = 0
+        self.failures: list[str] = []
+
+
+def _owner_changer():
+    """Return a chown that does not follow symlinks, or None when unsupported."""
+    lchown = getattr(os, "lchown", None)
+    if lchown is not None:
+        return lchown
     chown = getattr(os, "chown", None)
     if chown is None:
+        return None
+
+    def nofollow(path, uid: int, gid: int) -> None:
+        chown(path, uid, gid, follow_symlinks=False)
+
+    return nofollow
+
+
+def apply_owner(path: Path, uid: int | None, gid: int | None, report: OwnerReport) -> None:
+    if uid is None and gid is None:
         return
+    if path.is_symlink():
+        report.skipped_symlinks += 1
+        return
+    changer = _owner_changer()
+    if changer is None:
+        report.platform_without_chown = True
+        return
+    report.attempts += 1
     try:
-        chown(path, -1 if uid is None else uid, -1 if gid is None else gid)
-    except (PermissionError, NotImplementedError, OSError):
-        pass
+        changer(path, -1 if uid is None else uid, -1 if gid is None else gid)
+    except (PermissionError, NotImplementedError, OSError) as exc:
+        report.failures.append(f"{path}: {exc}")
+        return
+    report.applied += 1
 
 
-def install_dir(path: Path, uid: int | None, gid: int | None, mode: int = 0o775) -> None:
+def install_dir(path: Path, uid: int | None, gid: int | None, report: OwnerReport, mode: int = 0o775) -> None:
     path.mkdir(parents=True, exist_ok=True)
+    if path.is_symlink():
+        report.skipped_symlinks += 1
+        return
     try:
         path.chmod(mode)
     except (PermissionError, NotImplementedError, OSError):
         pass
-    apply_owner(path, uid, gid)
+    apply_owner(path, uid, gid, report)
 
 
-def chown_tree(path: Path, uid: int | None, gid: int | None) -> None:
+def chown_tree(path: Path, uid: int | None, gid: int | None, report: OwnerReport) -> None:
     if uid is None and gid is None:
         return
-    for root, dirs, files in os.walk(path):
-        for name in [*dirs, *files]:
-            apply_owner(Path(root) / name, uid, gid)
-    apply_owner(path, uid, gid)
+    # is_symlink() before exists(): a broken or planted link must not be followed.
+    if path.is_symlink():
+        report.skipped_symlinks += 1
+        return
+    if not path.exists():
+        return
+    if not path.is_dir():
+        apply_owner(path, uid, gid, report)
+        return
+    for root, dirs, files in os.walk(path, followlinks=False):
+        kept_dirs: list[str] = []
+        for name in dirs:
+            child = Path(root) / name
+            if child.is_symlink():
+                report.skipped_symlinks += 1
+            else:
+                kept_dirs.append(name)
+        dirs[:] = kept_dirs
+        for name in files:
+            child = Path(root) / name
+            if child.is_symlink():
+                report.skipped_symlinks += 1
+                continue
+            apply_owner(child, uid, gid, report)
+        for name in kept_dirs:
+            apply_owner(Path(root) / name, uid, gid, report)
+    apply_owner(path, uid, gid, report)
+
+
+def emit_ownership_report(report: OwnerReport, uid: int | None, gid: int | None) -> int:
+    """Warn about ownership failures. Exit non-zero when every requested chown failed."""
+    if uid is None and gid is None or report.platform_without_chown:
+        return 0
+    shown = 5
+    if report.skipped_symlinks:
+        print(
+            f"WARNING: skipped {report.skipped_symlinks} symlink(s); ownership was not applied through them.",
+            file=sys.stderr,
+        )
+    if report.failures:
+        print(
+            f"WARNING: could not set owner uid={uid} gid={gid} on {len(report.failures)} path(s); "
+            f"applied {report.applied} of {report.attempts}.",
+            file=sys.stderr,
+        )
+        for item in report.failures[:shown]:
+            print(f"WARNING: {item}", file=sys.stderr)
+        remaining = len(report.failures) - shown
+        if remaining > 0:
+            print(f"WARNING: {remaining} more ownership failure(s) not shown.", file=sys.stderr)
+    if report.attempts > 0 and report.applied == 0:
+        print(
+            "ERROR: ownership was requested but could not be applied to any path. "
+            "The container user may be unable to write this workspace.",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
 
 
 def ensure_system_repo(workspace: Path, repo_url: str) -> str:
@@ -138,7 +226,8 @@ def main() -> int:
     args = parser.parse_args()
 
     workspace = Path(args.workspace).expanduser().resolve()
-    install_dir(workspace, args.uid, args.gid)
+    report = OwnerReport()
+    install_dir(workspace, args.uid, args.gid, report)
 
     system_action = ensure_system_repo(workspace, args.repo_url)
 
@@ -161,8 +250,8 @@ def main() -> int:
 
     content_root = workspace / "bSmart"
     for rel in ["Docs", "Library", "Projects", "Sandboxes", "Workdocs", "State"]:
-        install_dir(content_root / rel, args.uid, args.gid)
-    install_dir(workspace / "bSmart-Extensions", args.uid, args.gid)
+        install_dir(content_root / rel, args.uid, args.gid, report)
+    install_dir(workspace / "bSmart-Extensions", args.uid, args.gid, report)
 
     files_created: list[str] = []
     hook = startup_hook_text()
@@ -255,15 +344,19 @@ sandboxes:
     if write_if_missing(content_root / "State" / "container-storage.yaml", storage):
         files_created.append("bSmart/State/container-storage.yaml")
 
-    chown_tree(workspace / "HERMES.md", args.uid, args.gid) if (workspace / "HERMES.md").exists() else None
-    chown_tree(workspace / "AGENTS.md", args.uid, args.gid) if (workspace / "AGENTS.md").exists() else None
+    chown_tree(workspace / "HERMES.md", args.uid, args.gid, report) if (workspace / "HERMES.md").exists() else None
+    chown_tree(workspace / "AGENTS.md", args.uid, args.gid, report) if (workspace / "AGENTS.md").exists() else None
     for p in [workspace / "bSmart-System", content_root, workspace / "bSmart-Extensions"]:
-        chown_tree(p, args.uid, args.gid)
+        chown_tree(p, args.uid, args.gid, report)
 
     content_git = maybe_init_content_git(content_root, args.content_git, args.agent_name)
-    chown_tree(content_root, args.uid, args.gid)
+    chown_tree(content_root, args.uid, args.gid, report)
 
-    print("bSmart workspace bootstrap complete")
+    exit_code = emit_ownership_report(report, args.uid, args.gid)
+    if exit_code == 0:
+        print("bSmart workspace bootstrap complete")
+    else:
+        print("bSmart workspace bootstrap finished with ownership errors")
     print(f"  workspace: {workspace}")
     print(f"  bSmart-System: {system_action} from {args.repo_url}")
     print(f"  local content files created: {', '.join(files_created) if files_created else 'none (already present)'}")
@@ -281,7 +374,7 @@ sandboxes:
     print("  1. Send /new to the bot")
     print("  2. Send Hi")
     print("  3. Confirm it reports bSmart startup and no GitHub SSH-key warning")
-    return 0
+    return exit_code
 
 
 if __name__ == "__main__":
