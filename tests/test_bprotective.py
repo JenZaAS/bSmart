@@ -122,8 +122,13 @@ class BProtectiveTests(unittest.TestCase):
             raise core.subprocess.TimeoutExpired(cmd=args, timeout=kwargs.get("timeout", 10))
 
         patches = [
+            patch.object(core, "_lookup_windows_sid", return_value=None),
             patch.object(core.os, "name", "nt"),
-            patch.dict(core.os.environ, {"USERNAME": "Erling", "SystemRoot": r"C:\Windows"}, clear=False),
+            patch.dict(
+                core.os.environ,
+                {"USERNAME": "TestUser", "USERDOMAIN": "TESTDOMAIN", "SystemRoot": r"C:\Windows"},
+                clear=False,
+            ),
             patch.object(core.subprocess, "run", side_effect=fake_run),
         ]
         if hasattr(core.os, "fchmod"):
@@ -138,8 +143,47 @@ class BProtectiveTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         argv, kwargs = calls[0]
         self.assertEqual(argv[0], r"C:\Windows\System32\icacls.exe")
-        self.assertEqual(argv[-1], "Erling:(R,W,D)")
+        self.assertEqual(argv[-1], "TESTDOMAIN\\TestUser:(R,W,D)")
         self.assertEqual(kwargs["timeout"], 10)
+
+    def test_windows_acl_uses_sid_and_skips_a_bare_username(self):
+        core = self.plugin._load_core()
+        fd, name = tempfile.mkstemp(prefix="bprotective-acl-", dir=self.home)
+        os.close(fd)
+        calls: list[list[str]] = []
+
+        def fake_run(args, **kwargs):
+            calls.append(list(args))
+            return None
+
+        with patch.object(core, "_lookup_windows_sid", return_value="S-1-5-21-1"), patch.object(
+            core.os, "name", "nt"
+        ), patch.object(core.subprocess, "run", side_effect=fake_run):
+            if hasattr(core.os, "fchmod"):
+                with patch.object(core.os, "fchmod", lambda *_args, **_kwargs: None):
+                    core._restrict_private(fd, name)
+            else:
+                core._restrict_private(fd, name)
+        self.assertEqual(calls[-1][-1], "*S-1-5-21-1:(R,W,D)")
+        calls.clear()
+        with patch.object(core, "_lookup_windows_sid", return_value=None), patch.object(
+            core.os, "name", "nt"
+        ), patch.dict(core.os.environ, {"USERNAME": "TestUser", "SystemRoot": r"C:\Windows"}, clear=False), patch.object(
+            core.subprocess, "run", side_effect=fake_run
+        ):
+            core.os.environ.pop("USERDOMAIN", None)
+            if hasattr(core.os, "fchmod"):
+                with patch.object(core.os, "fchmod", lambda *_args, **_kwargs: None):
+                    core._restrict_private(fd, name)
+            else:
+                core._restrict_private(fd, name)
+        self.assertEqual(calls, [])
+
+    def test_missing_core_blocks_terminal_commands(self):
+        self.plugin._core = None
+        decision = self.hook(args={"command": "git status"})
+        self.assertEqual(decision["action"], "block")
+        self.assertEqual(decision["rule_key"], "core-missing")
 
     def test_windows_commands_use_the_shared_policy(self):
         prompt = self.call("on")

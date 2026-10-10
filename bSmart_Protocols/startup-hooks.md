@@ -89,4 +89,4 @@ The workspace `AGENTS.md` contract still requires one startup run. A `bSmart —
 
 ## bProtective
 
-Startup hooks do not enable command protection. When a shell command runs on the operator's machines, follow `bprotective_preflight` in `bSmart_Protocols/operations.md`. Run that check with `python3`, then `python`, or `py -3` on Windows, when `python3` is missing or fails. The check itself is not an operation tag. The guard stays off until the operator confirms `bprotective on` or `/bprotective on`.
+Startup hooks do not enable command protection. While bProtective is on, follow `bprotective_preflight` in `bSmart_Protocols/operations.md` before a shell command on the operator's machines. While it is off, do not run that check. Run the check with `python3`, then `python`, or `py -3` on Windows, when `python3` is missing or fails. The check itself is not an operation tag. The guard stays off until the operator confirms `bprotective on` or `/bprotective on`.

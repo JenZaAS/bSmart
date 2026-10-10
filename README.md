@@ -509,7 +509,7 @@ bprotective off
 bprotective no <ID>
 ```
 
-Optional protected paths such as `E:\VPS\share` belong in `State/bprotective.yaml` under the per-instance content root from `scripts/bsmart_instance.py`, not in this repo. That file cannot turn the guard on.
+Optional protected paths belong in `State/bprotective.yaml` under the per-instance content root from `scripts/bsmart_instance.py`, in the instance next to the checkout. That file cannot turn the guard on. Run the pre-flight check only while protection is on.
 
 ## Update rule
 

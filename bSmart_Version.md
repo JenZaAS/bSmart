@@ -22,6 +22,12 @@ scope:
   - keep CLI and hook output encoding-safe for a cp1252 console
   - fit the pre-flight text to the operation-tag convention and the python3, python, py -3 launcher fallback
   - bProtective does not read role files; protection stays off until the operator confirms it
+  - block shell control of on/off/yes/no and writes, deletes, or moves of the state file
+  - keep a missing state file fail-closed after protection was enabled
+  - parse rm flags and block the reviewed catastrophic commands, and stop blocking ordinary pass, force-with-lease, and quoted mentions
+  - deny Codex escalations without an agent-visible token, and add a PermissionRequest hook
+  - fail closed when the core cannot load, with Cursor failClosed and BPROTECTIVE_CORE
+  - grant Windows state-file ACLs to a SID or DOMAIN\\user, and use Codex commandWindows
 verification:
   - existing Hermes bProtective tests pass, including Windows commands and the Windows ACL write
   - core and CLI tests cover Windows commands, protected paths, confirmation, hook response shapes, and the sibling content root

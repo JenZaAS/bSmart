@@ -289,7 +289,7 @@ extensions:
       packaging: bundled_integration
       purpose: Optional command guard shared by Hermes, Cursor, Claude, Codex, and generic shell assistants. Off until the operator confirms it.
       protocol: /workspace/bSmart-System/bSmart_Protocols/operations.md
-      preflight: Before a shell command on the operator's machines, follow bprotective_preflight in that protocol. The check uses python3, then python, or py -3 on Windows. The check is not an operation tag. Do not turn the guard on unless the operator asks.
+      preflight: While bProtective is on, follow bprotective_preflight before a shell command on the operator's machines. While it is off, do not run that check. The check uses python3, then python, or py -3 on Windows. The check is not an operation tag. Do not turn the guard on unless the operator asks.
     bSmartClientPlugins:
       path: /workspace/bSmart-System/integrations
       optional: true

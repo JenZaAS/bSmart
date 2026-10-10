@@ -33,7 +33,7 @@ Confirmation to turn the guard on or off expires after 300 seconds. The operator
 
 Some desktop assistants can run a shell and cannot install a pre-execution hook. For those, bProtective is a pre-flight check. The short instructions live in `bSmart_Protocols/operations.md` under `bprotective_preflight` and are pointed to from `bSmart.md`.
 
-Before a command on the operator's machines, or before a destructive command:
+While protection is on, before a command on the operator's machines, or before a destructive command:
 
 1. Run `bprotective check --json -- "<exact command>"`.
 2. `allow`: follow the normal bSmart approval rules.
@@ -56,7 +56,7 @@ State/bprotective.yaml
 
 ```yaml
 protected_paths:
-  - E:\VPS\share
+  - E:\demo\data
 extra_block:
   - key: custom-wipe
     pattern: "Invoke-CustomWipe"
@@ -80,12 +80,12 @@ A recursive delete that names a protected path is blocked. Another mutating comm
 | CLI / generic assistant | `scripts/bprotective check` | Ask the operator in chat | CLI tested locally. |
 | Cursor | `beforeShellExecution` | `permission: "ask"` | Not live-tested. Payload checked against Cursor hooks docs on 2026-10-08. |
 | Claude Code | `PreToolUse` matcher `Bash\|PowerShell` | `permissionDecision: "ask"` | Not live-tested. Same unverified status the repo already uses for the Claude bSmart plugin. |
-| Codex | `PreToolUse` matcher `Bash\|PowerShell` | `permissionDecision: "deny"` plus `bprotective yes <ID>` | Not live-tested. |
+| Codex | `PreToolUse` and `PermissionRequest` | PreToolUse `deny` with no token. PermissionRequest denies blocks and leaves escalations on the operator prompt. | Not live-tested. |
 
-Cursor's documented `beforeShellExecution` result is `permission` `allow`, `deny`, or `ask`, with `user_message` and `agent_message`. Input used here is `command`. Invalid JSON blocks the action; other hook crashes fail open unless `failClosed` is set. This adapter does not set `failClosed`, so a broken interpreter does not freeze the shell while protection is off. Community reports say Cursor currently ignores `ask` and only enforces `deny`. This repo has not reproduced that. Until it is live-tested, treat Cursor escalation as unverified and keep the pre-flight check for destructive commands.
+Cursor's documented `beforeShellExecution` result is `permission` `allow`, `deny`, or `ask`, with `user_message` and `agent_message`. Input used here is `command`. This adapter sets `failClosed`, so a crash or a missing core blocks the shell command. `BPROTECTIVE_CORE` is the directory that contains `hook.py` when the plugin was copied out of the checkout. Community reports say Cursor currently ignores `ask` and only enforces `deny`. This repo has not reproduced that. Until it is live-tested, treat Cursor escalation as unverified.
 
 Claude Code `PreToolUse` input uses `tool_input.command`. The adapter returns `hookSpecificOutput.permissionDecision` `deny` or `ask`. The matcher includes `PowerShell` because Windows sessions may not emit `Bash`. Empty stdout leaves Claude's own permission flow in place for allowed commands.
 
-Codex `PreToolUse` can deny, or allow with `updatedInput`. The docs say `permissionDecision: "ask"` is parsed and then ignored, and the tool call continues. Returning `ask` would fail open. The Codex adapter therefore denies an escalation and asks the operator to confirm that exact command once with `bprotective yes <ID>`. A block stays denied. Codex still requires the operator to trust the hook definition before it runs.
+Codex `PreToolUse` can deny, or allow with `updatedInput`. The docs say `permissionDecision: "ask"` is parsed and then ignored, and the tool call continues. Returning `ask` would fail open. The Codex adapter denies a block or an escalation and does not put a confirmation token in that message. `PermissionRequest` denies blocks and shell attempts to change the guard. For an escalation it returns no decision, so the operator prompt stays, and it never returns `allow`. The Windows command is `commandWindows` and uses PowerShell, because `||` and `${PLUGIN_ROOT}` do not work in Windows PowerShell 5.1. A non-zero hook exit is not retried with another interpreter. Codex still requires the operator to trust the hook definition before it runs. Checked against the Codex hooks guide on 2026-10-10.
 
 Installing a hook plugin does not enable protection. While the guard is off, Cursor receives `permission: allow` and Claude/Codex receive no decision.

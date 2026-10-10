@@ -274,7 +274,7 @@ bprotective_integration:
       - start a new Hermes session or restart the gateway
       - request activation with `/bprotective on`; do not activate during installation
   other_assistants:
-    - use `bprotective check` before shell commands on the operator's machines; see bprotective_preflight
+    - while protection is on, use `bprotective check` before shell commands on the operator's machines; see bprotective_preflight. While it is off, do not run that check
     - Cursor, Claude, and Codex hook packages live under integrations/<harness>/bprotective-plugin/ and are not live-tested
     - installing a hook package does not activate protection
   controls:
