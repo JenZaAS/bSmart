@@ -272,17 +272,18 @@ bprotective_integration:
       - run `hermes plugins doctor <active Hermes home>/plugins/bprotective --ci`
       - enable with `hermes plugins enable bprotective`
       - start a new Hermes session or restart the gateway
-      - request activation with `/bprotective on`; do not activate during installation
+      - request activation only when the operator asks, with `/bprotective on` and then `/bprotective yes <ID>` in the operator's own terminal; do not activate during installation
   other_assistants:
     - while protection is on, use `bprotective check` before shell commands on the operator's machines; see bprotective_preflight. While it is off, do not run that check
     - Cursor, Claude, and Codex hook packages live under integrations/<harness>/bprotective-plugin/ and are not live-tested
     - installing a hook package does not activate protection
   controls:
     - `/bprotective status` or `bprotective status`
-    - `/bprotective on` or `bprotective on`, followed by `yes <ID>`
-    - `/bprotective off` or `bprotective off`, followed by `yes <ID>`
+    - `/bprotective on` or `bprotective on`, then the operator runs `yes <ID>` in their own terminal
+    - `/bprotective off` or `bprotective off`, then the operator runs `yes <ID>` in their own terminal
+    - `bprotective recover`, then `bprotective yes <ID>`, when the state file is missing and the armed record remains
   instance_config: State/bprotective.yaml under the per-instance content root from bsmart_instance.default_content_root
-  safety: Both activation and deactivation are confirmation-gated; invalid policy state blocks terminal commands. Do not enable bProtective during setup.
+  safety: Both activation and deactivation are confirmation-gated. The operator runs both commands in their own terminal because agent hooks block them. Invalid or missing-after-armed policy state blocks terminal commands. A missing core blocks terminal commands. bProtective is for accidental catastrophic commands, not a deliberately adversarial agent. Do not enable bProtective during setup.
 
 
 dreaming:

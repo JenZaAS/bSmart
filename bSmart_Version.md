@@ -2,7 +2,7 @@
 
 ```yaml
 current_version: 0.1.46-draft
-updated: 2026-10-10 09:30 UTC
+updated: 2026-10-10 12:00 UTC
 status: draft
 ```
 
@@ -25,9 +25,16 @@ scope:
   - block shell control of on/off/yes/no and writes, deletes, or moves of the state file
   - keep a missing state file fail-closed after protection was enabled
   - parse rm flags and block the reviewed catastrophic commands, and stop blocking ordinary pass, force-with-lease, and quoted mentions
-  - deny Codex escalations without an agent-visible token, and add a PermissionRequest hook
+  - deny Codex blocks without an agent-visible token, and let escalations reach PermissionRequest
   - fail closed when the core cannot load, with Cursor failClosed and BPROTECTIVE_CORE
   - grant Windows state-file ACLs to a SID or DOMAIN\\user, and use Codex commandWindows
+  - stop a single & from hanging the tokenizer, and fail closed on a scan size or time limit
+  - keep an armed record outside State, and fail closed when that record disagrees with an off or missing state file unless the operator confirmed off
+  - add bprotective recover for a missing state file, and require the operator to run on and yes in their own terminal
+  - deny Claude Write/Edit/MultiEdit, Cursor Write/Delete, and Codex apply_patch on the state and armed-record paths
+  - start Cursor and Claude hooks from run_hook.cmd so Windows does not need sh
+  - block wrapped rm, bash -lc, xargs rm of a root, python shutil.rmtree of a root, chmod -R 000 /, chown -R of /, and git push of +main or --delete main
+  - state plainly that bProtective is for accidental catastrophic commands, not a deliberately adversarial agent
 verification:
   - existing Hermes bProtective tests pass, including Windows commands and the Windows ACL write
   - core and CLI tests cover Windows commands, protected paths, confirmation, hook response shapes, and the sibling content root

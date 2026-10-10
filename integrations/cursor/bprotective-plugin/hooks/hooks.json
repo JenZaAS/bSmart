@@ -3,7 +3,15 @@
   "hooks": {
     "beforeShellExecution": [
       {
-        "command": "sh -c 'if command -v python3 >/dev/null 2>&1; then exec python3 ./scripts/before_shell.py; elif command -v python >/dev/null 2>&1; then exec python ./scripts/before_shell.py; else exec py -3 ./scripts/before_shell.py; fi'",
+        "command": "./scripts/run_hook.cmd",
+        "timeout": 15,
+        "failClosed": true
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "./scripts/run_hook.cmd",
+        "matcher": "Write|Delete",
         "timeout": 15,
         "failClosed": true
       }

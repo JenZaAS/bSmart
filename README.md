@@ -507,7 +507,10 @@ bprotective on
 bprotective yes <ID>
 bprotective off
 bprotective no <ID>
+bprotective recover
 ```
+
+The operator runs both `bprotective on` and `bprotective yes <ID>` in their own terminal. Agent hooks block those commands. `bprotective recover`, then `bprotective yes <ID>`, is the operator command when the state file is missing and the armed record remains. A missing core blocks terminal commands. bProtective protects against accidental catastrophic commands, not against a deliberately adversarial agent.
 
 Optional protected paths belong in `State/bprotective.yaml` under the per-instance content root from `scripts/bsmart_instance.py`, in the instance next to the checkout. That file cannot turn the guard on. Run the pre-flight check only while protection is on.
 

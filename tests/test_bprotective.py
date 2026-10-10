@@ -37,7 +37,10 @@ class BProtectiveTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(prefix="bprotective-")
         self.home = Path(self.tmp.name)
         self.state = self.home / "bprotective.json"
-        self.env = {"BPROTECTIVE_STATE_FILE": str(self.state)}
+        self.env = {
+            "BPROTECTIVE_STATE_FILE": str(self.state),
+            "BPROTECTIVE_ARMED_FILE": str(self.home / "armed.json"),
+        }
         self.plugin = load_plugin()
         self.ctx = FakeContext()
         self.plugin.register(self.ctx)

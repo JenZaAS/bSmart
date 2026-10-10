@@ -157,10 +157,11 @@ bprotective:
   state:
     default: off
     resolution: BPROTECTIVE_STATE_FILE, else State/bprotective.json under the per-instance content root from bsmart_instance.default_content_root, else an existing ~/.hermes/bprotective.json
+    armed_record: ~/.bprotective/armed.json, or BPROTECTIVE_ARMED_FILE. This file is outside the instance State directory.
     confirmation_expiry_seconds: 300
   instance_config: State/bprotective.yaml under that same content root
   instance_config_rule: Optional protected paths and extra patterns only. The file cannot enable the guard. The directory is the per-instance content root from bsmart_instance.default_content_root.
-  boundary: This guard does not replace OS, container, Docker, or host-level security controls.
+  boundary: bProtective protects against accidental catastrophic commands. It does not protect against a deliberately adversarial agent, and it does not replace OS, container, Docker, or host-level security controls.
 
 bprotective_preflight:
   purpose: Apply the same guard when the assistant has a shell and no pre-execution hook.
@@ -181,10 +182,12 @@ bprotective_preflight:
       action: Refuse. Do not run the command and do not ask for an override.
   controls:
     status: bprotective status
-    enable: bprotective on, then the operator runs bprotective yes <ID>
-    disable: bprotective off, then the operator runs bprotective yes <ID>
-    cancel: bprotective no <ID>
-  hooks: A Cursor, Claude, or Codex bProtective hook enforces the same core when it is installed and trusted. Installation still leaves the guard off. A shell command that runs bprotective on, off, yes, or no, or that writes, deletes, or moves the state file, is blocked. Codex PreToolUse denies blocks and escalations without an approval token. Codex PermissionRequest denies blocks and leaves escalations on the operator prompt. The agent never receives a confirmation token from those hooks.
+    enable: The operator runs both `bprotective on` and `bprotective yes <ID>` in their own terminal. Agent hooks block those commands, so the agent cannot confirm them.
+    disable: The operator runs both `bprotective off` and `bprotective yes <ID>` in their own terminal. Agent hooks block those commands.
+    cancel: bprotective no <ID>, also from the operator's own terminal
+    recover: When the state file is missing and the armed marker or the outside armed record is still present, the operator runs `bprotective recover` and then `bprotective yes <ID>` in their own terminal. That writes a clean off state. Agent hooks block `recover` as well.
+  missing_core: A missing core blocks terminal commands. Hermes returns core-missing. Cursor, Claude, and Codex hook entries exit 2 with a deny payload, and Cursor sets failClosed. A hook launcher that cannot find Python exits 0 without a deny, so a missing interpreter does not block every command while protection is off.
+  hooks: A Cursor, Claude, or Codex bProtective hook enforces the same core when it is installed and trusted. Installation still leaves the guard off. A shell command that runs bprotective on, off, yes, no, or recover, or that names the bProtective CLI, scripts path, or State directory together with a write-capable tool, is blocked. File-edit hooks deny Write, Edit, MultiEdit, Cursor Write/Delete, and Codex apply_patch when the path is the state file, the local armed marker, or the outside armed record. Codex PreToolUse denies blocks and returns no decision for escalations, so PermissionRequest can prompt. It does not return ask, and it never includes a token. PermissionRequest denies blocks and leaves escalations on the operator prompt. Codex full-auto mode, which has no approval prompt, can run ask-class commands such as git push, pip install, docker, and gh pr. The agent never receives a confirmation token from those hooks. Once the guard has been armed, a state file that reads off without a recorded operator-confirmed off fails closed, and a missing state file fails closed while the outside armed record or the local marker remains.
 
 ```
 
