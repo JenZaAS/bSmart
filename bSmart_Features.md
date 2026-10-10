@@ -707,6 +707,7 @@ commands:
   - /bprotective no <ID>
   - bprotective check --json -- "<command>"
   - bprotective status
+  - bprotective recover
 included_capabilities:
   - Shared POSIX and Windows command policy
   - Hermes CLI and gateway pre-tool interception
@@ -722,7 +723,9 @@ notes:
   - Install and enable a harness plugin explicitly; files on disk do not activate the guard.
   - Cursor, Claude, and Codex hook adapters are unverified in those products. See integrations/bprotective/README.md.
   - Optional config belongs in State/bprotective.yaml under the per-instance content root from scripts/bsmart_instance.py, not in bSmart-System.
-  - This is defense in depth, not a replacement for OS, container, or host access boundaries.
+  - This is defense in depth against accidental catastrophic commands, not a defense against a deliberately adversarial agent, and not a replacement for OS, container, or host access boundaries.
+  - The operator runs both bprotective on and bprotective yes <ID> in their own terminal. bprotective recover is the command when the state file is missing and the armed record remains.
+  - A missing core blocks terminal commands.
 ```
 
 ### bAccountant

@@ -95,8 +95,51 @@ _APPROVAL_RULES: tuple[tuple[str, re.Pattern[str], str], ...] = (
 )
 
 _SHELLS = {"bash", "sh", "zsh", "dash", "ksh"}
-_POSIX_ROOTS = ("/etc", "/usr", "/home")
+_POSIX_ROOTS = (
+    "/etc",
+    "/usr",
+    "/home",
+    "/var",
+    "/opt",
+    "/root",
+    "/boot",
+    "/srv",
+    "/lib",
+    "/lib32",
+    "/lib64",
+    "/libexec",
+)
 _HOME_OPERANDS = {"~", "~/", "~/*", "$home", "${home}", "$home/*", "${home}/*"}
+_MAX_COMMAND_CHARS = 100_000
+_MAX_TOKENS = 20_000
+_MAX_SCAN_SECONDS = 0.5
+_WRAPPERS = {"sudo", "command", "exec", "env", "nice", "nohup", "timeout", "busybox"}
+_VALUE_FLAGS = {
+    "sudo": {
+        "-u",
+        "--user",
+        "-g",
+        "--group",
+        "-h",
+        "--host",
+        "-p",
+        "--prompt",
+        "-C",
+        "--close-from",
+        "-t",
+        "--type",
+        "-r",
+        "--role",
+        "-U",
+        "--other-user",
+        "-D",
+        "--chdir",
+    },
+    "env": {"-u", "--unset", "-c", "--chdir"},
+    "nice": {"-n", "--adjustment"},
+    "timeout": {"-k", "--kill-after", "-s", "--signal"},
+}
+_ROOT_PATHS = {"/", "/*", "/.", "/./", "//"}
 _DEVICE_REDIRECT = re.compile(
     r"(?:^|[\s;&|])>{1,2}\s*(/dev/(?:sd|nvme|vd|xvd|mmcblk|disk)\S*)",
     re.I,
@@ -105,10 +148,30 @@ _CONTROL_RE = re.compile(
     r"""(?ix)
     (?:^|[;&|\n]\s*|(?:python(?:3)?|py)\s+(?:-3\s+)?)
     (?:\S*[/\\])?
-    /?bprotective\s+(on|off|yes|no)\b
+    (?:/?bprotective(?:[/\\]cli\.py)?|scripts[/\\]bprotective)
+    \s+(on|off|yes|no|recover)\b
     """
 )
 _STATE_NAME_RE = re.compile(r"(?i)bprotective\.json(?:\.armed)?")
+_WRITE_TOOL_RE = re.compile(
+    r"""(?ix)
+    (?:^|[;&|\n]\s*)
+    (?:(?:sudo|command|exec|env|nice|nohup|timeout|busybox)\s+)*
+    (?:python(?:3)?|py|perl|sed|ruby|node|dd|git|find|rm|mv|cp|tee|truncate|shred|unlink|ln|rsync|install|busybox)
+    (?:\.exe)?(?![\w-])
+    """
+)
+_GUARD_PATH_RE = re.compile(
+    r"""(?ix)
+    bprotective[/\\]cli\.py
+    | scripts[/\\]bprotective\b
+    | integrations[/\\]bprotective\b
+    | bprotective\.json(?:\.armed)?
+    | \.bprotective[/\\]armed\.json
+    | (?:^|[\s'"=])(?:\./|\.\\)?state(?:[/\\\s'"]|$)
+    | [/\\]state(?:[/\\]|$)
+    """
+)
 _STATE_MUTATE_RE = re.compile(
     r"""(?ix)
     (?:^|[;&|\n]\s*)(?:sudo\s+)?
@@ -176,7 +239,10 @@ class Decision:
     @property
     def message(self) -> str:
         if self.rule_key == "state-invalid":
-            return "bProtective blocked the command because its policy state is unreadable."
+            detail = f" {self.reason}." if self.reason and self.reason != "policy state is unreadable" else ""
+            return f"bProtective blocked the command because its policy state is unreadable.{detail}"
+        if self.rule_key == "scan-limit":
+            return f"bProtective blocked this command because it hit a scan limit: {self.reason}."
         if self.rule_key == "config-invalid":
             return "bProtective blocked the command because its instance config is unreadable."
         if self.action == "block":
@@ -367,7 +433,9 @@ def _restrict_private(fd: int, temp_name: str) -> None:
 def state_path() -> Path:
     override = os.environ.get("BPROTECTIVE_STATE_FILE")
     if override:
-        return Path(override).expanduser().resolve()
+        # absolute() keeps a symlink as the state path. resolve() would follow it
+        # and lose the armed record that sits beside the link.
+        return Path(override).expanduser().absolute()
     legacy = _LEGACY_STATE
     content = content_root()
     if content is not None:
@@ -378,8 +446,25 @@ def state_path() -> Path:
     return legacy
 
 
+def armed_record_path() -> Path:
+    """Armed record outside the instance State directory.
+
+    Deleting State/bprotective.json together with its sibling marker must not
+    look like a fresh install. BPROTECTIVE_ARMED_FILE overrides the path so
+    tests do not write the operator's home directory.
+    """
+    override = os.environ.get("BPROTECTIVE_ARMED_FILE")
+    if override:
+        return Path(override).expanduser().absolute()
+    return Path.home() / ".bprotective" / "armed.json"
+
+
 def _armed_path(path: Path) -> Path:
     return path.with_name(path.name + ".armed")
+
+
+def _state_key(path: Path) -> str:
+    return os.path.normcase(os.path.normpath(str(path.absolute())))
 
 
 def _write_armed_marker(path: Path) -> None:
@@ -401,10 +486,81 @@ def _clear_armed_marker(path: Path) -> None:
         pass
 
 
+def _read_armed_file() -> tuple[dict[str, Any], str | None]:
+    path = armed_record_path()
+    if not path.is_file():
+        return {"states": {}}, None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}, "armed record is unreadable"
+    if not isinstance(data, dict) or not isinstance(data.get("states", {}), dict):
+        return {}, "armed record is unreadable"
+    data.setdefault("states", {})
+    return data, None
+
+
+def _write_armed_file(data: dict[str, Any]) -> None:
+    path = armed_record_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temp_name = tempfile.mkstemp(prefix=".armed.", dir=str(path.parent))
+    opened = False
+    try:
+        _restrict_private(fd, temp_name)
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            opened = True
+            json.dump(data, stream, sort_keys=True)
+            stream.write("\n")
+        os.replace(temp_name, path)
+    except Exception:
+        if not opened:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        try:
+            os.unlink(temp_name)
+        except OSError:
+            pass
+        raise
+
+
+def _armed_entry(data: dict[str, Any], key: str) -> dict[str, Any]:
+    states = data.get("states")
+    if not isinstance(states, dict):
+        return {}
+    entry = states.get(key)
+    return entry if isinstance(entry, dict) else {}
+
+
+def _store_armed_entry(key: str, entry: dict[str, Any]) -> None:
+    data, error = _read_armed_file()
+    if error:
+        data = {"states": {}}
+    states = data.setdefault("states", {})
+    if not isinstance(states, dict):
+        data["states"] = {}
+        states = data["states"]
+    states[key] = entry
+    _write_armed_file(data)
+
+
+def _still_armed(entry: dict[str, Any], local_marker: bool) -> bool:
+    if entry.get("confirmed_off"):
+        return False
+    return bool(entry.get("armed")) or local_marker
+
+
 def read_state() -> dict[str, Any]:
     path = state_path()
+    data, error = _read_armed_file()
+    if error:
+        return {"enabled": False, "pending": None, "error": error}
+    key = _state_key(path)
+    entry = _armed_entry(data, key)
+    local_marker = _armed_path(path).is_file()
     if not path.is_file():
-        if _armed_path(path).is_file():
+        if _still_armed(entry, local_marker):
             return {"enabled": False, "pending": None, "error": "state file is missing"}
         return {"enabled": False, "pending": None}
     try:
@@ -413,15 +569,24 @@ def read_state() -> dict[str, Any]:
         return {"enabled": False, "pending": None, "error": "state file is unreadable"}
     if not isinstance(value, dict):
         return {"enabled": False, "pending": None, "error": "state file is invalid"}
-    if value.get("enabled") and not _armed_path(path).is_file():
-        try:
-            _write_armed_marker(path)
-        except OSError:
-            pass
+    if value.get("enabled"):
+        if not local_marker:
+            try:
+                _write_armed_marker(path)
+            except OSError:
+                pass
+        if not entry.get("armed") or entry.get("confirmed_off"):
+            try:
+                _store_armed_entry(key, {"armed": True, "confirmed_off": False, "pending": entry.get("pending")})
+            except OSError:
+                pass
+        return value
+    if _still_armed(entry, local_marker):
+        return {"enabled": False, "pending": None, "error": "state file does not match the armed record"}
     return value
 
 
-def write_state(value: dict[str, Any]) -> None:
+def write_state(value: dict[str, Any], *, operator_off: bool = False) -> None:
     path = state_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
@@ -433,9 +598,12 @@ def write_state(value: dict[str, Any]) -> None:
             json.dump(value, stream, sort_keys=True)
             stream.write("\n")
         os.replace(temp_name, path)
+        key = _state_key(path)
         if value.get("enabled"):
             _write_armed_marker(path)
-        else:
+            _store_armed_entry(key, {"armed": True, "confirmed_off": False, "pending": None})
+        elif operator_off:
+            _store_armed_entry(key, {"armed": False, "confirmed_off": True, "pending": None})
             _clear_armed_marker(path)
     except Exception:
         if not opened:
@@ -448,6 +616,29 @@ def write_state(value: dict[str, Any]) -> None:
         except OSError:
             pass
         raise
+
+
+def path_targets_guard(path: str) -> bool:
+    """True when a file-edit path is the state file, its marker, or the outside armed record."""
+    text = path.strip().strip("\"'")
+    if not text:
+        return False
+    name = text.replace("\\", "/").rstrip("/").rsplit("/", 1)[-1].lower()
+    if name in {"bprotective.json", "bprotective.json.armed"}:
+        return True
+    try:
+        candidate = os.path.normcase(os.path.normpath(str(Path(text).expanduser().absolute())))
+    except OSError:
+        return False
+    guarded = (
+        state_path(),
+        _armed_path(state_path()),
+        armed_record_path(),
+    )
+    for item in guarded:
+        if os.path.normcase(os.path.normpath(str(item.absolute()))) == candidate:
+            return True
+    return False
 
 
 def _config_candidates() -> list[Path]:
@@ -474,12 +665,34 @@ def load_config() -> tuple[Config, str | None]:
         return EMPTY_CONFIG, str(exc)
 
 
-def _tokenize(text: str) -> list[str]:
-    """Split a shell command into words. Quotes are removed; their contents stay one word."""
+class ScanLimit(Exception):
+    """The command is too large or took too long to scan. Callers fail closed."""
+
+
+def _check_budget(deadline: float | None, tokens: list[str]) -> None:
+    if deadline is not None and time.monotonic() >= deadline:
+        raise ScanLimit("command scan exceeded the time limit")
+    if len(tokens) > _MAX_TOKENS:
+        raise ScanLimit("command exceeds the token limit")
+
+
+def _tokenize(text: str, deadline: float | None = None) -> list[str]:
+    """Split a shell command into words. Quotes are removed; their contents stay one word.
+
+    A single ``&`` is its own token. The word scan treats ``&`` as a stop
+    character, so it must be consumed here. Leaving it in place appends an
+    empty token forever.
+    """
+    if len(text) > _MAX_COMMAND_CHARS:
+        raise ScanLimit("command exceeds the scan size limit")
     tokens: list[str] = []
     i = 0
     n = len(text)
+    steps = 0
     while i < n:
+        steps += 1
+        if steps % 64 == 0:
+            _check_budget(deadline, tokens)
         while i < n and text[i] in " \t\r":
             i += 1
         if i >= n:
@@ -490,6 +703,17 @@ def _tokenize(text: str) -> list[str]:
             continue
         if text[i] in {";", "|", "\n"}:
             tokens.append(text[i])
+            i += 1
+            continue
+        if text[i] == "&":
+            if i + 1 < n and text[i + 1] in "<>":
+                j = i
+                while j < n and text[j] in "<>&":
+                    j += 1
+                tokens.append(text[i:j])
+                i = j
+                continue
+            tokens.append("&")
             i += 1
             continue
         if text[i] in {">", "<"}:
@@ -514,6 +738,7 @@ def _tokenize(text: str) -> list[str]:
                 i += 1
             tokens.append("".join(buf))
             continue
+        start = i
         buf = []
         while i < n and text[i] not in " \t\r\n;|&<>":
             if text[i] == "\\" and i + 1 < n:
@@ -522,7 +747,11 @@ def _tokenize(text: str) -> list[str]:
                 continue
             buf.append(text[i])
             i += 1
+        if i == start:
+            i += 1
+            continue
         tokens.append("".join(buf))
+    _check_budget(deadline, tokens)
     return tokens
 
 
@@ -530,7 +759,7 @@ def _statements(tokens: list[str]) -> list[list[str]]:
     groups: list[list[str]] = []
     current: list[str] = []
     for token in tokens:
-        if token in {"&&", "||", ";", "|", "\n"}:
+        if token in {"&&", "||", ";", "|", "&", "\n"}:
             if current:
                 groups.append(current)
                 current = []
@@ -541,12 +770,34 @@ def _statements(tokens: list[str]) -> list[list[str]]:
     return groups
 
 
+def _basename(word: str) -> str:
+    name = word.replace("\\", "/").rsplit("/", 1)[-1]
+    if name.lower().endswith(".exe"):
+        name = name[:-4]
+    return name.lower()
+
+
 def _unwrap_sudo(argv: list[str]) -> list[str]:
+    """Drop wrappers and the values their flags take. ``/bin/rm`` becomes ``rm``."""
     words = list(argv)
-    while words and words[0] in {"sudo", "command", "exec"}:
-        words = words[1:]
-        while words and words[0].startswith("-"):
-            words = words[1:]
+    while words:
+        name = _basename(words[0])
+        if name not in _WRAPPERS:
+            break
+        words.pop(0)
+        flags = _VALUE_FLAGS.get(name, set())
+        while words and words[0].startswith("-") and words[0] != "-":
+            flag = words.pop(0)
+            key = flag.split("=", 1)[0]
+            if "=" not in flag and key in flags and words:
+                words.pop(0)
+        if name == "env":
+            while words and "=" in words[0] and not words[0].startswith("-"):
+                words.pop(0)
+        if name == "timeout" and words and words[0][:1].isdigit():
+            words.pop(0)
+    if words:
+        words[0] = _basename(words[0])
     return words
 
 
@@ -555,7 +806,7 @@ def _strip_quotes(text: str) -> str:
 
 
 def _posix_root_operand(value: str, cwd: str | None) -> bool:
-    if value in {"/", "/*", "/.", "/./", "//"}:
+    if value in _ROOT_PATHS:
         return True
     for root in _POSIX_ROOTS:
         if value in {root, root + "/", root + "/*"}:
@@ -603,7 +854,7 @@ def _find_block(argv: list[str]) -> Decision | None:
     if not argv or argv[0] != "find" or "-delete" not in argv:
         return None
     paths = [arg for arg in argv[1:] if arg != "-delete" and not arg.startswith("-")]
-    if any(path in {"/", "/etc", "/usr", "/home", "/*"} for path in paths):
+    if any(_posix_root_operand(path, None) for path in paths):
         return Decision("block", "find-delete", "find -delete of a protected root")
     return None
 
@@ -635,10 +886,33 @@ def _chmod_root_block(argv: list[str]) -> Decision | None:
             mode = arg
             continue
         operands.append(arg)
-    if not recursive or mode not in {"777", "0777", "a+rwx"}:
+    if not recursive or mode not in {"777", "0777", "a+rwx", "000", "0000", "a-rwx"}:
         return None
-    if any(item in {"/", "/*", "/.", "//"} for item in operands):
-        return Decision("block", "chmod-root", "recursive mode 777 of the filesystem root")
+    if any(item in _ROOT_PATHS for item in operands):
+        return Decision("block", "chmod-root", "recursive mode change of the filesystem root")
+    return None
+
+
+def _chown_root_block(argv: list[str]) -> Decision | None:
+    if not argv or argv[0] not in {"chown", "chgrp"}:
+        return None
+    recursive = False
+    saw_owner = False
+    operands: list[str] = []
+    for arg in argv[1:]:
+        if arg in {"-R", "--recursive"} or (arg.startswith("-") and not arg.startswith("--") and "R" in arg):
+            recursive = True
+            continue
+        if arg.startswith("-"):
+            continue
+        if not saw_owner:
+            saw_owner = True
+            continue
+        operands.append(arg)
+    if not recursive:
+        return None
+    if any(item in _ROOT_PATHS for item in operands):
+        return Decision("block", "chown-root", "recursive ownership change of the filesystem root")
     return None
 
 
@@ -666,6 +940,7 @@ def _git_decision(argv: list[str]) -> Decision | None:
         return None
     force = False
     lease = False
+    delete = False
     refs: list[str] = []
     for arg in argv[2:]:
         if arg in {"--force", "-f"}:
@@ -677,13 +952,23 @@ def _git_decision(argv: list[str]) -> Decision | None:
         if arg == "--force-with-lease" or arg.startswith("--force-with-lease="):
             lease = True
             continue
+        if arg in {"--delete", "-d"}:
+            delete = True
+            continue
         if arg.startswith("-"):
             continue
         refs.append(arg)
-    protected_ref = any(ref.split("/")[-1] in {"main", "master"} or ref in {"main", "master"} for ref in refs)
-    if force or (lease and protected_ref):
+    protected_ref = any(_git_ref_protected(ref) for ref in refs)
+    forced_update = any(ref.startswith("+") and _git_ref_protected(ref) for ref in refs)
+    if force or forced_update or (delete and protected_ref) or (lease and protected_ref):
         return Decision("block", "destructive-git", "destructive Git or GitHub history/resource operation")
     return None
+
+
+def _git_ref_protected(ref: str) -> bool:
+    name = ref[1:] if ref[:1] in {"+", ":"} else ref
+    tail = name.split("/")[-1]
+    return tail in {"main", "master"} or name in {"main", "master"}
 
 
 def _shell_bodies(argv: list[str]) -> list[str]:
@@ -693,11 +978,24 @@ def _shell_bodies(argv: list[str]) -> list[str]:
     if argv[0] in _SHELLS or argv[0] == "eval":
         if argv[0] == "eval" and len(argv) > 1:
             bodies.append(" ".join(argv[1:]))
-        elif "-c" in argv:
-            index = argv.index("-c")
-            if index + 1 < len(argv):
-                bodies.append(argv[index + 1])
+        else:
+            for index, arg in enumerate(argv):
+                script = _shell_script_arg(argv, index, arg)
+                if script is not None:
+                    bodies.append(script)
     return bodies
+
+
+def _shell_script_arg(argv: list[str], index: int, arg: str) -> str | None:
+    """Return the script after ``-c`` or a short cluster that contains ``c``, such as ``-lc``."""
+    if arg == "-c" or (arg.startswith("-") and not arg.startswith("--") and "c" in arg[1:]):
+        if index + 1 < len(argv):
+            return argv[index + 1]
+    if arg == "--command" and index + 1 < len(argv):
+        return argv[index + 1]
+    if arg.startswith("--command="):
+        return arg.split("=", 1)[1]
+    return None
 
 
 def _redirect_block(surface: str) -> Decision | None:
@@ -707,10 +1005,17 @@ def _redirect_block(surface: str) -> Decision | None:
 
 
 def _channel_block(command: str) -> Decision | None:
-    """Block shell control of the guard and mutation of its state file."""
+    """Block shell control of the guard and writes that name its files.
+
+    This is a heuristic for accidental commands. It is not a complete list of
+    every way to edit a file. The armed record outside State is what fails
+    closed after a tamper the heuristic missed.
+    """
     surface = _strip_quotes(command)
     if _CONTROL_RE.search(surface):
         return Decision("block", "guard-control", "changing bProtective from a shell command")
+    if _WRITE_TOOL_RE.search(surface) and _GUARD_PATH_RE.search(command):
+        return Decision("block", "state-file", "write, delete, or move of the bProtective state file")
     if not _STATE_NAME_RE.search(command):
         return None
     if re.search(r"(?i)(?:>{1,2}|set-content|out-file|tee)\s+\S*bprotective\.json", surface):
@@ -720,7 +1025,41 @@ def _channel_block(command: str) -> Decision | None:
     return None
 
 
-def _structured_decision(command: str) -> Decision | None:
+def _python_rmtree_block(argv: list[str]) -> Decision | None:
+    if not argv or argv[0] not in {"python", "python3", "py"}:
+        return None
+    body: str | None = None
+    for index, arg in enumerate(argv):
+        if arg == "-c" and index + 1 < len(argv):
+            body = argv[index + 1]
+            break
+    if not body or not re.search(r"rmtree|removedirs", body):
+        return None
+    for match in re.finditer(r"""['"]([^'"]+)['"]""", body):
+        if _posix_root_operand(match.group(1), None):
+            return Decision("block", "root-recursive-delete", "recursive deletion of a protected root or home path")
+    return None
+
+
+def _xargs_rm_block(statements: list[list[str]], tokens: list[str], cwd: str | None) -> Decision | None:
+    for statement in statements:
+        argv = _unwrap_sudo(statement)
+        if not argv or argv[0] != "xargs":
+            continue
+        names = [_basename(word) for word in argv]
+        if "rm" not in names:
+            continue
+        rm_at = names.index("rm")
+        rm_argv = ["rm", *argv[rm_at + 1 :]]
+        direct = _rm_block(rm_argv, cwd)
+        if direct is not None:
+            return direct
+        if any(_posix_root_operand(token, cwd) for token in tokens if token not in {"&&", "||", ";", "|", "&", "\n"}):
+            return Decision("block", "root-recursive-delete", "recursive deletion of a protected root or home path")
+    return None
+
+
+def _structured_decision(command: str, tokens: list[str]) -> Decision | None:
     channel = _channel_block(command)
     if channel is not None:
         return channel
@@ -728,9 +1067,13 @@ def _structured_decision(command: str) -> Decision | None:
     redirect = _redirect_block(surface)
     if redirect is not None:
         return redirect
+    statements = _statements(tokens)
     cwd: str | None = None
     escalation: Decision | None = None
-    for statement in _statements(_tokenize(command)):
+    xargs_block = _xargs_rm_block(statements, tokens, cwd)
+    if xargs_block is not None:
+        return xargs_block
+    for statement in statements:
         argv = _unwrap_sudo([token for token in statement if not token.startswith((">", "<", ">&"))])
         if not argv:
             continue
@@ -742,8 +1085,10 @@ def _structured_decision(command: str) -> Decision | None:
             _find_block(argv),
             _shred_block(argv),
             _chmod_root_block(argv),
+            _chown_root_block(argv),
             _docker_prune_block(argv),
             _git_decision(argv),
+            _python_rmtree_block(argv),
         )
         for decision in checks:
             if decision is None:
@@ -755,12 +1100,26 @@ def _structured_decision(command: str) -> Decision | None:
     return escalation
 
 
-def policy_decision(command: str, config: Config | None = None, _depth: int = 0) -> Decision:
+def policy_decision(
+    command: str,
+    config: Config | None = None,
+    _depth: int = 0,
+    _deadline: float | None = None,
+) -> Decision:
     """Return allow, escalate, or block from the command text. Ignores on/off state."""
     if _depth > 3:
         return Decision("block", "nested-shell", "nested shell command was not expanded")
+    if len(command) > _MAX_COMMAND_CHARS:
+        return Decision("block", "scan-limit", "command exceeds the scan size limit")
+    deadline = _deadline if _deadline is not None else time.monotonic() + _MAX_SCAN_SECONDS
+    if time.monotonic() >= deadline:
+        return Decision("block", "scan-limit", "command scan exceeded the time limit")
+    try:
+        tokens = _tokenize(command, deadline)
+    except ScanLimit as exc:
+        return Decision("block", "scan-limit", str(exc))
     active = config or EMPTY_CONFIG
-    structured = _structured_decision(command)
+    structured = _structured_decision(command, tokens)
     if structured is not None and structured.action == "block":
         return structured
     surface = _strip_quotes(command)
@@ -776,18 +1135,19 @@ def policy_decision(command: str, config: Config | None = None, _depth: int = 0)
     for rule in active.extra_block:
         if rule.pattern.search(command):
             return Decision("block", rule.key, rule.reason)
+    statements = _statements(tokens)
     if _depth < 3:
-        for statement in _statements(_tokenize(command)):
+        for statement in statements:
             words = [token for token in statement if not token.startswith((">", "<"))]
             for body in _shell_bodies(_unwrap_sudo(words)):
-                nested = policy_decision(body, active, _depth + 1)
+                nested = policy_decision(body, active, _depth + 1, deadline)
                 if nested.action == "block":
                     return nested
     protected_escalate = _protected_escalate(command, active)
     if protected_escalate is not None:
         return protected_escalate
     git_only = None
-    for statement in _statements(_tokenize(command)):
+    for statement in statements:
         decision = _git_decision(_unwrap_sudo(statement))
         if decision is not None and decision.action == "block":
             return decision
@@ -805,9 +1165,9 @@ def policy_decision(command: str, config: Config | None = None, _depth: int = 0)
         if rule.pattern.search(command):
             return Decision("escalate", rule.key, rule.reason)
     if _depth < 3:
-        for statement in _statements(_tokenize(command)):
+        for statement in statements:
             for body in _shell_bodies(_unwrap_sudo(statement)):
-                nested = policy_decision(body, active, _depth + 1)
+                nested = policy_decision(body, active, _depth + 1, deadline)
                 if nested.action != "allow":
                     return nested
     return Decision("allow", "allow", "command is allowed")
@@ -820,9 +1180,11 @@ def guard(command: str, *, via_hook: bool = False) -> Decision:
     and state-file changes even while protection is off, so the agent cannot
     approve or disable itself through the shell.
     """
+    if len(command) > _MAX_COMMAND_CHARS:
+        return Decision("block", "scan-limit", "command exceeds the scan size limit")
     state = read_state()
     if state.get("error"):
-        return Decision("block", "state-invalid", "policy state is unreadable")
+        return Decision("block", "state-invalid", str(state["error"]))
     if via_hook:
         channel = _channel_block(command)
         if channel is not None:
@@ -865,10 +1227,24 @@ def request_command_approval(command: str) -> str:
 
 
 def handle_control(args: list[str], *, reply_prefix: str) -> tuple[str, int]:
-    """On/off/status/yes/no. `reply_prefix` is `/bprotective` for Hermes and `bprotective` for the CLI."""
+    """On/off/status/yes/no/recover. `reply_prefix` is `/bprotective` for Hermes and `bprotective` for the CLI."""
+    if args == ["recover"]:
+        state = read_state()
+        if not state.get("error"):
+            return f"bProtective does not need recovery. Use {reply_prefix} off to turn it off.", 1
+        token = _queue_recover()
+        return f"Confirmation required to recover bProtective. Reply: {reply_prefix} yes {token}", 0
+    if len(args) == 2 and args[0] in {"yes", "no"}:
+        recovered = _resolve_recover(args[1], accept=args[0] == "yes")
+        if recovered is not None:
+            return recovered
     state = read_state()
     if state.get("error"):
-        return f"bProtective unavailable: {state['error']}.", 1
+        return (
+            f"bProtective unavailable: {state['error']}. "
+            f"Run {reply_prefix} recover from your own terminal, then {reply_prefix} yes <ID>.",
+            1,
+        )
     if not args or args == ["status"]:
         return f"bProtective is {'on' if state.get('enabled') else 'off'}.", 0
     if args in (["on"], ["off"]):
@@ -881,7 +1257,7 @@ def handle_control(args: list[str], *, reply_prefix: str) -> tuple[str, int]:
         return _resolve_confirmation(args[1], accept=True)
     if len(args) == 2 and args[0] == "no":
         return _resolve_confirmation(args[1], accept=False)
-    return f"Usage: {reply_prefix} [status|on|off|yes ID|no ID]", 1
+    return f"Usage: {reply_prefix} [status|on|off|recover|yes ID|no ID]", 1
 
 
 def _confirmation(operation: str) -> str:
@@ -915,12 +1291,50 @@ def _resolve_confirmation(token: str, *, accept: bool) -> tuple[str, int]:
         return "bProtective will allow that command once.", 0
     if pending.get("operation") not in {"on", "off"}:
         return "Invalid bProtective confirmation.", 1
-    state["enabled"] = pending["operation"] == "on"
+    turning_on = pending["operation"] == "on"
+    state["enabled"] = turning_on
     state["pending"] = None
-    write_state(state)
+    write_state(state, operator_off=not turning_on)
     if state["enabled"]:
         return f"bProtective {pending['operation']} enabled.", 0
     return "bProtective off; guard disabled.", 0
+
+
+def _queue_recover() -> str:
+    path = state_path()
+    key = _state_key(path)
+    data, _error = _read_armed_file()
+    entry = _armed_entry(data, key)
+    token = secrets.token_urlsafe(12)
+    entry = {
+        "armed": True,
+        "confirmed_off": False,
+        "pending": {"id": token, "operation": "recover", "expires_at": int(time.time()) + CONFIRMATION_TTL_SECONDS},
+    }
+    _store_armed_entry(key, entry)
+    return token
+
+
+def _resolve_recover(token: str, *, accept: bool) -> tuple[str, int] | None:
+    path = state_path()
+    key = _state_key(path)
+    data, error = _read_armed_file()
+    if error:
+        data = {"states": {}}
+    entry = _armed_entry(data, key)
+    pending = entry.get("pending") if isinstance(entry.get("pending"), dict) else None
+    if not pending or pending.get("id") != token or pending.get("operation") != "recover":
+        return None
+    if int(pending.get("expires_at", 0)) < int(time.time()):
+        entry["pending"] = None
+        _store_armed_entry(key, entry)
+        return "bProtective confirmation expired; request the change again.", 1
+    if not accept:
+        entry["pending"] = None
+        _store_armed_entry(key, entry)
+        return "bProtective change cancelled.", 0
+    write_state({"enabled": False, "pending": None, "allow_once": None, "command_pending": None}, operator_off=True)
+    return "bProtective recovered; guard disabled.", 0
 
 
 def _matching_pending(state: dict[str, Any], token: str) -> tuple[str | None, dict[str, Any] | None]:

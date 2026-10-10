@@ -2,7 +2,7 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash|PowerShell",
+        "matcher": "Bash|PowerShell|apply_patch",
         "hooks": [
           {
             "type": "command",
@@ -16,7 +16,7 @@
     ],
     "PermissionRequest": [
       {
-        "matcher": "Bash|PowerShell",
+        "matcher": "Bash|PowerShell|apply_patch",
         "hooks": [
           {
             "type": "command",

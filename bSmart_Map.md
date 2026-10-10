@@ -79,9 +79,9 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | `./bSmart-System/integrations/claude/bsmart-plugin/` | Claude plugin for startup and `/project`; not yet verified in the Claude app. `/role` prints a deprecation notice | low | Claude only |
 | `./bSmart-System/integrations/bprotective/` | Shared bProtective policy, CLI, and hook response mapping | low | execution only |
 | `./bSmart-System/integrations/hermes/bprotective-plugin/` | Hermes pre-tool adapter for bProtective | low | Hermes only |
-| `./bSmart-System/integrations/cursor/bprotective-plugin/` | Cursor beforeShellExecution adapter; not live-tested | low | Cursor only |
+| `./bSmart-System/integrations/cursor/bprotective-plugin/` | Cursor beforeShellExecution and Write/Delete preToolUse adapter; not live-tested | low | Cursor only |
 | `./bSmart-System/integrations/claude/bprotective-plugin/` | Claude Code PreToolUse adapter; not verified in the Claude app | low | Claude only |
-| `./bSmart-System/integrations/codex/bprotective-plugin/` | Codex PreToolUse adapter; not live-tested | low | Codex only |
+| `./bSmart-System/integrations/codex/bprotective-plugin/` | Codex PreToolUse, PermissionRequest, and apply_patch adapter; not live-tested | low | Codex only |
 | `./bSmart-System/scripts/bprotective` | bProtective CLI for check, status, and confirmed on/off | low | execution only |
 | `./bSmart-System/scripts` | Deterministic helper programs and lookup tools | low | execution only |
 | `./bSmart-System/scripts/bsmart-role-core.mjs` | Deprecation notice for `/role`. Does not select a project | low | old `/role` commands |

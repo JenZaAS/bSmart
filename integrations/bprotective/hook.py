@@ -9,12 +9,14 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
 
 _SHELL_TOOLS = {"bash", "powershell", "shell", "terminal", "cmd"}
-_IGNORE_TOOLS = {"apply_patch", "edit", "write", "read", "grep", "glob"}
+_PATH_KEYS = {"file_path", "path", "target_file", "filepath", "file"}
+_PATCH_FILE_RE = re.compile(r"(?m)^\*\*\* (?:Update|Add|Delete) File: (.+)$")
 
 
 def load_core() -> Any:
@@ -36,27 +38,72 @@ def command_from(adapter: str, payload: dict[str, Any]) -> str | None:
     """Return the shell command, or None when this payload is not a shell call."""
     if adapter == "cursor":
         command = payload.get("command")
-        return command if isinstance(command, str) else None
+        if isinstance(command, str):
+            return command
     tool_name = str(payload.get("tool_name") or "").lower()
-    if tool_name in _IGNORE_TOOLS:
+    if tool_name and tool_name not in _SHELL_TOOLS and adapter != "cursor":
         return None
-    if tool_name and tool_name not in _SHELL_TOOLS:
-        return None
+    tool_input = _tool_input(payload)
+    if isinstance(tool_input, dict):
+        command = tool_input.get("command")
+        if isinstance(command, str) and (adapter == "cursor" or not tool_name or tool_name in _SHELL_TOOLS):
+            return command
+    return None
+
+
+def _tool_input(payload: dict[str, Any]) -> Any:
     tool_input = payload.get("tool_input")
     if isinstance(tool_input, str):
         try:
-            tool_input = json.loads(tool_input)
+            return json.loads(tool_input)
         except json.JSONDecodeError:
-            return None
-    if isinstance(tool_input, dict):
-        command = tool_input.get("command")
-        return command if isinstance(command, str) else None
-    return None
+            return tool_input
+    return tool_input
+
+
+def edited_paths(payload: dict[str, Any]) -> list[str]:
+    """Paths a Write, Edit, or apply_patch payload would change."""
+    found: list[str] = []
+
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if key.lower() in _PATH_KEYS and isinstance(value, str):
+                    found.append(value)
+                elif key == "command" and isinstance(value, str):
+                    found.extend(match.group(1).strip() for match in _PATCH_FILE_RE.finditer(value))
+                else:
+                    walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(payload)
+    return found
+
+
+def _deny(adapter: str, message: str, *, event: str = "pretool") -> dict[str, Any]:
+    if adapter == "cursor":
+        return {"permission": "deny", "user_message": message, "agent_message": message}
+    if event == "permission":
+        return {
+            "hookSpecificOutput": {
+                "hookEventName": "PermissionRequest",
+                "decision": {"behavior": "deny", "message": message},
+            }
+        }
+    return _tool_decision("deny", message)
 
 
 def respond(adapter: str, payload: dict[str, Any], core: Any | None = None) -> dict[str, Any] | None:
     """Return the hook JSON object, or None when the harness should see no decision."""
     core = core or load_core()
+    try:
+        guarded = _guard_edit(adapter, payload, core)
+    except Exception as exc:  # noqa: BLE001 — a hook crash must still return a decision
+        guarded = _deny(adapter, f"bProtective hook failed: {exc}")
+    if guarded is not None:
+        return guarded
     command = command_from(adapter, payload)
     if command is None or not command.strip():
         return {"permission": "allow"} if adapter == "cursor" else None
@@ -73,9 +120,27 @@ def respond(adapter: str, payload: dict[str, Any], core: Any | None = None) -> d
         permission = "deny" if decision.action == "block" else "ask"
         return _tool_decision(permission, decision.message)
     if adapter == "codex":
+        # ask is parsed and then ignored, so the tool would run. Return no
+        # decision for an escalation and let PermissionRequest show the prompt.
         # The reason is model-visible. It must not carry an approval token.
-        return _tool_decision("deny", decision.message)
+        if decision.action == "block":
+            return _tool_decision("deny", decision.message)
+        return None
     raise ValueError(f"Unknown bProtective adapter: {adapter}")
+
+
+def _guard_edit(adapter: str, payload: dict[str, Any], core: Any, *, event: str = "pretool") -> dict[str, Any] | None:
+    paths = edited_paths(payload)
+    if not paths:
+        return None
+    for path in paths:
+        if core.path_targets_guard(path):
+            return _deny(
+                adapter,
+                "bProtective blocked this command: write to a bProtective state or armed-record path.",
+                event=event,
+            )
+    return None
 
 
 def respond_permission(payload: dict[str, Any], core: Any | None = None) -> dict[str, Any] | None:
@@ -86,6 +151,9 @@ def respond_permission(payload: dict[str, Any], core: Any | None = None) -> dict
     no decision so this hook does not skip Codex's own approval prompt.
     """
     core = core or load_core()
+    guarded = _guard_edit("codex", payload, core, event="permission")
+    if guarded is not None:
+        return guarded
     command = command_from("codex", payload)
     if command is None or not command.strip():
         return None
