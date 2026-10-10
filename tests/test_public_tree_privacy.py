@@ -6,6 +6,7 @@ Failure text includes the path and digest, not the matched text.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.machinery
 import importlib.util
 import tempfile
@@ -48,23 +49,17 @@ def iter_text_files():
             yield path, text
 
 
-def _from_codes(codes: str) -> str:
-    return "".join(chr(int(piece)) for piece in codes.split())
+def _digest(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
-# Character codes so the tree scan does not see the plaintext.
-_GAP_SAMPLES = (
-    ("single-word-a", "67 111 109 98 111 116"),
-    ("single-word-b", "73 82 80 77 77 111 100 101 108"),
-    ("two-words", "68 105 103 32 84 101 99 104 110 111 108 111 103 121"),
-    ("camel-org-suffix", "74 101 110 90 97 65 73"),
-    ("windows-share", "69 58 92 86 80 83 92 115 104 97 114 101"),
-    ("windows-share-child", "69 58 92 86 80 83 92 115 104 97 114 101 92 100 97 116 97"),
-    ("camel-suffix", "68 105 103 84 101 99 104 65 100 109 105 110"),
-    ("digit-suffix", "100 105 103 116 101 99 104 50"),
-    ("camel-admin", "71 114 111 107 65 100 109 105 110"),
-    ("region-city", "69 117 114 111 112 101 47 79 115 108 111"),
-    ("container-name", "104 101 114 109 101 115 45 117 110 105 116 121"),
+# Made-up names. The real digest list is used only by the tree scan.
+_EXAMPLE_DIGESTS = frozenset(
+    {
+        _digest("acmecorp"),
+        _digest("acme/share"),
+        _digest("acmecorpltd"),
+    }
 )
 
 
@@ -88,36 +83,54 @@ class PublicTreePrivacyTests(unittest.TestCase):
         self.assertIn("/opt/example/child", windows)
         self.assertIn("opt/example", windows)
 
-    def test_listed_gaps_and_compounds_are_caught(self):
-        for label, codes in _GAP_SAMPLES:
-            self.assertNotEqual(_TOKENS.private_digest_hits(_from_codes(codes)), [], label)
+    def _example_hits(self, text: str, public_compounds: frozenset[str] | set[str] | None = None):
+        return _TOKENS.private_digest_hits(text, _EXAMPLE_DIGESTS, public_compounds)
 
-    def test_common_words_and_the_published_org_are_not_matches(self):
-        samples = (
-            "unity",
-            "oslo",
-            "norway",
-            "norwegian",
-            "threadripper",
-            "superadmin",
-            "JenZaAS",
-            "https://github.com/JenZaAS/bSmart",
+    def test_synthetic_compounds_paths_and_joined_names_are_caught(self):
+        two_word = _digest("acmecorp")
+        three_word = _digest("acmecorpltd")
+        share = _digest("acme/share")
+        self.assertIn(two_word, self._example_hits("AcmeCorpAdmin"))
+        self.assertIn(two_word, self._example_hits("acmecorp2"))
+        self.assertIn(two_word, self._example_hits("Acme Corp"))
+        self.assertNotIn(three_word, self._example_hits("Acme Corp"))
+        self.assertIn(three_word, self._example_hits("Acme Corp Ltd"))
+        self.assertIn(two_word, self._example_hits("acme-corp"))
+        self.assertIn(two_word, self._example_hits("acme_corp"))
+        self.assertEqual(self._example_hits(r"E:\acme\share"), [share])
+        self.assertIn(share, self._example_hits(r"E:\acme\share\data"))
+
+    def test_ordinary_words_are_not_synthetic_matches(self):
+        for text in (
+            "digital",
+            "configuration",
+            "corporate",
             "DigitalSignal",
-            "Configuration",
-            "A unity shader pack",
-        )
-        for text in samples:
-            self.assertEqual(_TOKENS.private_digest_hits(text), [], text)
+            "ThreadPool",
+            "acme",
+            "share",
+            "One Two Three",
+            r"E:\other\place",
+        ):
+            self.assertEqual(self._example_hits(text), [], text)
+
+    def test_org_allow_list_skips_only_that_compound(self):
+        allowed = frozenset({"acmecorpas"})
+        self.assertEqual(self._example_hits("AcmeCorpAS", allowed), [])
+        self.assertIn(_digest("acmecorp"), self._example_hits("AcmeCorpAS", frozenset()))
+        self.assertIn(_digest("acmecorp"), self._example_hits("AcmeCorpAdmin", allowed))
 
     def test_non_utf8_file_is_decoded_and_scanned(self):
-        token = _from_codes("67 111 109 98 111 116")
-        blob = b"\xff" + token.encode("ascii") + b"\xfe"
+        blob = b"\xff" + b"acmecorp" + b"\xfe"
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "notes.txt"
             path.write_bytes(blob)
             text = read_repo_text(path)
         self.assertIsNotNone(text)
-        self.assertNotEqual(_TOKENS.private_digest_hits(text or ""), [], "non-utf8")
+        self.assertIn(_digest("acmecorp"), self._example_hits(text or ""))
+
+    def test_rule_checks_do_not_use_the_real_digest_list(self):
+        self.assertTrue(_EXAMPLE_DIGESTS.isdisjoint(_TOKENS.PRIVATE_TOKEN_DIGESTS))
 
     def test_lookup_uses_the_same_digest_list(self):
         loader = importlib.machinery.SourceFileLoader(

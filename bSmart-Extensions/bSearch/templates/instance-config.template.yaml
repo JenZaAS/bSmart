@@ -1,5 +1,6 @@
 bsearch:
   status: initialized
+  # The operator must replace <operator-timezone> with an IANA zone, falling back to UTC if unset.
   timezone: <operator-timezone>
   schedule:
     mode: desired_not_scheduled_yet

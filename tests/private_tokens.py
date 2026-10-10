@@ -67,13 +67,13 @@ def _normalize_separators(text: str) -> str:
     return DRIVE_RE.sub("", normalized)
 
 
-def _compound_prefixes(token: str):
+def _compound_prefixes(token: str, public_compounds: frozenset[str] | set[str]):
     """Agent-name prefixes of a CamelCase or letter-plus-digit compound.
 
-    Ordinary words are one part and yield nothing. The published organization
+    Ordinary words are one part and yield nothing. A published organization
     login is skipped so its internal capitals are not treated as a compound.
     """
-    if token.lower() in PUBLIC_COMPOUND_TOKENS:
+    if token.lower() in public_compounds:
         return
     parts = CAMEL_PART_RE.findall(token)
     if len(parts) < 2:
@@ -87,7 +87,8 @@ def _compound_prefixes(token: str):
             yield acc
 
 
-def token_candidates(text: str):
+def token_candidates(text: str, public_compounds: frozenset[str] | set[str] | None = None):
+    compounds = PUBLIC_COMPOUND_TOKENS if public_compounds is None else public_compounds
     normalized = _normalize_separators(text)
     lower = normalized.lower()
     words = WORD_RE.findall(lower)
@@ -115,18 +116,23 @@ def token_candidates(text: str):
             acc += "/" + part
             yield acc
     for match in IDENT_RE.finditer(text):
-        yield from _compound_prefixes(match.group(0))
+        yield from _compound_prefixes(match.group(0), compounds)
 
 
-def private_digest_hits(text: str) -> list[str]:
+def private_digest_hits(
+    text: str,
+    digests: frozenset[str] | set[str] | None = None,
+    public_compounds: frozenset[str] | set[str] | None = None,
+) -> list[str]:
+    chosen = PRIVATE_TOKEN_DIGESTS if digests is None else digests
     found = set()
     for line in text.splitlines():
         seen = set()
-        for cand in token_candidates(line):
+        for cand in token_candidates(line, public_compounds):
             if cand in seen:
                 continue
             seen.add(cand)
             digest = hashlib.sha256(cand.encode("utf-8")).hexdigest()
-            if digest in PRIVATE_TOKEN_DIGESTS:
+            if digest in chosen:
                 found.add(digest)
     return sorted(found)
