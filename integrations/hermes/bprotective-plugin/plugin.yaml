@@ -3,7 +3,7 @@ version: 0.1.0
 manifest_version: 2
 api_version: 1
 license: MIT
-author: "Erling H Jensen / bSmart-System"
+author: "bSmart-System"
 description: "Approval-gated command protection for Hermes."
 provides_hooks:
   - pre_tool_call

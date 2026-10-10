@@ -304,17 +304,17 @@ dreaming:
     - No — do not ask again
     - Later — ask again
   defaults:
-    timezone: Europe/Oslo
+    timezone: <operator-timezone>
     daily:
       enabled: true
-      schedule: "0 2 * * *"
-      intent: around 04:00 Norway time; UTC schedule may be approximate across DST
+      schedule: "0 4 * * *"
+      intent: around 04:00 in the operator's local timezone; convert the cron to UTC and revisit the hour when the zone observes DST
       token_budget: low
       auto_apply_clear_changes: true
     weekly:
       enabled: true
-      schedule: "30 2 * * 6"
-      intent: Friday night/Saturday around 04:00 Norway time; UTC schedule may be approximate across DST
+      schedule: "0 4 * * 6"
+      intent: Saturday around 04:00 in the operator's local timezone; convert the cron to UTC and revisit the hour when the zone observes DST
       token_budget: moderate_bounded
       auto_apply_clear_changes: true
   disabled_behavior: record disabled locally so /new or setup does not keep prompting

@@ -3,14 +3,14 @@
 Use this prompt for manual runs or future cron runs.
 
 ## Goal
-Run one bSearch discovery cycle for Erling.
+Run one bSearch discovery cycle for the operator.
 
 ## Run configuration
 - Candidate pool size: 10
 - Delivered item count: 5
 - Exploration strength: 0.5
-- Timezone preference: Europe/Oslo
-- Preferred scheduled run time: daily at 03:00 Norwegian time
+- Timezone preference: <operator-timezone>
+- Preferred scheduled run time: daily at 03:00 in the operator timezone
 - Preferred model for scheduled runs: `openai-codex / gpt-5.4`
 
 ## User-interest anchors

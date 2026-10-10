@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.45.2-draft
-updated: 2026-10-10 09:21 UTC
+current_version: 0.1.45.3-draft
+updated: 2026-10-10 10:45 UTC
 status: draft
 ```
 
@@ -26,6 +26,25 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.45.3-draft
+
+```yaml
+release_type: public_tree_privacy
+scope:
+  - replace site-specific instance names, people, host labels, job ids, timezone defaults, and host paths in the public tree with placeholders
+  - keep GitHub organization URLs and the license holder
+  - keep explicit caller-supplied values working when a baked-in site default changes to a generic one
+  - add a tree check that matches SHA-256 hashes of lowercased tokens and does not store those tokens
+  - share that digest list with the Hermes runtime lookup checks, and allow no remaining matches
+  - record, in the protocol index, how a contributor adds a term by hash
+safety:
+  - the check reports a path and a digest, not the matched text
+  - no file is exempt
+verification:
+  - python and node tests pass on Linux, Windows, and macOS for Python 3.11 and 3.12
+  - tests do not pin current_version, so a later draft can move the header
+```
 
 ## 0.1.45.2-draft
 
@@ -232,7 +251,7 @@ release_type: container_git_and_branch_compatibility
 scope:
   - handle mounted bSmart-System repositories with differing filesystem ownership
   - accept the selected branch and its upstream during freshness checks unless a branch is explicitly required
-  - support Hugo testing on redesign/deterministic-startup without a false main-branch warning
+  - support named non-main instance testing on redesign/deterministic-startup without a false main-branch warning
 verification:
   - system update helper compiles and runs
   - prior system, project, bSwarm, and bStart tests remain green
@@ -586,7 +605,7 @@ scope:
   - add a separate operator-triggered local-agent onboarding protocol for host and Docker agents
   - derive local agent paths from the current session and confirm the agent root once
   - use fixed sibling bSmart, projects, and sandboxes folders
-  - support configurable Admin and Digtech names with derived identifiers
+  - support configurable admin and specialist agent names with derived identifiers
   - add optional Codex, OpenCode client/CLI, and Claude client/CLI installation with working-directory verification
   - define isolated Hermes homes, Docker identities, mounts, and staged shortcut launch
   - hand off bSmart feature onboarding to the launched agent instead of duplicating it
@@ -655,7 +674,7 @@ safety:
   - preserves the no-secret-values-in-Git/docs/logs/chat boundary
 verification:
   - searched bSmart-System for removed provider references after edit
-  - read back State and Dreaming protocol edits and verified SschwAdmin still has `threadripper` in bSmart_State.md
+  - read back State and Dreaming protocol edits and verified the admin instance still records its host label in bSmart_State.md
   - verified the feature registry now lists Improvement Scout and describes its source-list/proposal workflow
   - bSelective unit tests pass in both packaged and installed extension copies
   - exercised bSelective CLI against a temporary MATLAB class for summary and exact method-source retrieval
@@ -690,7 +709,7 @@ scope:
   - add Dreaming as an opt-in bSmart feature/protocol for scheduled instance-local content cleanup, conflict detection, token-saving compaction, hidden backups, review/undo manifests, Dream Project, and Nap handoff
   - clarify that Dreaming affects instance content (`/workspace/bSmart`), not reusable bSmart-System (`/workspace/bSmart-System`)
   - allow clear low-risk Dreaming changes to be auto-applied only with hidden backups, while unclear/project/destructive/system/runtime changes require operator review
-  - document Daily Dreaming defaults for low-token recent-session content review around 04:00 Norway time
+  - document Daily Dreaming defaults for low-token recent-session content review around 04:00 in the operator's local timezone
   - document Weekly Dreaming defaults for broader Friday-night/Saturday stale/conflict/compaction review with bounded token use
   - add Security Watch as an opt-in/admin-owned bSmart feature and protocol for low-noise read-only VPS/container drift checks
   - clarify the minimal manual bSmart bootstrap shape and strengthen the HERMES.md hook so agents actually load bSmart.md before answering
@@ -726,7 +745,7 @@ release_type: draft_update
 scope:
   - make project-storage setup treat host sandbox-folder creation as a required pre-compose step
   - update bsmart-project-storage-check output so host prep appears before volume lines with an explicit do-not-add-yet warning
-  - use sudo install -d -o 10000 -g 10000 -m 0775 for VPS-local /sandboxes host folders
+  - use sudo install -d with the container uid and gid and mode 0775 for host sandbox folders
   - make bSmart-enabled AI instances use HTTPS for public bSmart-System updates by default, without requiring per-container GitHub SSH secrets
   - run the daily startup check with --auto-pull so clean bSmart-System repos can fast-forward safely
 safety:
@@ -795,7 +814,7 @@ migration_notes:
 release_type: draft_update
 scope:
   - define a bSmart secret-storage boundary for Hermes/service containers
-  - prefer deployer-native read-only secrets or /opt/docker-workspace/<service>/secrets mounted as /run/secrets:ro
+  - prefer deployer-native read-only secrets or <host-secrets-path> mounted as /run/secrets:ro
   - explicitly avoid /workspace/secrets, bSmart repos/content folders, and project folders for credentials
 safety:
   - private keys require 0600-style permissions

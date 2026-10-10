@@ -49,13 +49,6 @@ Because `/opt/data` is normally a bind-mounted persistent Hermes home, files cop
 2. At container startup, sync that directory into `/opt/data/plugins/session-shortcuts`.
 3. Run `hermes plugins enable session-shortcuts --no-allow-tool-override` idempotently.
 
-Current AI Hermes blueprints using this pattern:
-
-- `hermes-admin`
-- `hermes-digtech`
-- `hermes-hugo`
-- `hermes-jenza`
-- `grimne`
-- `hermes-unity`
+Use this pattern in each agent image that should carry the plugin. The service name is local to that deployment.
 
 After changing this extension, sync `plugins/session-shortcuts/` into each image source context and rebuild/redeploy the affected containers.

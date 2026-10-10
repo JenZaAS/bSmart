@@ -37,3 +37,17 @@ protocol_index:
 - `bSmart.md` owns startup routing and the order in which compact metadata is loaded.
 - `bSmart_Invariants.md` owns absolute cross-runtime rules and overrides conflicting lower-level guidance.
 - Instance and project files own local facts and preferences; they must not duplicate generic procedures.
+
+## Public wording
+
+Reusable files in this repository are public. Write instance names, people, host names, job ids, timezones, and host paths as placeholders such as `<agent-name>`, `<operator>`, `<operator-timezone>`, `<host-workspace-path>`, and `<job-id>`. GitHub organization URLs and the license holder stay as published.
+
+`tests/test_public_tree_privacy.py` hashes each lowercased token and each host-path prefix in the tree and fails when the digest is on its list. The list does not contain the words. To block another term, hash the lowercased token locally and add only the digest:
+
+```bash
+python -c "import hashlib; print(hashlib.sha256('the-token'.lower().encode()).hexdigest())"
+```
+
+Use the form that would appear in a file: one word, a hyphenated name, or a path prefix such as `/opt/example`. A spaced two-word name is also matched as those words joined. Do not paste the token into the test, the commit message, or this document.
+
+A few paths are still being rewritten by another open change. The test allows only the recorded per-file line counts for those paths. Lower a count when that text is removed, and delete the path when every count is zero.

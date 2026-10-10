@@ -122,7 +122,7 @@ class BProtectiveTests(unittest.TestCase):
 
         patches = [
             patch.object(self.plugin.os, "name", "nt"),
-            patch.dict(self.plugin.os.environ, {"USERNAME": "Erling", "SystemRoot": r"C:\Windows"}, clear=False),
+            patch.dict(self.plugin.os.environ, {"USERNAME": "TestUser", "SystemRoot": r"C:\Windows"}, clear=False),
             patch.object(self.plugin.subprocess, "run", side_effect=fake_run),
         ]
         if hasattr(self.plugin.os, "fchmod"):
@@ -137,7 +137,7 @@ class BProtectiveTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         argv, kwargs = calls[0]
         self.assertEqual(argv[0], r"C:\Windows\System32\icacls.exe")
-        self.assertEqual(argv[-1], "Erling:(R,W,D)")
+        self.assertEqual(argv[-1], "TestUser:(R,W,D)")
         self.assertEqual(kwargs["timeout"], 10)
 
     def test_non_terminal_tools_are_ignored(self):

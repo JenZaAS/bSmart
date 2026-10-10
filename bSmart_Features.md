@@ -475,7 +475,7 @@ included_capabilities:
 notes:
   - This is distinct from bSearch, which is broader knowledge discovery and curation.
   - This is distinct from Dreaming, which improves local bSmart content/state rather than scouting external ideas.
-  - Current SschwAdmin cron job is `bSmart improvement scout` (`eb2f57b305a5`), scheduled Sunday 01:30 UTC.
+  - A weekly example is Sunday 01:30 UTC under the job name `bSmart improvement scout`. The job id is instance-local and stays out of the public system.
 ```
 
 ### bQAbuild
@@ -557,7 +557,7 @@ included_capabilities:
   - Obvious secret/risky-pattern detection
   - Opt-in ownership per AI container
 notes:
-  - SschwAdmin is the default owner for Erling's VPS.
+  - The designated admin instance is the default owner on a hosted VPS.
   - The lightweight weekly job is silent unless new findings, changed watched files, or check failures appear.
   - Live Docker/Dokploy state and host package CVEs require a future least-privilege host helper.
 ```

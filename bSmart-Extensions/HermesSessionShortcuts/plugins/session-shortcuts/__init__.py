@@ -1,4 +1,4 @@
-"""SschwAdmin session-history slash shortcuts for Hermes.
+"""Session-history slash shortcuts for Hermes.
 
 Commands:
 - /hist [telegram|cli|discord|all] [limit] [search terms]

@@ -315,7 +315,7 @@ class BSearchHandler:
         return ref, score
 
     def _http_text(self, url: str) -> str:
-        req = urllib.request.Request(url, headers={'User-Agent': 'SschwAdmin-bSearch'})
+        req = urllib.request.Request(url, headers={'User-Agent': 'bSmart-bSearch'})
         with urllib.request.urlopen(req, timeout=30) as response:
             return response.read().decode('utf-8', errors='replace')
 

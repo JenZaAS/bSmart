@@ -14,6 +14,6 @@ Point Cursor at this directory:
 
 `bSmart-System/integrations/cursor/bsmart-plugin`
 
-For this SschwAdmin workspace, the same commands, rule, and startup hook are also enabled from the workspace `.cursor` directory so they work before a marketplace install. Start a new chat after enabling the hook.
+The same commands, rule, and startup hook can also be enabled from the workspace `.cursor` directory so they work before a marketplace install. Start a new chat after enabling the hook.
 
 Node.js must be available. Run `python3`. If it is missing or fails, use `python` (or `py -3` on Windows).

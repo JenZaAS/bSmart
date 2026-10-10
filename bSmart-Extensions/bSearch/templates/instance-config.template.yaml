@@ -1,9 +1,9 @@
 bsearch:
   status: initialized
-  timezone: Europe/Oslo
+  timezone: UTC
   schedule:
     mode: desired_not_scheduled_yet
-    human_label: daily at 03:00 Norwegian time
+    human_label: daily at 03:00 in the operator timezone
     cron_candidate: "0 3 * * *"
   delivery:
     candidate_pool_size: 10

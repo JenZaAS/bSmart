@@ -1,7 +1,7 @@
 ---
 name: HermesSessionShortcuts
 status: packaged_in_bsmart_system
-owner: Erling H Jensen / SschwAdmin
+owner: operator
 objective: Package reusable Hermes session-list/resume slash shortcuts as an optional bSmart extension and Docker-image-installable plugin.
 ---
 
