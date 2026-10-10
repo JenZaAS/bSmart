@@ -1,9 +1,61 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.45.1-draft
-updated: 2026-10-10 08:50 UTC
+current_version: 0.1.45.2-draft
+updated: 2026-10-10 09:21 UTC
 status: draft
+```
+
+## How to record a version
+
+Every system change gets a new section in this file, newest first, and the `current_version` field moves with it. Pick the next free draft number. Do not reuse a number another open change has taken. A patch such as `0.1.45.2-draft` is a normal entry when the next minor number is already reserved.
+
+The section is the changelog. Every version stays here. Add a `news` field only when the change is news-worthy: it changes the user's workflow, the commands they type, or what they see in a session. Bug fixes, refactors, encoding work, test-only changes, and other behind-the-scenes work stay in `scope` and `verification` and are not announced.
+
+Write `news` as one short plain-language paragraph, a few sentences. Say what the user does differently. Keep the characters ASCII. Put it in that version's yaml block, before `scope`:
+
+```yaml
+news: |
+  Short paragraph for the user. No changelog bullets.
+```
+
+`scripts/bsmart-release-notice` is the only announcer. Version order is numeric, so a heading that sits out of order in this file (0.1.19-draft is listed above 0.1.31-draft) is still placed by its number. A version string that is not in this file is compared by that number when it parses, and is ignored when it does not. It is not treated as older than every entry.
+
+The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.1.20, which wrote only `last_announced_version: <current>`. That old format has no `seen_news` key. When that file is present and an existing-instance signal is also present, every flagged news item through the current version is unseen. The daily check on main could record `0.1.45.1-draft` after the 0.1.45 roles change, which is newer than that news, so "that version and later" would hide it. The seen list, written when interactive `bStart` records, is what keeps the showing to once. Without a signal, the old file still means that version and later ones. A record that has `seen_news` shows only flagged news after `last_announced_version`.
+
+`bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
+
+Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.45.2-draft
+
+```yaml
+release_type: user_facing_release_news
+scope:
+  - mark a version as user-facing news with an optional news paragraph in this file; unflagged versions stay in the changelog only
+  - show that news once, oldest first, for every flagged version after the instance's last announced version
+  - keep the record in bSmart/State/bsmart-release-notice.yaml; an old file with no seen_news key includes that version, and with Roles/, legacy bSmart_State.md, or the role-migration marker it shows every flagged item through the current version once
+  - record a fresh baseline from bootstrap and the manual installer, retry that write, do not create bSmart_State.md, and ignore State cache files and ORIG_HEAD
+  - let bStart --no-record and BSMART_NEWS_NO_RECORD=1 print news without marking it seen, for a Hermes cron job or other automation that loads HERMES.md
+  - compare versions numerically, and ignore an unparseable version instead of treating it as older than every entry
+  - surface a preview from startup check and instance upgrade without recording it; a notice failure does not fail the upgrade
+  - tell the agent, in the startup instructions, to relay the news briefly in its next reply
+  - add the 0.1.45-draft news paragraph for the move from roles to session projects
+verification:
+  - bStart prints news once and records it; a second bStart is silent
+  - skipped versions accumulate every flagged news item in between, oldest first, including when headings are out of numeric order
+  - a version without news is not announced
+  - a version string missing from this file is not treated as older than every entry
+  - bootstrap, then bStart with its system-update state write, prints no historical news
+  - container-storage.yaml, bsmart-system-update.yaml, and ORIG_HEAD do not by themselves show historical news
+  - an old-format notice file at 0.1.45-draft includes the 0.1.45 news
+  - an old-format notice file at 0.1.45.1-draft plus Roles/ shows the 0.1.45 news once
+  - bStart --no-record and BSMART_NEWS_NO_RECORD=1 print news and leave the record unchanged
+  - a bootstrap whose baseline write fails does not create bSmart_State.md, and the following bStart prints no historical news
+  - instance upgrade prints a preview and leaves the record unmarked; the following bStart records it
+  - an instance with Roles/, legacy bSmart_State.md, or a role-migration marker and no notice file is shown the 0.1.45 news once by bStart
+  - the same notice appears from the Hermes bSmart-System/bStart.py layout and the workspace-root bStart.py layout
+  - python and node tests pass on Linux, Windows, and macOS for Python 3.11 and 3.12
 ```
 
 ## 0.1.45.1-draft
@@ -32,6 +84,12 @@ verification:
 
 ```yaml
 release_type: session_scoped_projects
+news: |
+  Roles are gone. Each session starts in Free mode. Work happens in projects and
+  workstreams, selected for this session with /project. Each project keeps its
+  own handoff, which you write when switching away. projects/INDEX.md lists the
+  projects. /role now only points to /project. Existing roles were migrated where
+  unambiguous (anything skipped is listed as a question).
 scope:
   - remove the instance-wide role selector; projects are the unit
   - keep the active project and workstream in the session, starting in Free mode, and never guess
@@ -814,6 +872,7 @@ steps:
   - read bSmart_Version.md current version
   - git fetch from configured remote
   - show incoming changelog/migration notes
+  - show user-facing news for versions flagged since this instance last updated
   - ask operator approval
   - git pull or checkout approved version
   - run bSmart doctor/check

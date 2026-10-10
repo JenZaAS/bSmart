@@ -209,6 +209,42 @@ def maybe_init_content_git(content_root: Path, mode: str, agent_name: str) -> st
     return "already present"
 
 
+def record_fresh_baseline(content_root: Path, system_root: Path) -> None:
+    """Mark this new instance at the current version so historical news stays quiet.
+
+    The notice file is written by the system checkout's announcer. A copy of
+    this bootstrap script fetched to /tmp still points at the cloned checkout.
+    The write is retried. Bootstrap does not create bSmart_State.md, so a
+    baseline that still fails is not mistaken for a legacy instance.
+    """
+    candidates = (
+        system_root / "scripts" / "bsmart-release-notice",
+        SYSTEM_ROOT / "scripts" / "bsmart-release-notice",
+    )
+    script = next((path for path in candidates if path.is_file()), None)
+    if script is None or not (system_root / "bSmart_Version.md").is_file():
+        print("WARNING: bSmart release notice is unavailable; fresh baseline was not recorded")
+        return
+    command = [
+        sys.executable,
+        str(script),
+        "--baseline",
+        "--content-root",
+        str(content_root),
+        "--system-root",
+        str(system_root),
+    ]
+    result = None
+    for _attempt in range(3):
+        result = run(command, check=False)
+        if result.returncode == 0:
+            return
+    detail = ((result.stderr or result.stdout) if result is not None else "").strip()
+    print("WARNING: could not record a fresh release-news baseline")
+    if detail:
+        print(detail)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Bootstrap bSmart into a Hermes workspace mount.")
     parser.add_argument("--workspace", required=True, help="Host path backing the container's /workspace mount")
@@ -308,8 +344,8 @@ local_paths:
     if write_if_missing(content_root / "bSmart_Agent.md", agent_md):
         files_created.append("bSmart/bSmart_Agent.md")
 
-    if write_if_missing(content_root / "bSmart_State.md", "# bSmart state\n\n- Mode: `Free`\n- Active project (short name): `none`\n"):
-        files_created.append("bSmart/bSmart_State.md")
+    # bSmart_State.md is legacy migration history. Never create it. A file
+    # written here would count as an older instance if the baseline write failed.
 
     todo = """# bSmart TODO
 
@@ -343,6 +379,11 @@ sandboxes:
 """
     if write_if_missing(content_root / "State" / "container-storage.yaml", storage):
         files_created.append("bSmart/State/container-storage.yaml")
+
+    # container-storage.yaml now exists and is not an old-instance signal.
+    # Record the fresh baseline after it, with a retry, so the later bStart
+    # does not replay historical news. An existing notice file is left as it is.
+    record_fresh_baseline(content_root, workspace / "bSmart-System")
 
     chown_tree(workspace / "HERMES.md", args.uid, args.gid, report) if (workspace / "HERMES.md").exists() else None
     chown_tree(workspace / "AGENTS.md", args.uid, args.gid, report) if (workspace / "AGENTS.md").exists() else None

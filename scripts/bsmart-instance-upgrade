@@ -12,7 +12,9 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
+import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -28,6 +30,7 @@ PROFILE_RECOMMENDED = """## Startup reply behavior
 - Preserve the compact command lines emitted by bStart.py.
 - Do not replace the bStart startup summary with a generic greeting or reduced status summary.
 - A first reply after `/new` may add a short greeting, but must retain the Project (session), Workstream, active projects, and command-help lines.
+- If startup prints a bSmart news block, relay that news briefly in the first reply, once, and do not repeat it later.
 """
 
 
@@ -87,6 +90,50 @@ def configure_output_streams() -> None:
                 reconfigure(errors="backslashreplace")
             except (AttributeError, OSError, ValueError):
                 continue
+
+
+def announce_release(workspace: Path, system: Path) -> int:
+    """Print flagged news without marking it seen.
+
+    bStart is the interactive startup that records the news. A cron, script,
+    or harness running this upgrade must not consume it. A notice failure
+    must not turn a successful upgrade into a failed exit.
+    """
+    script = Path(__file__).absolute().parent / "bsmart-release-notice"
+    if not script.is_file() or not (system / "bSmart_Version.md").is_file():
+        return 0
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    env["PYTHONUTF8"] = "1"
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(script),
+                "--quiet",
+                "--preview",
+                "--content-root",
+                str(workspace / "bSmart"),
+                "--system-root",
+                str(system),
+            ],
+            cwd=str(workspace),
+            env=env,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return 0
+    if result.stdout:
+        print(result.stdout, end="" if result.stdout.endswith("\n") else "\n", flush=True)
+    if result.stderr:
+        print(result.stderr, end="" if result.stderr.endswith("\n") else "\n", file=sys.stderr, flush=True)
+    return 0
 
 
 def main() -> int:
@@ -180,7 +227,7 @@ def main() -> int:
     for item in backed_up:
         print(f"  backup: {item}")
     print("instance content: startup hooks synchronized; role handoffs migrated only when unambiguous")
-    return 0
+    return announce_release(workspace, system)
 
 
 if __name__ == "__main__":

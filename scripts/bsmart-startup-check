@@ -116,7 +116,7 @@ def main() -> int:
         print_result("bSmart content upgrade", content_proc)
         if content_proc.returncode not in (0,):
             return content_proc.returncode
-        notice_proc = run_script("bsmart-release-notice", ["--quiet"])
+        notice_proc = run_script("bsmart-release-notice", ["--quiet", "--preview"])
         print_result("bSmart release notice", notice_proc)
         if notice_proc.returncode not in (0,):
             return notice_proc.returncode
@@ -149,7 +149,7 @@ def main() -> int:
     if proc.returncode not in (0,):
         exit_code = max(exit_code, proc.returncode)
 
-    proc = run_script("bsmart-release-notice", ["--quiet"])
+    proc = run_script("bsmart-release-notice", ["--quiet", "--preview"])
     print_result("bSmart release notice", proc)
     if proc.returncode not in (0,):
         exit_code = max(exit_code, proc.returncode)

@@ -115,7 +115,8 @@ update_workflow:
     - back up and synchronize HERMES.md, AGENTS.md, and CLAUDE.md
     - create only missing standard content
     - verify, refresh, or install the managed /project integration
-  first_reply_rule: Preserve the bStart startup and command-help lines in the first reply; instance-specific greetings may precede them but must not replace them.
+    - print a preview of user-facing release news without marking it seen; interactive bStart records that news once; a cron session passes bStart --no-record or sets BSMART_NEWS_NO_RECORD=1 so the print is not marked seen
+  first_reply_rule: Preserve the bStart startup and command-help lines in the first reply; instance-specific greetings may precede them but must not replace them. If startup prints a bSmart news block, relay that news briefly in the first reply, once, and do not repeat it later.
   preserve: Never overwrite instance identity, project handoffs, legacy migration files, projects, secrets, or unrelated content.
   profile_migration: Apply known exact bSmart_Agent.md compatibility migrations automatically with a backup and clear report; ask only for ambiguous or broader changes.
 
@@ -209,6 +210,7 @@ startup_sequence:
   - when the operator asks to set up or update a Hermes runtime, load /workspace/bSmart-System/bSmart_Protocols/hermes-runtime-onboarding.md and use only the sections that match that host. The state.db section is incident-only
   - first visible assistant reply starts with the bStart greeting: "Hi, <operator-name>!"
   - then show the compact bStart startup summary
+  - if bStart, bsmart-startup-check, bsmart-update, or bsmart-instance-upgrade printed a bSmart news block, relay that news briefly in this reply, once, and do not repeat it on later turns
   - include one short help line: "Info keywords: help, features, setup, projects, tasks, safety."
   - ask whether to continue the current TODO item
 
@@ -239,7 +241,7 @@ missing_content_behavior:
   bGuardrails.md: create from bSmart_Templates/bGuardrails.template.md after approval
   Roles/: do not create; historical files stay until the operator removes them
   Roles/current_role.md: do not create or select; it is not a session project
-  bSmart_State.md: never create; migrate only through bsmart-instance-upgrade
+  bSmart_State.md: never create; bootstrap and the README installer leave it absent; migrate an existing file only through bsmart-instance-upgrade
   bSmart_TODO.md: create from template after approval
   bSmart_Log.md: create empty log from template after approval
 

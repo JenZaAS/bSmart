@@ -38,16 +38,16 @@ def main() -> int:
         [sys.executable, str(scripts / "bsmart-content-upgrade"), "--create-missing", "--content-root", str(content)],
         [sys.executable, str(scripts / "bsmart-project-integration-check"), "--install", "--quiet"],
     ]
-    print("bSmart update: finalizing pulled system; Git pull not requested")
+    print("bSmart update: finalizing pulled system; Git pull not requested", flush=True)
     for command in commands:
         result = subprocess.run(command, cwd=workspace, text=True)
         if result.returncode != 0:
-            print(f"bSmart update: blocked at {Path(command[1]).name}")
+            print(f"bSmart update: blocked at {Path(command[1]).name}", flush=True)
             return result.returncode
     if shutil.which("hermes"):
-        print("bSmart update: complete; restart Hermes, then verify with /new and Hi")
+        print("bSmart update: complete; restart Hermes, then verify with /new and Hi", flush=True)
     else:
-        print("bSmart update: complete; start a new session and verify the startup hook")
+        print("bSmart update: complete; start a new session and verify the startup hook", flush=True)
     return 0
 
 

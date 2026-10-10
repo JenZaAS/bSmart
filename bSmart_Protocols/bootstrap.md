@@ -61,6 +61,8 @@ new_agent_bootstrap_standard:
     - send Hi as the first agent-authored verification turn
     - confirm bSmart startup summary and no GitHub SSH-key warning
   first_reply_rule: preserve bStart output and command-help lines; do not replace them with instance-specific greeting-only behavior
+  release_news: if startup prints a bSmart news block, relay that news briefly in the first reply, once, and do not repeat it later
+  release_news_rule: only versions with a news paragraph in bSmart_Version.md are announced; the record is bSmart/State/bsmart-release-notice.yaml; an old record with no seen_news key includes that version, and with Roles/, legacy bSmart_State.md, or the role-migration marker shows every flagged item through the current version once; bootstrap writes a fresh baseline, retries it, and does not create bSmart_State.md; interactive bStart marks news seen; a cron session uses bStart --no-record or BSMART_NEWS_NO_RECORD=1; those three signals are the only ones when the record is missing
 ```
 
 ```yaml

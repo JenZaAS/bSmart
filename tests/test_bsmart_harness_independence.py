@@ -588,6 +588,7 @@ class TwoInstanceTests(unittest.TestCase):
             self.assertIn("Agent: GrokAdmin", result.stdout)
             self.assertNotIn("Agent: MainAgent", result.stdout)
             self.assertTrue((self.nested / "bSmart" / "State" / "bsmart-system-update.yaml").is_file(), result.stdout)
+            self.assertTrue((self.nested / "bSmart" / "State" / "bsmart-release-notice.yaml").is_file(), result.stdout)
             self.assert_main_untouched()
 
     def test_direct_update_check_through_system_symlink_uses_nested_content(self):
@@ -625,7 +626,7 @@ class TwoInstanceTests(unittest.TestCase):
         nested_state = self.nested / "bSmart" / "State"
         self.assertTrue((nested_state / "bsmart-startup-check.yaml").is_file(), result.stdout + result.stderr)
         self.assertTrue((nested_state / "bsmart-system-update.yaml").is_file(), result.stdout + result.stderr)
-        self.assertTrue((nested_state / "bsmart-release-notice.yaml").is_file(), result.stdout + result.stderr)
+        self.assertFalse((nested_state / "bsmart-release-notice.yaml").exists(), result.stdout + result.stderr)
         self.assertTrue((self.nested / "bSmart" / "bHistory.md").is_file())
         self.assert_main_untouched()
 

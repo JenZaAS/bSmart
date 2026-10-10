@@ -383,16 +383,8 @@ operating_policy:
 \`\`\`
 EOF
 
-cat > "$WS/bSmart/bSmart_State.md" <<'EOF'
-# bSmart state
-
-- Mode: `Free`
-- Active project (short name): `none`
-
-Notes:
-- Project root selection is `BSMART_PROJECT_ROOT`, then `/projects`, then `./projects`; no legacy project-root fallback is used.
-- Sandbox root selection is `BSMART_SANDBOX_ROOT`, then `/sandboxes`, then `./sandboxes`, then `./bSmart/Sandboxes`.
-EOF
+# bSmart_State.md is legacy migration history. Do not create it.
+# bSmart.md says never create; migrate an existing file only through bsmart-instance-upgrade.
 
 cat > "$WS/bSmart/bSmart_TODO.md" <<'EOF'
 # bSmart TODO
@@ -425,6 +417,20 @@ if [ "$APPLY_GROUP_PERMS" = "yes" ]; then
   else
     echo "WARNING: setfacl not found; setgid/group mode applied, but default ACL inheritance was skipped." >&2
   fi
+fi
+
+baseline_ok=no
+for _attempt in 1 2 3; do
+  if python3 "$WS/bSmart-System/scripts/bsmart-release-notice" \
+    --baseline \
+    --content-root "$WS/bSmart" \
+    --system-root "$WS/bSmart-System"; then
+    baseline_ok=yes
+    break
+  fi
+done
+if [ "$baseline_ok" != yes ]; then
+  echo "WARNING: could not record a fresh release-news baseline" >&2
 fi
 
 echo "bSmart installed for ${SERVICE}."
@@ -521,5 +527,5 @@ system_update_rule:
 See:
 - `bSmart.md` for runtime bootstrap instructions.
 - `bSmart_Setup.md` for first-time setup.
-- `bSmart_Version.md` for version history and migration notes.
+- `bSmart_Version.md` for version history, user-facing news, and migration notes. Add a `news` paragraph only when a change affects the user's workflow, commands, or what they see.
 - `Docs/system-vs-content.md` for the separation model.

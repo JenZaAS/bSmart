@@ -9,7 +9,7 @@ protocol_index:
 
 | Protocol | Scope | Load when |
 |---|---|---|
-| `bootstrap.md` | Session startup order, fresh-agent bootstrap, and verification | Starting, installing, or repairing bSmart |
+| `bootstrap.md` | Session startup order, fresh-agent bootstrap, release news, and verification | Starting, installing, or repairing bSmart |
 | `startup-hooks.md` | AGENTS.md/HERMES.md hook content and hook helper behavior | Creating or troubleshooting startup hooks |
 | `operations.md` | Safe action cadence, approvals, secrets, and traceability | Any action with safety or approval implications |
 | `state.md` | Legacy `bSmart_State.md` and role-file migration rules | Migrating an older instance off role files |
