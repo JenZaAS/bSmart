@@ -22,11 +22,7 @@ ROLES_NEWS = (
     "workstreams, selected for this session with /project. Each project keeps its "
     "own handoff, which you write when switching away. projects/INDEX.md lists the "
     "projects. /role now only points to /project. Existing roles were migrated where "
-    "unambiguous (anything skipped is listed as a question), and the old files were "
-    "backed up under .bsmart-upgrade-backups/<timestamp>/roles-migration/. "
-    "bSmart/State/role-migration-review.md exists only when there were leftover "
-    "fields. To restore the old files, run "
-    "bsmart-instance-upgrade --restore-session-projects with that backup directory."
+    "unambiguous (anything skipped is listed as a question)."
 )
 
 FIXTURE = """# fixture
@@ -448,7 +444,9 @@ class RealChangelogTests(unittest.TestCase):
             self.assertIn("0.1.45-draft:", result.stdout)
             self.assertIn(ROLES_NEWS, result.stdout)
             self.assertIn("where unambiguous (anything skipped is listed as a question)", result.stdout)
-            self.assertIn("exists only when there were leftover fields", result.stdout)
+            self.assertNotIn(".bsmart-upgrade-backups/", result.stdout)
+            self.assertNotIn("role-migration-review.md", result.stdout)
+            self.assertNotIn("--restore-session-projects", result.stdout)
             if not version_has_news(current):
                 self.assertNotIn(f"{current}:", result.stdout)
             self.assertNotIn("0.1.44.1-draft:", result.stdout)
@@ -507,6 +505,84 @@ class RealChangelogTests(unittest.TestCase):
             self.assertIn("seen_news:", recorded)
             self.assertIn(f"last_announced_version: {current}", recorded)
             self.assertIn("0.1.45-draft", recorded.split("seen_news:", 1)[1])
+
+    def test_old_style_0451_with_roles_shows_045_news_once(self) -> None:
+        """A daily check between #7 and this change recorded 0.1.45.1-draft only."""
+        with tempfile.TemporaryDirectory() as directory:
+            content = Path(directory) / "bSmart"
+            roles = content / "Roles"
+            roles.mkdir(parents=True)
+            (roles / "general_role.md").write_text("historical role\n", encoding="utf-8")
+            state = write_old_state(content, "0.1.45.1-draft")
+            before = state.read_text(encoding="utf-8")
+            preview = run_text(
+                [
+                    sys.executable,
+                    str(NOTICE),
+                    "--quiet",
+                    "--preview",
+                    "--content-root",
+                    str(content),
+                    "--system-root",
+                    str(ROOT),
+                ]
+            )
+            self.assertEqual(preview.returncode, 0, preview.stderr)
+            self.assertIn(ROLES_NEWS, preview.stdout)
+            self.assertEqual(state.read_text(encoding="utf-8"), before)
+            first = run_text(
+                [
+                    sys.executable,
+                    str(NOTICE),
+                    "--quiet",
+                    "--record",
+                    "--content-root",
+                    str(content),
+                    "--system-root",
+                    str(ROOT),
+                ]
+            )
+            self.assertEqual(first.returncode, 0, first.stderr)
+            self.assertIn(ROLES_NEWS, first.stdout)
+            recorded = state.read_text(encoding="utf-8")
+            self.assertIn("seen_news:", recorded)
+            self.assertIn("0.1.45-draft", recorded.split("seen_news:", 1)[1])
+            self.assertIn(f"last_announced_version: {repo_current_version()}", recorded)
+            second = run_text(
+                [
+                    sys.executable,
+                    str(NOTICE),
+                    "--quiet",
+                    "--record",
+                    "--content-root",
+                    str(content),
+                    "--system-root",
+                    str(ROOT),
+                ]
+            )
+            self.assertEqual(second.returncode, 0, second.stderr)
+            self.assertEqual(second.stdout, "")
+            self.assertNotIn(ROLES_NEWS, second.stdout)
+
+    def test_old_style_0451_without_a_signal_does_not_replay_older_news(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            content = Path(directory) / "bSmart"
+            write_old_state(content, "0.1.45.1-draft")
+            result = run_text(
+                [
+                    sys.executable,
+                    str(NOTICE),
+                    "--quiet",
+                    "--record",
+                    "--content-root",
+                    str(content),
+                    "--system-root",
+                    str(ROOT),
+                ]
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn(ROLES_NEWS, result.stdout)
+            self.assertNotIn("bSmart news:", result.stdout)
 
     def test_startup_instructions_tell_the_agent_to_relay_news(self) -> None:
         relay = "relay that news briefly in the first reply, once"
@@ -805,7 +881,7 @@ class EstablishedInstanceTests(unittest.TestCase):
         first = self.notice()
         self.assertEqual(first.returncode, 0, first.stderr)
         self.assertIn(ROLES_NEWS, first.stdout)
-        self.assertIn(".bsmart-upgrade-backups/<timestamp>/roles-migration/", first.stdout)
+        self.assertNotIn("--restore-session-projects", first.stdout)
         recorded = (self.content / "State" / "bsmart-release-notice.yaml").read_text(encoding="utf-8")
         self.assertNotIn("baseline: fresh", recorded)
         self.assertIn("0.1.45-draft", recorded)
@@ -982,7 +1058,7 @@ class CallOrderTests(unittest.TestCase):
             self.assertNotIn("bSmart news:", boot.stdout)
             self.assertNotIn(ROLES_NEWS, boot.stdout)
             content = workspace / "bSmart"
-            self.assertTrue((content / "bSmart_State.md").is_file())
+            self.assertFalse((content / "bSmart_State.md").exists())
             self.assertTrue((content / "State" / "container-storage.yaml").is_file())
             recorded = (content / "State" / "bsmart-release-notice.yaml").read_text(encoding="utf-8")
             self.assertIn("baseline: fresh", recorded)
@@ -1083,6 +1159,171 @@ class CallOrderTests(unittest.TestCase):
             )
             self.assertNotIn(ROLES_NEWS, second.stdout)
             self.assertNotIn("bSmart news:", second.stdout)
+
+    def test_bstart_no_record_flag_and_env_leave_the_news_unseen(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            system = root / "bSmart-System"
+            scripts = system / "scripts"
+            scripts.mkdir(parents=True)
+            shutil.copy2(START, system / "bStart.py")
+            shutil.copy2(NOTICE, scripts / "bsmart-release-notice")
+            shutil.copy2(ROOT / "scripts" / "bsmart_instance.py", scripts / "bsmart_instance.py")
+            shutil.copy2(ROOT / "bSmart_Version.md", system / "bSmart_Version.md")
+            content = root / "bSmart"
+            roles = content / "Roles"
+            roles.mkdir(parents=True)
+            (roles / "general_role.md").write_text("historical role\n", encoding="utf-8")
+            state = write_old_state(content, "0.1.45.1-draft")
+            before = state.read_text(encoding="utf-8")
+            (content / "bSmart_Agent.md").write_text("agent:\n  name: Cron\n  operator: Tester\n", encoding="utf-8")
+            env = os.environ.copy()
+            env["BSMART_PROJECT_ROOT"] = str(root / "projects")
+            (root / "projects").mkdir()
+            command = [
+                sys.executable,
+                str(system / "bStart.py"),
+                "--root",
+                str(root),
+                "--skip-update",
+                "--skip-integrity",
+                "--no-record",
+            ]
+            flagged = run_text(command, env=env)
+            self.assertEqual(flagged.returncode, 0, flagged.stdout + flagged.stderr)
+            self.assertIn(ROLES_NEWS, flagged.stdout)
+            self.assertEqual(state.read_text(encoding="utf-8"), before)
+            automated = env.copy()
+            automated["BSMART_NEWS_NO_RECORD"] = "1"
+            cron = run_text(command[:-1], env=automated)
+            self.assertEqual(cron.returncode, 0, cron.stdout + cron.stderr)
+            self.assertIn(ROLES_NEWS, cron.stdout)
+            self.assertEqual(state.read_text(encoding="utf-8"), before)
+            interactive = run_text(command[:-1], env=env)
+            self.assertEqual(interactive.returncode, 0, interactive.stdout + interactive.stderr)
+            self.assertIn(ROLES_NEWS, interactive.stdout)
+            recorded = state.read_text(encoding="utf-8")
+            self.assertIn("seen_news:", recorded)
+            self.assertIn("0.1.45-draft", recorded.split("seen_news:", 1)[1])
+            quiet = run_text(command[:-1], env=env)
+            self.assertNotIn(ROLES_NEWS, quiet.stdout)
+            self.assertNotIn("bSmart news:", quiet.stdout)
+
+    def test_bootstrap_retries_a_failing_baseline(self) -> None:
+        wrapper = """#!/usr/bin/env python3
+import subprocess
+import sys
+from pathlib import Path
+
+here = Path(__file__).resolve().parent
+counter = here / ".baseline-attempts"
+seen = int(counter.read_text(encoding="utf-8")) if counter.is_file() else 0
+counter.write_text(str(seen + 1), encoding="utf-8")
+if seen < 2:
+    print("baseline failed", file=sys.stderr)
+    raise SystemExit(1)
+raise SystemExit(
+    subprocess.call([sys.executable, str(here / "bsmart-release-notice.real"), *sys.argv[1:]])
+)
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            origin = root / "origin"
+            self.init_origin(origin)
+            notice = origin / "scripts" / "bsmart-release-notice"
+            notice.replace(origin / "scripts" / "bsmart-release-notice.real")
+            notice.write_text(wrapper, encoding="utf-8")
+            env = git_env()
+            subprocess.run(["git", "add", "scripts"], cwd=origin, check=True, env=env)
+            subprocess.run(["git", "commit", "-q", "-m", "flaky baseline"], cwd=origin, check=True, env=env)
+            workspace = root / "workspace"
+            uid = str(getattr(os, "getuid", lambda: 10000)())
+            gid = str(getattr(os, "getgid", lambda: 10000)())
+            boot = run_text(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts" / "bsmart-bootstrap-workspace"),
+                    "--workspace",
+                    str(workspace),
+                    "--agent-name",
+                    "Fresh",
+                    "--operator",
+                    "Tester",
+                    "--repo-url",
+                    str(origin),
+                    "--uid",
+                    uid,
+                    "--gid",
+                    gid,
+                ],
+                env=env,
+            )
+            self.assertEqual(boot.returncode, 0, boot.stdout + boot.stderr)
+            content = workspace / "bSmart"
+            self.assertFalse((content / "bSmart_State.md").exists())
+            attempts = workspace / "bSmart-System" / "scripts" / ".baseline-attempts"
+            self.assertEqual(attempts.read_text(encoding="utf-8"), "3")
+            recorded = (content / "State" / "bsmart-release-notice.yaml").read_text(encoding="utf-8")
+            self.assertIn("baseline: fresh", recorded)
+            self.assertNotIn("bSmart news:", boot.stdout)
+            env["BSMART_PROJECT_ROOT"] = str(workspace / "projects")
+            (workspace / "projects").mkdir()
+            started = run_text([sys.executable, str(workspace / "bStart.py"), "--root", str(workspace)], env=env)
+            self.assertEqual(started.returncode, 0, started.stdout + started.stderr)
+            self.assertNotIn(ROLES_NEWS, started.stdout)
+            self.assertNotIn("bSmart news:", started.stdout)
+
+    def test_failed_baseline_does_not_turn_a_fresh_install_into_legacy(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            origin = root / "origin"
+            self.init_origin(origin)
+            failing = origin / "scripts" / "bsmart-release-notice"
+            failing.write_text(
+                "#!/usr/bin/env python3\nimport sys\nprint('baseline failed', file=sys.stderr)\nraise SystemExit(1)\n",
+                encoding="utf-8",
+            )
+            env = git_env()
+            subprocess.run(["git", "add", "scripts/bsmart-release-notice"], cwd=origin, check=True, env=env)
+            subprocess.run(["git", "commit", "-q", "-m", "fail baseline"], cwd=origin, check=True, env=env)
+            workspace = root / "workspace"
+            uid = str(getattr(os, "getuid", lambda: 10000)())
+            gid = str(getattr(os, "getgid", lambda: 10000)())
+            boot = run_text(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts" / "bsmart-bootstrap-workspace"),
+                    "--workspace",
+                    str(workspace),
+                    "--agent-name",
+                    "Fresh",
+                    "--operator",
+                    "Tester",
+                    "--repo-url",
+                    str(origin),
+                    "--uid",
+                    uid,
+                    "--gid",
+                    gid,
+                ],
+                env=env,
+            )
+            self.assertEqual(boot.returncode, 0, boot.stdout + boot.stderr)
+            self.assertIn("WARNING: could not record a fresh release-news baseline", boot.stdout)
+            content = workspace / "bSmart"
+            self.assertFalse((content / "bSmart_State.md").exists())
+            self.assertFalse((content / "State" / "bsmart-release-notice.yaml").exists())
+            cloned = workspace / "bSmart-System" / "scripts" / "bsmart-release-notice"
+            shutil.copy2(NOTICE, cloned)
+            env["BSMART_PROJECT_ROOT"] = str(workspace / "projects")
+            (workspace / "projects").mkdir()
+            started = run_text([sys.executable, str(workspace / "bStart.py"), "--root", str(workspace)], env=env)
+            self.assertEqual(started.returncode, 0, started.stdout + started.stderr)
+            self.assertNotIn(ROLES_NEWS, started.stdout)
+            self.assertNotIn("bSmart news:", started.stdout)
+            recorded = (content / "State" / "bsmart-release-notice.yaml").read_text(encoding="utf-8")
+            self.assertIn("baseline: fresh", recorded)
+            self.assertNotIn("0.1.45-draft", recorded.split("seen_news:", 1)[1])
 
 
 if __name__ == "__main__":

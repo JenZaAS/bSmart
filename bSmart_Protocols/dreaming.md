@@ -254,6 +254,7 @@ Interactive decision UX:
 - Present the first pending item for decision with simple choices such as `Review it now`, `Later`, `Skip it`, and `Show details`.
 - Process pending asks one-by-one. After each response/action, move to the next pending item until all are handled or the user stops/postpones the review.
 - For scheduled cron delivery, the user may be absent; deliver only a short human summary and the next clear follow-up choice. Keep IDs, paths, commands, and detailed review options in the report/detail flow, not the normal message.
+- A Hermes cron job that starts by loading `HERMES.md` runs `bStart`. Pass `bStart.py --no-record`, or set `BSMART_NEWS_NO_RECORD=1`, so that job can print release news without marking it seen. The next interactive session still relays it once.
 - Do not force the operator to type exact command syntax when an interactive choice can safely express the decision.
 
 ## Daily run guidelines

@@ -295,14 +295,27 @@ def release_notice_script() -> Path | None:
     return None
 
 
-def release_news_lines(system: Path, content: Path) -> list[str]:
+def news_record_requested(no_record_flag: bool) -> bool:
+    """Interactive startup records seen news. Automation can opt out.
+
+    --no-record and BSMART_NEWS_NO_RECORD=1 (also true/yes/on) still print
+    the news. A Hermes cron job that loads HERMES.md should use one of them
+    so the next interactive session can relay the news.
+    """
+    if no_record_flag:
+        return False
+    raw = os.environ.get("BSMART_NEWS_NO_RECORD", "").strip().lower()
+    return raw not in {"1", "true", "yes", "on"}
+
+
+def release_news_lines(system: Path, content: Path, *, record: bool) -> list[str]:
     """News since this instance last updated. Empty for a fresh install.
 
-    This is the only caller that marks news seen. Upgrade and startup check
-    may print a preview and must leave the record for this session.
-    A failure here must not abort startup; the next start tries again.
-    Call this before the update check writes State, so that cache is not
-    mistaken for an existing instance.
+    record=True is the interactive path and marks news seen. Upgrade and
+    startup check preview instead. --no-record and BSMART_NEWS_NO_RECORD
+    preview as well. A failure here must not abort startup; the next start
+    tries again. Call this before the update check writes State, so that
+    cache is not mistaken for an existing instance.
     """
     script = release_notice_script()
     if script is None or not (system / "bSmart_Version.md").is_file():
@@ -316,7 +329,7 @@ def release_news_lines(system: Path, content: Path) -> list[str]:
                 sys.executable,
                 str(script),
                 "--quiet",
-                "--record",
+                "--record" if record else "--preview",
                 "--content-root",
                 str(content),
                 "--system-root",
@@ -356,13 +369,18 @@ def main() -> int:
     parser.add_argument("--role", help=argparse.SUPPRESS)
     parser.add_argument("--skip-update", action="store_true")
     parser.add_argument("--skip-integrity", action="store_true")
+    parser.add_argument(
+        "--no-record",
+        action="store_true",
+        help="print release news without marking it seen (also BSMART_NEWS_NO_RECORD=1)",
+    )
     args = parser.parse_args()
     workspace = Path(args.root).expanduser().absolute()
     system, content = resolve_paths(workspace)
     warnings: list[str] = []
     # Before safe_system_update writes bsmart-system-update.yaml. A State cache
     # from this same startup is not an older instance.
-    news_lines = release_news_lines(system, content)
+    news_lines = release_news_lines(system, content, record=news_record_requested(args.no_record))
     updated, update_line = safe_system_update(system, content, args.skip_update)
     integrity: list[str] = []
     if updated and not args.skip_integrity:

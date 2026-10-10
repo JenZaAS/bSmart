@@ -31,7 +31,7 @@ After updating bSmart-System in an existing workspace, run:
 python3 /workspace/bSmart-System/scripts/bsmart-instance-upgrade
 ```
 
-This explicit upgrade helper backs up differing canonical hooks, installs the workspace-root `bStart.py`, and synchronizes `HERMES.md`, `AGENTS.md`, and `CLAUDE.md`. It may write the role-migration files and print a release-news preview. It does not mark that news seen and it does not overwrite unrelated instance content. Interactive `bStart` records seen news.
+This explicit upgrade helper backs up differing canonical hooks, installs the workspace-root `bStart.py`, and synchronizes `HERMES.md`, `AGENTS.md`, and `CLAUDE.md`. It may write the role-migration files and print a release-news preview. It does not mark that news seen and it does not overwrite unrelated instance content. Interactive `bStart` records seen news. A Hermes cron job or other automation that loads `HERMES.md` should run `bStart.py --no-record` or set `BSMART_NEWS_NO_RECORD=1`. The news is still printed and is not marked seen, so the next interactive session can relay it.
 
 The standard post-pull command is:
 

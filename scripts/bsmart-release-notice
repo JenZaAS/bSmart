@@ -5,14 +5,16 @@ bSmart_Version.md is the changelog. A version is announced only when its yaml
 block contains a news paragraph. The instance record lives in
 bSmart/State/bsmart-release-notice.yaml. That file has existed since 0.1.20
 as last_announced_version only. A file with no seen_news key has not shown
-news for that version yet, so the window includes it. A fresh install is
-baselined by bootstrap (or by bStart when no strong signal exists). Roles/,
-legacy bSmart_State.md, and State/role-migration.json are the only signals
-that a missing record is an existing instance. Other State files and ORIG_HEAD
-are not.
+news yet. With an old-instance signal (Roles/, legacy bSmart_State.md, or
+State/role-migration.json) every flagged item through the current version is
+unseen, and the seen list is what shows it once. Without that signal the
+window includes the recorded version and later ones. A fresh install is
+baselined by bootstrap (or by bStart when no strong signal exists). Other
+State files and ORIG_HEAD are not signals.
 
-Only --record marks news seen. Interactive bStart passes it. Upgrade and
-startup check use --preview and leave the record alone.
+Only --record marks news seen. Interactive bStart passes it. Upgrade,
+startup check, and bStart --no-record (or BSMART_NEWS_NO_RECORD=1) use
+--preview and leave the record alone.
 """
 
 from __future__ import annotations
@@ -145,9 +147,13 @@ def pending_news(
     """Flagged news through current, oldest first by version number.
 
     A new-format record excludes previous. An old-format record includes it
-    ("that version and later"). A previous version that does not parse is not
-    a window. A parsed version missing from the changelog is compared by
-    number, not treated as older than every entry. A downgrade yields nothing.
+    ("that version and later") unless all_through_current is set. That flag
+    is the old-style file sitting next to Roles/, legacy bSmart_State.md, or
+    the role-migration marker: the daily check may have recorded a version
+    newer than the news, and the seen list is what prevents a repeat. A
+    previous version that does not parse is not a window. A parsed version
+    missing from the changelog is compared by number, not treated as older
+    than every entry. A downgrade yields nothing.
     """
     current_key = version_key(current)
     if current_key is None:
@@ -393,8 +399,16 @@ def _announce_unlocked(
     if path.is_file():
         previous, seen_or_none = read_state(path)
         if seen_or_none is None:
-            include_previous = True
             seen = []
+            # The daily check on main wrote last_announced_version only. A
+            # stamp of 0.1.45.1-draft is newer than the 0.1.45 roles news, so
+            # "that version and later" would hide it. An old instance still
+            # has Roles/, legacy state, or the migration marker: show every
+            # flagged item through current once, then rely on seen_news.
+            if has_strong_signal(content_root):
+                all_through_current = True
+            else:
+                include_previous = True
         else:
             seen = seen_or_none
         if not previous:
