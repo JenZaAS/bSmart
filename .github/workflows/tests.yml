@@ -34,3 +34,36 @@ jobs:
         run: python -m unittest discover -s tests
       - name: Node tests
         run: node --test tests/test-project.mjs
+      - name: Windows hook launcher via cmd
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          set BPROTECTIVE_STATE_FILE=%TEMP%\bprotective-hook-state.json
+          set BPROTECTIVE_ARMED_FILE=%TEMP%\bprotective-hook-armed.json
+          python -c "import json,os; open(os.path.join(os.environ['TEMP'],'bprotective-hook-in.json'),'w',encoding='utf-8').write(json.dumps({'command':'echo hi'}))"
+          integrations\cursor\bprotective-plugin\scripts\run_hook.cmd < %TEMP%\bprotective-hook-in.json > %TEMP%\bprotective-hook-cursor.json
+          if errorlevel 1 exit /b 1
+          integrations\claude\bprotective-plugin\scripts\run_hook.cmd < %TEMP%\bprotective-hook-in.json > %TEMP%\bprotective-hook-claude.json
+          if errorlevel 1 exit /b 1
+          python -c "import json,os; root=os.environ['TEMP']; data=json.load(open(os.path.join(root,'bprotective-hook-cursor.json'),encoding='utf-8')); assert data.get('permission')=='allow', data; claude=open(os.path.join(root,'bprotective-hook-claude.json'),encoding='utf-8').read().strip(); assert claude=='', claude"
+          findstr /C:"sh -c" integrations\cursor\bprotective-plugin\hooks\hooks.json >nul && exit /b 1
+          findstr /C:"run_hook.cmd" integrations\cursor\bprotective-plugin\hooks\hooks.json >nul || exit /b 1
+      - name: Windows hook launcher via PowerShell
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:BPROTECTIVE_STATE_FILE = Join-Path $env:TEMP 'bprotective-hook-state.json'
+          $env:BPROTECTIVE_ARMED_FILE = Join-Path $env:TEMP 'bprotective-hook-armed.json'
+          $payload = '{"command":"echo hi"}'
+          $cursor = '.\integrations\cursor\bprotective-plugin\scripts\run_hook.cmd'
+          $out = $payload | & $cursor
+          if ($LASTEXITCODE -ne 0) { throw "cursor launcher exit $LASTEXITCODE output=$out" }
+          $parsed = $out | ConvertFrom-Json
+          if ($parsed.permission -ne 'allow') { throw "cursor launcher returned $out" }
+          $claude = '.\integrations\claude\bprotective-plugin\scripts\run_hook.cmd'
+          $claudeOut = $payload | & $claude
+          if ($LASTEXITCODE -ne 0) { throw "claude launcher exit $LASTEXITCODE output=$claudeOut" }
+          if ($claudeOut) { throw "claude launcher printed a decision: $claudeOut" }
+          $hooks = Get-Content '.\integrations\cursor\bprotective-plugin\hooks\hooks.json' -Raw
+          if ($hooks -match 'sh\s+-c' -or $hooks -match '(?i)\bsh\.exe\b') { throw 'Cursor hook command depends on sh' }
+          if ($hooks -notmatch 'run_hook\.cmd') { throw 'Cursor hook command is not run_hook.cmd' }

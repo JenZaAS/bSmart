@@ -2,7 +2,7 @@
 
 ```yaml
 current_version: 0.1.46-draft
-updated: 2026-10-10 12:00 UTC
+updated: 2026-10-10 10:49 UTC
 status: draft
 ```
 
@@ -35,6 +35,10 @@ scope:
   - start Cursor and Claude hooks from run_hook.cmd so Windows does not need sh
   - block wrapped rm, bash -lc, xargs rm of a root, python shutil.rmtree of a root, chmod -R 000 /, chown -R of /, and git push of +main or --delete main
   - state plainly that bProtective is for accidental catastrophic commands, not a deliberately adversarial agent
+  - match guard paths only as the state file, its .armed marker, ~/.bprotective/armed.json, and the content-root State folder, so ordinary state paths stay allowed while protection is off
+  - keep the command scan linear and cap it near 16k characters, and run the hook channel check once per call
+  - block rm, mv, and redirects of ~/.bprotective, interpreter one-liners that rm -rf a root, and recursive deletes of /home/<user> and C:\Users\<user>
+  - warn on stdout or stderr when a hook launcher cannot find Python, and check the Windows launcher out as CRLF so cmd.exe can find its labels
 verification:
   - existing Hermes bProtective tests pass, including Windows commands and the Windows ACL write
   - core and CLI tests cover Windows commands, protected paths, confirmation, hook response shapes, and the sibling content root

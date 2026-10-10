@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Claude Code hook entry. Not live-tested in Claude Code."""
+"""Claude Code hook entry. Not live-tested in Claude Code.
+
+Finds the shared integrations/bprotective/entry.py and runs it. The deny
+payload below is only the last resort when that file cannot be found.
+"""
 
 from __future__ import annotations
 
@@ -10,43 +14,34 @@ import sys
 from pathlib import Path
 
 ADAPTER = "claude"
+_MISSING = "bProtective core failed to load. Set BPROTECTIVE_CORE to the directory that contains hook.py."
 
 
-def resolve_entry() -> Path | None:
-    """Find entry.py in-tree or via BPROTECTIVE_CORE when this plugin is copied."""
+def _entry() -> Path | None:
     candidates: list[Path] = []
     env = os.environ.get("BPROTECTIVE_CORE")
     if env:
-        root = Path(env).expanduser()
-        candidates.append(root / "entry.py")
-    here = Path(__file__).resolve()
-    if len(here.parents) > 3:
-        candidates.append(here.parents[3] / "bprotective" / "entry.py")
-    for parent in here.parents:
+        candidates.append(Path(env).expanduser() / "entry.py")
+    for parent in Path(__file__).resolve().parents:
         candidates.append(parent / "integrations" / "bprotective" / "entry.py")
         candidates.append(parent / "bprotective" / "entry.py")
     for candidate in candidates:
-        if candidate.is_file() and candidate.name == "entry.py":
+        if candidate.is_file():
             return candidate
     return None
 
 
-def _deny_missing() -> None:
-    message = "bProtective core failed to load. Set BPROTECTIVE_CORE to the directory that contains hook.py."
-    payload = {
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "deny",
-            "permissionDecisionReason": message,
-        }
-    }
-    sys.stdout.write(json.dumps(payload))
-
-
 if __name__ == "__main__":
-    entry = resolve_entry()
+    entry = _entry()
     if entry is None:
-        _deny_missing()
+        payload = {
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": "deny",
+                "permissionDecisionReason": _MISSING,
+            }
+        }
+        sys.stdout.write(json.dumps(payload))
         raise SystemExit(2)
     sys.argv = [str(entry), "--adapter", ADAPTER, *sys.argv[1:]]
     runpy.run_path(str(entry), run_name="__main__")
