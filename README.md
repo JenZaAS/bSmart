@@ -521,5 +521,5 @@ system_update_rule:
 See:
 - `bSmart.md` for runtime bootstrap instructions.
 - `bSmart_Setup.md` for first-time setup.
-- `bSmart_Version.md` for version history and migration notes.
+- `bSmart_Version.md` for version history, user-facing news, and migration notes. Add a `news` paragraph only when a change affects the user's workflow, commands, or what they see.
 - `Docs/system-vs-content.md` for the separation model.

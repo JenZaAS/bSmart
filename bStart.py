@@ -284,6 +284,54 @@ def project_catalog(root: Path | None, warnings: list[str]) -> list[str]:
     return lines
 
 
+def release_notice_script() -> Path | None:
+    """This file is also copied to the workspace root, so search both layouts."""
+    for path in (
+        SCRIPT_ROOT / "scripts" / "bsmart-release-notice",
+        SCRIPT_ROOT / "bSmart-System" / "scripts" / "bsmart-release-notice",
+    ):
+        if path.is_file():
+            return path
+    return None
+
+
+def release_news_lines(system: Path, content: Path) -> list[str]:
+    """News since this instance last updated. Empty for a fresh install.
+
+    scripts/bsmart-release-notice records the seen version in instance state.
+    A failure here must not abort startup; the next start tries again.
+    """
+    script = release_notice_script()
+    if script is None or not (system / "bSmart_Version.md").is_file():
+        return []
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    env["PYTHONUTF8"] = "1"
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(script),
+                "--quiet",
+                "--content-root",
+                str(content),
+                "--system-root",
+                str(system),
+            ],
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    return [line for line in (proc.stdout or "").splitlines() if line.strip()]
+
+
 def session_lines() -> tuple[str, str]:
     """Show this process's session. An unset variable is Free mode, not a guess."""
     project = os.environ.get("BSMART_SESSION_PROJECT", "").strip()
@@ -348,6 +396,8 @@ def main() -> int:
             warnings.append(f"Context: could not read {path}: {exc}")
     print(f"Hi, {greeting_name}!")
     print("bSmart — Startup")
+    for line in release_news_lines(system, content):
+        print(line)
     print(f"Agent: {agent}")
     print(project_line)
     print("  Use: /project list | /project <project> | /project add <project> | /project help")

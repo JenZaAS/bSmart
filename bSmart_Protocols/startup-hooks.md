@@ -31,7 +31,7 @@ After updating bSmart-System in an existing workspace, run:
 python3 /workspace/bSmart-System/scripts/bsmart-instance-upgrade
 ```
 
-This explicit upgrade helper backs up differing canonical hooks, installs the workspace-root `bStart.py`, and synchronizes `HERMES.md`, `AGENTS.md`, and `CLAUDE.md`. It does not modify bSmart instance content or state.
+This explicit upgrade helper backs up differing canonical hooks, installs the workspace-root `bStart.py`, and synchronizes `HERMES.md`, `AGENTS.md`, and `CLAUDE.md`. It may write the role-migration files and `bSmart/State/bsmart-release-notice.yaml`. It does not overwrite unrelated instance content.
 
 The standard post-pull command is:
 

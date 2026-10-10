@@ -96,7 +96,8 @@ def context_text(startup: str, returncode: int, client: str | None = None) -> st
     status = "bStart.py finished." if returncode == 0 else "bStart.py reported a problem."
     text = (
         "bSmart client startup hook already ran bStart.py. Do not run it again. "
-        "In the first reply, preserve the startup lines and command-help lines.\n"
+        "In the first reply, preserve the startup lines and command-help lines. "
+        "If that output contains a bSmart news block, relay the news briefly in the first reply, once, and do not repeat it later.\n"
         f"{status}\n\n{startup}"
     )
     if client == "cursor":

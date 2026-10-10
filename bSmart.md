@@ -115,7 +115,8 @@ update_workflow:
     - back up and synchronize HERMES.md, AGENTS.md, and CLAUDE.md
     - create only missing standard content
     - verify, refresh, or install the managed /project integration
-  first_reply_rule: Preserve the bStart startup and command-help lines in the first reply; instance-specific greetings may precede them but must not replace them.
+    - show user-facing release news once, for versions flagged in bSmart_Version.md since this instance last updated
+  first_reply_rule: Preserve the bStart startup and command-help lines in the first reply; instance-specific greetings may precede them but must not replace them. If startup prints a bSmart news block, relay that news briefly in the first reply, once, and do not repeat it later.
   preserve: Never overwrite instance identity, project handoffs, legacy migration files, projects, secrets, or unrelated content.
   profile_migration: Apply known exact bSmart_Agent.md compatibility migrations automatically with a backup and clear report; ask only for ambiguous or broader changes.
 
@@ -209,6 +210,7 @@ startup_sequence:
   - when the operator asks to set up or update a Hermes runtime, load /workspace/bSmart-System/bSmart_Protocols/hermes-runtime-onboarding.md and use only the sections that match that host. The state.db section is incident-only
   - first visible assistant reply starts with the bStart greeting: "Hi, <operator-name>!"
   - then show the compact bStart startup summary
+  - if bStart, bsmart-startup-check, bsmart-update, or bsmart-instance-upgrade printed a bSmart news block, relay that news briefly in this reply, once, and do not repeat it on later turns
   - include one short help line: "Info keywords: help, features, setup, projects, tasks, safety."
   - ask whether to continue the current TODO item
 

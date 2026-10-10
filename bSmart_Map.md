@@ -58,7 +58,7 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | `./bSmart-System/bSmart_Invariants.md` | Absolute cross-runtime bSmart rules | low | startup |
 | `./bSmart-System/bSmart_Map.md` | This logical system map | low | bStart routing |
 | `./bSmart-System/bSmart_Features.md` | Compact feature summaries and detail lookup metadata | low | compact startup |
-| `./bSmart-System/bSmart_Version.md` | System version and changelog | low | metadata check only |
+| `./bSmart-System/bSmart_Version.md` | System version, changelog, and optional user-facing news | low | metadata check; news on update |
 | `./bSmart-System/bSmart_Setup.md` | Setup and repair procedure | low | setup only |
 | `./bSmart-System/bSmart_Protocols/` | Detailed operational protocols | low | need to know |
 | `./bSmart-System/bSmart_Protocols/protocols.md` | Compact protocol index and ownership map | low | compact startup |
@@ -83,6 +83,7 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | `./bSmart-System/scripts/bsmart_session_projects.py` | Project index, startup self-check, and role-to-handoff migration with backup and restore | low | startup and upgrade |
 | `./bSmart-System/scripts/bsmart-instance-upgrade` | Explicit existing-instance startup repair with backups | low | system upgrade/setup |
 | `./bSmart-System/scripts/bsmart-update` | Finalize an already-pulled system update without pulling Git | low | explicit update |
+| `./bSmart-System/scripts/bsmart-release-notice` | Show flagged user-facing news once per instance | low | update and startup |
 | `./bSmart-System/tests/` | System validation | low | explicit testing only |
 | `./bSmart-System/bSmart_Docs/` | Human-facing system documentation | low | explicit request only |
 

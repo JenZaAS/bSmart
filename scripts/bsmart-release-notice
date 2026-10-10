@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Announce each bSmart-System version once per instance.
+"""Announce user-facing bSmart news once per instance.
 
-The notice is intentionally small and stateful: healthy repeat runs are silent,
-and the notice state lives in instance content rather than the system repo.
+bSmart_Version.md is the changelog. A version is announced only when its yaml
+block contains a news paragraph. The instance record lives in
+bSmart/State/bsmart-release-notice.yaml. A missing record is a fresh install:
+the current version is stored and older news is not replayed.
 """
 
 from __future__ import annotations
@@ -17,62 +19,227 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from bsmart_instance import default_content_root
+
 SYSTEM_ROOT = SCRIPT_DIR.parent
-
-
 DEFAULT_CONTENT_ROOT = default_content_root(SYSTEM_ROOT)
+STATE_NAME = "bsmart-release-notice.yaml"
+NEWS_HEADER = "bSmart news:"
+NEWS_INSTRUCTION = "Relay this briefly to the user in your next reply. Say it once."
+VERSION_HEADING = re.compile(
+    r"^## (\d+\.\d+(?:\.\d+)*(?:-[A-Za-z0-9.]+)?)\s*$",
+    re.MULTILINE,
+)
+BLOCK_MARKERS = {"|", ">", "|-", ">-", "|+", ">+"}
 
 
-def version(system_root: Path) -> str:
-    text = (system_root / "bSmart_Version.md").read_text(encoding="utf-8", errors="replace")
-    match = re.search(r"^current_version:\s*(\S+)", text, re.MULTILINE)
+def configure_output_streams() -> None:
+    """Print news without raising UnicodeEncodeError.
+
+    A pipe on Windows uses the ANSI code page with a strict error handler.
+    UTF-8 keeps characters that page cannot encode. When a stream cannot
+    change encoding, keep its current encoding and escape the rest.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="backslashreplace")
+        except (AttributeError, OSError, ValueError):
+            try:
+                reconfigure(errors="backslashreplace")
+            except (AttributeError, OSError, ValueError):
+                continue
+
+
+def current_version(text: str) -> str:
+    match = re.search(r"^current_version:\s*(\S+)\s*$", text, re.MULTILINE)
     return match.group(1) if match else "unknown"
 
 
-def release_summary(system_root: Path, current: str) -> list[str]:
-    text = (system_root / "bSmart_Version.md").read_text(encoding="utf-8", errors="replace")
-    section = re.search(rf"^## {re.escape(current)}\s*$([\s\S]*?)(?=^## |\Z)", text, re.MULTILINE)
-    if not section:
+def version_sections(text: str) -> list[tuple[str, str]]:
+    """Return (version, body) pairs, newest first, as written in the file."""
+    matches = list(VERSION_HEADING.finditer(text))
+    sections: list[tuple[str, str]] = []
+    for index, match in enumerate(matches):
+        start = match.end()
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        sections.append((match.group(1), text[start:end]))
+    return sections
+
+
+def extract_news(section: str) -> str:
+    """Return the news paragraph, or empty when this version is not news."""
+    fence = re.search(r"```(?:yaml|yml)?\s*\n(.*?)```", section, re.DOTALL)
+    body = fence.group(1) if fence else section
+    match = re.search(r"^news:[ \t]*(.*)$", body, re.MULTILINE)
+    if not match:
+        return ""
+    indicator = match.group(1).strip()
+    if indicator in BLOCK_MARKERS:
+        collected: list[str] = []
+        for line in body[match.end() + 1 :].splitlines():
+            if line.startswith((" ", "\t")):
+                collected.append(line.strip())
+            elif line.strip() == "":
+                collected.append("")
+            else:
+                break
+        while collected and collected[-1] == "":
+            collected.pop()
+        paragraphs: list[str] = []
+        current: list[str] = []
+        for piece in collected:
+            if piece == "":
+                if current:
+                    paragraphs.append(" ".join(current))
+                    current = []
+            else:
+                current.append(piece)
+        if current:
+            paragraphs.append(" ".join(current))
+        return "\n\n".join(paragraphs).strip()
+    if len(indicator) >= 2 and indicator[0] == indicator[-1] and indicator[0] in {'"', "'"}:
+        indicator = indicator[1:-1]
+    return indicator.strip()
+
+
+def pending_news(text: str, previous: str, current: str) -> list[tuple[str, str]]:
+    """Flagged news after previous, through current, oldest first.
+
+    previous is excluded. A previous version that is not in the changelog is
+    treated as older than every listed version. A downgrade yields nothing.
+    """
+    parsed = version_sections(text)
+    names = [name for name, _section in parsed]
+    if current not in names:
         return []
-    scope = re.search(r"^scope:\s*$([\s\S]*?)(?=^safety:|^verification:|\Z)", section.group(1), re.MULTILINE)
-    if not scope:
+    current_index = names.index(current)
+    if previous and previous in names:
+        last_index = names.index(previous)
+        if last_index <= current_index:
+            return []
+        window = parsed[current_index:last_index]
+    elif previous:
+        window = parsed[current_index:]
+    else:
         return []
-    return [m.group(1).strip() for m in re.finditer(r"^\s*-\s+(.+)$", scope.group(1), re.MULTILINE)][:5]
+    items: list[tuple[str, str]] = []
+    for name, section in reversed(window):
+        message = extract_news(section)
+        if message:
+            items.append((name, message))
+    return items
+
+
+def format_news(items: list[tuple[str, str]]) -> str:
+    lines = [NEWS_HEADER, NEWS_INSTRUCTION]
+    for version, message in items:
+        lines.append(f"{version}:")
+        lines.append(message)
+    return "\n".join(lines) + "\n"
+
+
+def state_path(content_root: Path) -> Path:
+    return content_root / "State" / STATE_NAME
+
+
+def read_state(path: Path) -> tuple[str, list[str]]:
+    if not path.is_file():
+        return "", []
+    version = ""
+    seen: list[str] = []
+    in_seen = False
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.startswith("last_announced_version:"):
+            version = line.split(":", 1)[1].strip()
+            in_seen = False
+            continue
+        if line.startswith("seen_news:"):
+            in_seen = True
+            rest = line.split(":", 1)[1].strip()
+            if rest and rest != "[]":
+                seen.append(rest.lstrip("-").strip())
+            continue
+        if in_seen and line.strip().startswith("- "):
+            seen.append(line.strip()[2:].strip())
+            continue
+        if line.strip():
+            in_seen = False
+    return version, seen
+
+
+def write_state(path: Path, version: str, seen: list[str], fresh: bool) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [f"last_announced_version: {version}"]
+    if seen:
+        lines.append("seen_news:")
+        lines.extend(f"  - {item}" for item in seen)
+    else:
+        lines.append("seen_news: []")
+    if fresh:
+        lines.append("baseline: fresh")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def announce(system_root: Path, content_root: Path, quiet: bool) -> int:
+    version_file = system_root / "bSmart_Version.md"
+    if not version_file.is_file():
+        return 0
+    try:
+        text = version_file.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        print(f"bSmart release notice: could not read version file - {exc}", file=sys.stderr)
+        return 1
+    current = current_version(text)
+    if current == "unknown":
+        print("bSmart release notice: current_version is missing", file=sys.stderr)
+        return 1
+    path = state_path(content_root)
+    if not path.is_file():
+        try:
+            write_state(path, current, [], fresh=True)
+        except OSError as exc:
+            print(f"bSmart release notice: could not record notice state - {exc}", file=sys.stderr)
+            return 1
+        return 0
+    previous, seen = read_state(path)
+    if not previous:
+        try:
+            write_state(path, current, seen, fresh=True)
+        except OSError as exc:
+            print(f"bSmart release notice: could not record notice state - {exc}", file=sys.stderr)
+            return 1
+        return 0
+    if previous == current:
+        if not quiet:
+            print(f"bSmart release notice: {current} already announced")
+        return 0
+    items = [(version, message) for version, message in pending_news(text, previous, current) if version not in seen]
+    if items:
+        print(format_news(items), end="")
+    elif not quiet:
+        print(f"bSmart release notice: {current} has no user-facing news")
+    updated = list(seen)
+    for version, _message in items:
+        if version not in updated:
+            updated.append(version)
+    try:
+        write_state(path, current, updated, fresh=False)
+    except OSError as exc:
+        print(f"bSmart release notice: could not record notice state - {exc}", file=sys.stderr)
+        return 1
+    return 0
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Announce a bSmart-System version once per instance.")
+    configure_output_streams()
+    parser = argparse.ArgumentParser(description="Announce user-facing bSmart news once per instance.")
     parser.add_argument("--content-root", default=str(DEFAULT_CONTENT_ROOT))
     parser.add_argument("--system-root", default=str(SYSTEM_ROOT))
-    parser.add_argument("--quiet", action="store_true", help="suppress healthy/already-announced output")
+    parser.add_argument("--quiet", action="store_true", help="suppress healthy or already-announced output")
     args = parser.parse_args()
-
-    content = Path(args.content_root).expanduser()
-    system = Path(args.system_root).expanduser()
-    current = version(system)
-    state = content / "State" / "bsmart-release-notice.yaml"
-    previous = ""
-    if state.is_file():
-        for line in state.read_text(encoding="utf-8", errors="replace").splitlines():
-            if line.startswith("last_announced_version:"):
-                previous = line.split(":", 1)[1].strip()
-                break
-    if previous == current:
-        if not args.quiet:
-            print(f"bSmart release notice: {current} already announced")
-        return 0
-
-    print(f"bSmart update available: {current}")
-    for item in release_summary(system, current):
-        print(f"- {item}")
-    print(f"Review: {system / 'bSmart_Version.md'}")
-    try:
-        state.parent.mkdir(parents=True, exist_ok=True)
-        state.write_text(f"last_announced_version: {current}\n", encoding="utf-8")
-    except OSError as exc:
-        print(f"bSmart release notice: could not record notice state — {exc}")
-        return 1
-    return 0
+    return announce(Path(args.system_root).expanduser(), Path(args.content_root).expanduser(), args.quiet)
 
 
 if __name__ == "__main__":
