@@ -487,7 +487,7 @@ class ContentRootTests(unittest.TestCase):
             root = Path(directory)
             container = root / "container"
             (container / "bSmart-System" / "scripts").mkdir(parents=True)
-            checkout = root / "agents" / "GrokAdmin"
+            checkout = root / "agents" / "NestedAgent"
             system = checkout / "bSmart-System"
             system.mkdir(parents=True)
             self.assertEqual(module["workspace_for_system"](system, container), checkout)
@@ -513,13 +513,13 @@ class ContentRootTests(unittest.TestCase):
 
 
 class TwoInstanceTests(unittest.TestCase):
-    """A main instance and /agents/GrokAdmin must not share state files."""
+    """A main instance and /agents/NestedAgent must not share state files."""
 
     def setUp(self):
         self.root = Path(tempfile.mkdtemp(prefix="bsmart-two-instances-"))
         self.addCleanup(lambda: shutil.rmtree(self.root, ignore_errors=True))
         self.main = self.root / "workspace"
-        self.nested = self.main / "agents" / "GrokAdmin"
+        self.nested = self.main / "agents" / "NestedAgent"
         self.populate_main()
 
     def populate_main(self) -> None:
@@ -544,7 +544,7 @@ class TwoInstanceTests(unittest.TestCase):
         except OSError as exc:
             self.skipTest(f"symlinks are unavailable: {exc}")
         shutil.copy2(ROOT / "bStart.py", self.nested / "bStart.py")
-        self.write_agent(self.nested / "bSmart", "GrokAdmin", "Nested User")
+        self.write_agent(self.nested / "bSmart", "NestedAgent", "Nested User")
 
     def write_agent(self, content: Path, name: str, operator: str) -> None:
         content.mkdir(parents=True, exist_ok=True)
@@ -585,7 +585,7 @@ class TwoInstanceTests(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertIn("Agent: GrokAdmin", result.stdout)
+            self.assertIn("Agent: NestedAgent", result.stdout)
             self.assertNotIn("Agent: MainAgent", result.stdout)
             self.assertTrue((self.nested / "bSmart" / "State" / "bsmart-system-update.yaml").is_file(), result.stdout)
             self.assertTrue((self.nested / "bSmart" / "State" / "bsmart-release-notice.yaml").is_file(), result.stdout)
@@ -636,7 +636,7 @@ class TwoInstanceTests(unittest.TestCase):
         self.nested.mkdir(parents=True)
         shutil.copytree(self.main / "bSmart-System", self.nested / "bSmart-System")
         shutil.copy2(ROOT / "bStart.py", self.nested / "bStart.py")
-        self.write_agent(self.nested / "bSmart", "GrokAdmin", "Nested User")
+        self.write_agent(self.nested / "bSmart", "NestedAgent", "Nested User")
         result = subprocess.run(
             [sys.executable, str(self.nested / "bSmart-System" / "bStart.py")],
             cwd=self.nested,
@@ -647,7 +647,7 @@ class TwoInstanceTests(unittest.TestCase):
             check=False,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("Agent: GrokAdmin", result.stdout)
+        self.assertIn("Agent: NestedAgent", result.stdout)
         self.assertTrue((self.nested / "bSmart" / "State" / "bsmart-system-update.yaml").is_file())
         self.assert_main_untouched()
 

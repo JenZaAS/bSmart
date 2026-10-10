@@ -101,4 +101,4 @@ There is no local bSmart policy forbidding AI-authored GitHub comments, but comm
 - limited to technical feedback and evidence,
 - never include secrets or private corpus details.
 
-Recommended shared channel: the dedicated GitHub machine user [JenZaAI](https://github.com/JenZaAI), with per-container SSH keys for git and a narrow token/GitHub App permission for API actions such as PR comments.
+Recommended shared channel: the dedicated GitHub machine user `<machine-user>`, with per-container SSH keys for git and a narrow token/GitHub App permission for API actions such as PR comments.

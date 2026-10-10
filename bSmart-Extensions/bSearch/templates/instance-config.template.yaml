@@ -1,6 +1,6 @@
 bsearch:
   status: initialized
-  timezone: UTC
+  timezone: <operator-timezone>
   schedule:
     mode: desired_not_scheduled_yet
     human_label: daily at 03:00 in the operator timezone

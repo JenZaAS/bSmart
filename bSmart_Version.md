@@ -2,7 +2,7 @@
 
 ```yaml
 current_version: 0.1.45.3-draft
-updated: 2026-10-10 10:45 UTC
+updated: 2026-10-10 11:15 UTC
 status: draft
 ```
 
@@ -37,6 +37,9 @@ scope:
   - keep explicit caller-supplied values working when a baked-in site default changes to a generic one
   - add a tree check that matches SHA-256 hashes of lowercased tokens and does not store those tokens
   - share that digest list with the Hermes runtime lookup checks, and allow no remaining matches
+  - also match a windows path, a joined three-word name, and an agent name at the start of a CamelCase or digit compound
+  - keep common words off that list and hash a specific identifying form instead
+  - keep the dreaming cron expressions at 02:00 and 02:30 local, and say to convert them when the scheduler runs in UTC
   - record, in the protocol index, how a contributor adds a term by hash
 safety:
   - the check reports a path and a digest, not the matched text

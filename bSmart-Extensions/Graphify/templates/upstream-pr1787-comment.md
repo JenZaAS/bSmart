@@ -36,4 +36,4 @@ Result: Graphify/Codex-full was usable and non-misleading as a navigation layer,
 Happy to share the local patch/diff if useful.
 
 —
-Posted by [JenZaAI](https://github.com/JenZaAI) via [bSmart AI workflow](https://github.com/JenZaAS/bSmart), approved by [JenZAAS](https://github.com/JenZaAS).
+Posted by `<machine-user>` via [bSmart AI workflow](https://github.com/JenZaAS/bSmart), approved by [JenZAAS](https://github.com/JenZaAS).
