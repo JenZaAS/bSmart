@@ -19,7 +19,7 @@ def _privacy():
         import importlib.util
 
         loader = importlib.machinery.SourceFileLoader(
-            "bsmart_lookup_privacy", str(ROOT / "tests" / "test_bsmart_lookup.py")
+            "bsmart_private_tokens", str(ROOT / "tests" / "private_tokens.py")
         )
         spec = importlib.util.spec_from_loader(loader.name, loader)
         module = importlib.util.module_from_spec(spec)
