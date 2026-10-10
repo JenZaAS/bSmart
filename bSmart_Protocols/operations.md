@@ -214,7 +214,7 @@ bsmart_startup_checks:
     - before any startup helper call that may update or repair local state, use a plain-language action note naming the intended bSmart operation; do not rely on the framework's generic execute_code approval reason
     - on CIFS/SMB-backed workspaces executable bits may not be honored; run Python helpers with python3 <script> instead of executing the script path directly
     - the helper does not create the spec or change Compose/Dokploy unless an explicit configure subcommand is run
-    - bsmart-release-notice prints only versions flagged with a news paragraph; other changelog entries stay tracked and are not announced; a fresh install records the current version and prints nothing
+    - bsmart-release-notice prints only versions flagged with a news paragraph; other changelog entries stay tracked and are not announced; a missing notice file on an instance with Roles/, role-migration state, other State files, or a pre-pull version is an upgrade and still shows unseen news; only a fresh install records the current version and prints nothing
 ```
 
 ```yaml

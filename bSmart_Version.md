@@ -19,7 +19,7 @@ news: |
   Short paragraph for the user. No changelog bullets.
 ```
 
-`scripts/bsmart-release-notice` is the only announcer. `bsmart-startup-check`, `bsmart-instance-upgrade` (and therefore `bsmart-update`), and `bStart` call it. An instance is shown every flagged paragraph after its last-seen version, through the current version, oldest first, once. The record is `bSmart/State/bsmart-release-notice.yaml`. A missing record is a fresh install: the current version is stored and older news is not replayed.
+`scripts/bsmart-release-notice` is the only announcer. `bsmart-startup-check`, `bsmart-instance-upgrade` (and therefore `bsmart-update`), and `bStart` call it. An instance is shown every flagged paragraph after its last-seen version, through the current version, oldest first, once. The record is `bSmart/State/bsmart-release-notice.yaml`. That file is missing on a fresh install and also on an existing instance that has not run this notice yet. A fresh install has none of these signals: `Roles/`, legacy `bSmart_State.md`, `State/role-migration.json`, any other file under `bSmart/State/`, or a pre-pull `ORIG_HEAD` version in the system checkout. Only then is the current version stored with no historical news. Any of those signals means an upgrade: derive the last-seen version from a recorded version or from `ORIG_HEAD` when that is older, otherwise show every flagged news item through the current version once. An instance that already migrated before this notice existed still gets the 0.1.45 note once.
 
 ## 0.1.45.2-draft
 
@@ -28,7 +28,7 @@ release_type: user_facing_release_news
 scope:
   - mark a version as user-facing news with an optional news paragraph in this file; unflagged versions stay in the changelog only
   - show that news once, oldest first, for every flagged version after the instance's last announced version
-  - keep the record in bSmart/State/bsmart-release-notice.yaml and do not replay historical news on a fresh install
+  - keep the record in bSmart/State/bsmart-release-notice.yaml; a missing file on an existing instance is still an upgrade, and only a fresh install skips historical news
   - surface the news from bsmart-release-notice, which startup check, instance upgrade, and bStart call
   - tell the agent, in the startup instructions, to relay the news briefly in its next reply
   - add the 0.1.45-draft news paragraph for the move from roles to session projects
@@ -37,6 +37,7 @@ verification:
   - skipped versions accumulate every flagged news item in between, oldest first
   - a version without news is not announced
   - a fresh install records the current version and prints no historical news
+  - an instance with Roles/ or a role-migration marker and no notice file is shown the 0.1.45 news once
   - the same notice appears from the Hermes bSmart-System/bStart.py layout and the workspace-root bStart.py layout
   - python and node tests pass on Linux, Windows, and macOS for Python 3.11 and 3.12
 ```
@@ -72,10 +73,10 @@ news: |
   workstreams, selected for this session with /project. Each project keeps its
   own handoff, which you write when switching away. projects/INDEX.md lists the
   projects. /role now only points to /project. Existing roles were migrated into
-  project handoffs, and the old files were backed up under .bsmart-upgrade-backups.
-  Leftover fields are in bSmart/State/role-migration-review.md. To restore the old
-  files, run bsmart-instance-upgrade --restore-session-projects with that backup
-  directory.
+  project handoffs, and the old files were backed up under
+  .bsmart-upgrade-backups/<timestamp>/roles-migration/. Leftover fields are in
+  bSmart/State/role-migration-review.md. To restore the old files, run
+  bsmart-instance-upgrade --restore-session-projects with that backup directory.
 scope:
   - remove the instance-wide role selector; projects are the unit
   - keep the active project and workstream in the session, starting in Free mode, and never guess

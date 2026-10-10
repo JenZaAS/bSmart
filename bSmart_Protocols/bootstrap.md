@@ -62,7 +62,7 @@ new_agent_bootstrap_standard:
     - confirm bSmart startup summary and no GitHub SSH-key warning
   first_reply_rule: preserve bStart output and command-help lines; do not replace them with instance-specific greeting-only behavior
   release_news: if startup prints a bSmart news block, relay that news briefly in the first reply, once, and do not repeat it later
-  release_news_rule: only versions with a news paragraph in bSmart_Version.md are announced; the record is bSmart/State/bsmart-release-notice.yaml; a fresh install stores the current version and does not replay older news
+  release_news_rule: only versions with a news paragraph in bSmart_Version.md are announced; the record is bSmart/State/bsmart-release-notice.yaml; a missing record on an existing instance still shows unseen news; a fresh install stores the current version and does not replay older news
 ```
 
 ```yaml

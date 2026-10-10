@@ -21,10 +21,10 @@ ROLES_NEWS = (
     "workstreams, selected for this session with /project. Each project keeps its "
     "own handoff, which you write when switching away. projects/INDEX.md lists the "
     "projects. /role now only points to /project. Existing roles were migrated into "
-    "project handoffs, and the old files were backed up under .bsmart-upgrade-backups. "
-    "Leftover fields are in bSmart/State/role-migration-review.md. To restore the old "
-    "files, run bsmart-instance-upgrade --restore-session-projects with that backup "
-    "directory."
+    "project handoffs, and the old files were backed up under "
+    ".bsmart-upgrade-backups/<timestamp>/roles-migration/. Leftover fields are in "
+    "bSmart/State/role-migration-review.md. To restore the old files, run "
+    "bsmart-instance-upgrade --restore-session-projects with that backup directory."
 )
 
 FIXTURE = """# fixture
@@ -90,6 +90,28 @@ def write_state(content: Path, version: str, seen: list[str] | None = None) -> P
         lines.append("seen_news: []")
     state.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return state
+
+
+def run_text(command: list[str], env: dict[str, str] | None = None, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+    """Capture child output as UTF-8.
+
+    Windows otherwise encodes an em dash in cp1252 (byte 0x97). Decoding that
+    as strict UTF-8 drops stdout and hides the real assertion.
+    """
+    child = os.environ.copy() if env is None else env
+    child["PYTHONIOENCODING"] = "utf-8"
+    child["PYTHONUTF8"] = "1"
+    return subprocess.run(
+        command,
+        cwd=None if cwd is None else str(cwd),
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=child,
+        check=False,
+    )
 
 
 def tool_path() -> str:
@@ -408,30 +430,12 @@ class LayoutTests(unittest.TestCase):
             env["HOME"] = str(root / "home")
             env["PATH"] = tool_path()
             env.pop("HERMES_HOME", None)
-            first = subprocess.run(
-                command,
-                cwd=str(root),
-                text=True,
-                encoding="utf-8",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=env,
-                check=False,
-            )
+            first = run_text(command, env=env, cwd=root)
             self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
             self.assertIn("First note about roles.", first.stdout)
             self.assertIn("Second note about projects.", first.stdout)
             self.assertNotIn("NOT-NEWS-MIDDLE", first.stdout)
-            second = subprocess.run(
-                command,
-                cwd=str(root),
-                text=True,
-                encoding="utf-8",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=env,
-                check=False,
-            )
+            second = run_text(command, env=env, cwd=root)
             self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
             self.assertNotIn("First note about roles.", second.stdout)
             self.assertNotIn("Second note about projects.", second.stdout)
@@ -512,30 +516,146 @@ class UpgradePathTests(unittest.TestCase):
             env["HOME"] = str(root / "home")
             env["PATH"] = tool_path()
             env.pop("HERMES_HOME", None)
-            result = subprocess.run(
-                [sys.executable, str(UPDATE), "--workspace", str(workspace)],
-                text=True,
-                encoding="utf-8",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=env,
-                check=False,
-            )
+            result = run_text([sys.executable, str(UPDATE), "--workspace", str(workspace)], env=env)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn("bSmart update: complete", result.stdout)
             self.assertIn(ROLES_NEWS, result.stdout)
             self.assertNotIn("blocked", result.stdout)
-            again = subprocess.run(
-                [sys.executable, str(UPDATE), "--workspace", str(workspace)],
-                text=True,
-                encoding="utf-8",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=env,
-                check=False,
-            )
+            again = run_text([sys.executable, str(UPDATE), "--workspace", str(workspace)], env=env)
             self.assertEqual(again.returncode, 0, again.stdout + again.stderr)
             self.assertNotIn(ROLES_NEWS, again.stdout)
+
+
+class EstablishedInstanceTests(unittest.TestCase):
+    """A missing notice file is a fresh install only when nothing older is there."""
+
+    def setUp(self) -> None:
+        self.root = Path(tempfile.mkdtemp(prefix="bsmart-news-existing-"))
+        self.addCleanup(lambda: shutil.rmtree(self.root, ignore_errors=True))
+        self.system = self.root / "bSmart-System"
+        self.content = self.root / "bSmart"
+        self.system.mkdir()
+        self.content.mkdir()
+        shutil.copy2(ROOT / "bSmart_Version.md", self.system / "bSmart_Version.md")
+
+    def notice(self) -> subprocess.CompletedProcess[str]:
+        return run_text(
+            [
+                sys.executable,
+                str(NOTICE),
+                "--quiet",
+                "--content-root",
+                str(self.content),
+                "--system-root",
+                str(self.system),
+            ]
+        )
+
+    def test_roles_directory_shows_the_045_news_once(self) -> None:
+        roles = self.content / "Roles"
+        roles.mkdir()
+        (roles / "general_role.md").write_text("historical role\n", encoding="utf-8")
+        first = self.notice()
+        self.assertEqual(first.returncode, 0, first.stderr)
+        self.assertIn(ROLES_NEWS, first.stdout)
+        self.assertIn(".bsmart-upgrade-backups/<timestamp>/roles-migration/", first.stdout)
+        recorded = (self.content / "State" / "bsmart-release-notice.yaml").read_text(encoding="utf-8")
+        self.assertNotIn("baseline: fresh", recorded)
+        self.assertIn("0.1.45-draft", recorded)
+        second = self.notice()
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertEqual(second.stdout, "")
+        self.assertNotIn(ROLES_NEWS, second.stdout)
+
+    def test_migration_marker_shows_the_045_news_at_most_once(self) -> None:
+        marker = self.content / "State" / "role-migration.json"
+        marker.parent.mkdir(parents=True)
+        marker.write_text('{"marker": "session-projects-0.1.45", "backup": "/tmp/old"}\n', encoding="utf-8")
+        first = self.notice()
+        self.assertEqual(first.returncode, 0, first.stderr)
+        self.assertIn(ROLES_NEWS, first.stdout)
+        second = self.notice()
+        self.assertEqual(second.stdout, "")
+        self.assertNotIn(ROLES_NEWS, second.stdout)
+
+    def test_existing_state_file_is_an_upgrade(self) -> None:
+        state = self.content / "State"
+        state.mkdir()
+        (state / "bsmart-startup-check.yaml").write_text("last_checked_utc_date: 2026-01-01\n", encoding="utf-8")
+        result = self.notice()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(ROLES_NEWS, result.stdout)
+        recorded = (self.content / "State" / "bsmart-release-notice.yaml").read_text(encoding="utf-8")
+        self.assertNotIn("baseline: fresh", recorded)
+
+    def test_agent_profile_alone_stays_a_fresh_install(self) -> None:
+        (self.content / "bSmart_Agent.md").write_text("name: New\n", encoding="utf-8")
+        result = self.notice()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assertNotIn(ROLES_NEWS, result.stdout)
+        recorded = (self.content / "State" / "bsmart-release-notice.yaml").read_text(encoding="utf-8")
+        self.assertIn("baseline: fresh", recorded)
+
+    def test_pre_pull_orig_head_is_the_previous_version(self) -> None:
+        old = FIXTURE.replace("current_version: 0.1.4-draft", "current_version: 0.1.0-draft")
+        version = self.system / "bSmart_Version.md"
+        version.write_text(old, encoding="utf-8")
+        env = os.environ.copy()
+        env["GIT_AUTHOR_NAME"] = "Test"
+        env["GIT_AUTHOR_EMAIL"] = "test@example.com"
+        env["GIT_COMMITTER_NAME"] = "Test"
+        env["GIT_COMMITTER_EMAIL"] = "test@example.com"
+        subprocess.run(["git", "init", "-q"], cwd=self.system, check=True, env=env)
+        subprocess.run(["git", "add", "bSmart_Version.md"], cwd=self.system, check=True, env=env)
+        subprocess.run(["git", "commit", "-q", "-m", "old"], cwd=self.system, check=True, env=env)
+        old_head = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=self.system,
+            check=True,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+        ).stdout.strip()
+        version.write_text(FIXTURE, encoding="utf-8")
+        subprocess.run(["git", "add", "bSmart_Version.md"], cwd=self.system, check=True, env=env)
+        subprocess.run(["git", "commit", "-q", "-m", "new"], cwd=self.system, check=True, env=env)
+        subprocess.run(["git", "update-ref", "ORIG_HEAD", old_head], cwd=self.system, check=True, env=env)
+        result = run_text(
+            [
+                sys.executable,
+                str(NOTICE),
+                "--quiet",
+                "--content-root",
+                str(self.content),
+                "--system-root",
+                str(self.system),
+            ],
+            env=env,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("First note about roles.", result.stdout)
+        self.assertIn("Second note about projects.", result.stdout)
+        self.assertNotIn("NOT-NEWS-MIDDLE", result.stdout)
+        self.assertNotIn("baseline: fresh", (self.content / "State" / "bsmart-release-notice.yaml").read_text(encoding="utf-8"))
+
+    def test_instance_upgrade_with_roles_shows_045_news_once(self) -> None:
+        workspace = self.root / "workspace"
+        system = workspace / "bSmart-System"
+        (system / "bSmart_Templates").mkdir(parents=True)
+        (system / "bStart.py").write_text("new bStart\n", encoding="utf-8")
+        (system / "bSmart_Templates" / "AGENTS.md").write_text("hook\n", encoding="utf-8")
+        shutil.copy2(ROOT / "bSmart_Version.md", system / "bSmart_Version.md")
+        (workspace / "bSmart" / "Roles").mkdir(parents=True)
+        (workspace / "bSmart" / "Roles" / "general_role.md").write_text("historical role\n", encoding="utf-8")
+        command = [sys.executable, str(UPGRADE), "--workspace", str(workspace)]
+        first = run_text(command)
+        self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+        self.assertIn(ROLES_NEWS, first.stdout)
+        self.assertTrue((workspace / "bSmart" / "State" / "role-migration.json").is_file())
+        second = run_text(command)
+        self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
+        self.assertNotIn(ROLES_NEWS, second.stdout)
 
 
 if __name__ == "__main__":
