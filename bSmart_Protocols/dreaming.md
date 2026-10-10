@@ -39,13 +39,13 @@ Its goals are:
 modes:
   daily:
     default_frequency: daily
-    default_time_local: around 04:00 Norway time
+    default_time_local: around 02:00 in the operator's local timezone
     default_scope: current_day_or_recent_session_activity
     token_budget: low
     default_output: small dream note plus concise user delivery only if useful
   weekly:
     default_frequency: weekly
-    default_time_local: Friday night to Saturday around 04:00 Norway time
+    default_time_local: Saturday around 02:30 in the operator's local timezone
     default_scope: overall bSmart content quality
     token_budget: moderate_but_bounded
     focus:
@@ -107,7 +107,7 @@ If the status is missing or `ask_later`, ask:
 > Enable bSmart Dreaming for this AI instance?
 
 Recommended choices:
-1. `Yes — use defaults` — daily around 04:00 and weekly Friday night/Saturday around 04:00 Norway time.
+1. `Yes — use defaults` — daily around 02:00 and weekly Saturday around 02:30 in the operator's local timezone.
 2. `Customize schedule` — operator specifies daily and weekly frequency/time.
 3. `No — do not ask again` — record `status: disabled` in local `bSmart_Agent.md` or another instance-local config so `/new` does not keep prompting.
 4. `Later — ask again on future setup/startup`.
@@ -120,7 +120,7 @@ Record the choice in instance-local `bSmart_Agent.md` or another local bSmart st
 dreaming:
   status: enabled | disabled | ask_later
   owner_instance: <agent-name>
-  local_timezone: Europe/Oslo
+  local_timezone: <operator-timezone>
   content_scope:
     system_root_excluded: /workspace/bSmart-System
     instance_root: /workspace/bSmart
@@ -140,14 +140,14 @@ dreaming:
   daily:
     enabled: true
     schedule: "0 2 * * *"
-    intent: around 04:00 Norway time; UTC schedule may be approximate across DST
+    intent: around 02:00 in the operator's local timezone; convert the cron if the scheduler runs in UTC
     scope: recent_session_and_changed_bSmart_content
     token_budget: low
     auto_apply_clear_changes: true
   weekly:
     enabled: true
     schedule: "30 2 * * 6"
-    intent: Friday night/Saturday around 04:00 Norway time; UTC schedule may be approximate across DST
+    intent: Saturday around 02:30 in the operator's local timezone; convert the cron if the scheduler runs in UTC
     scope: overall_bSmart_content
     token_budget: moderate_bounded
     auto_apply_clear_changes: true

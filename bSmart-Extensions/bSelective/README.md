@@ -6,10 +6,10 @@ Core rule: **When interrogating MATLAB `.m` files, extract only as much context 
 
 ## Source ideas and influences
 
-- Operator idea/source: Erling's bSmart coding-feature design split: `bWorkflow` for reusable procedure memory, `bSelective` for selective context acquisition, and `bGauntlet`/future `bSwarm` for evidence-driven multi-agent review/orchestration.
+- Operator idea/source: the bSmart coding-feature design split: `bWorkflow` for reusable procedure memory, `bSelective` for selective context acquisition, and `bGauntlet`/future `bSwarm` for evidence-driven multi-agent review/orchestration.
 - External inspiration: Recursive Language Models (RLM), especially treating context as a variable and inspecting external data programmatically instead of loading everything into the prompt.
 - Design boundary: bSelective borrows the RLM selective/progressive context idea only. It does not borrow the Prime Agent application/harness layer. The v1 is deliberately narrower: deterministic MATLAB `.m` retrieval with explicit whole-file fallback.
-- Project source note: see `/projects/bCoding-features/workdocs/bSelective-matlab-v1-progress-2026-08-21.md`.
+- Project source note: keep the progress note in that project's workdocs.
 
 ## Commands
 

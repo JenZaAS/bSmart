@@ -37,3 +37,26 @@ protocol_index:
 - `bSmart.md` owns startup routing and the order in which compact metadata is loaded.
 - `bSmart_Invariants.md` owns absolute cross-runtime rules and overrides conflicting lower-level guidance.
 - Instance and project files own local facts and preferences; they must not duplicate generic procedures.
+
+## Public wording
+
+Reusable files in this repository are public. Write instance names, people, host names, job ids, timezones, and host paths as placeholders such as `<agent-name>`, `<operator>`, `<operator-timezone>`, `<host-workspace-path>`, `<machine-user>`, and `<job-id>`. GitHub organization URLs and the license holder stay as published.
+
+`tests/private_tokens.py` holds the digest list. `tests/test_public_tree_privacy.py` hashes candidates from the tree and fails when a digest is on that list. There is no file exemption. The Hermes runtime checks use the same list.
+
+The digests hide the terms from casual reading. A short word can still be guessed from its hash. This is an anti-regression guard, not a secret.
+
+To block another term, hash the lowercased form locally and add only the digest:
+
+```bash
+python -c "import hashlib; print(hashlib.sha256('the-token'.lower().encode()).hexdigest())"
+```
+
+Hash the form that would appear in a file:
+
+- one word, or a hyphenated or underscored name with the marks removed
+- two or three adjacent words joined
+- an agent name at the start of a CamelCase word or a letter-and-digit word, such as a name with an extra role suffix or a trailing digit
+- a path prefix such as `/opt/example`, after backslashes are treated as slashes and a drive letter is removed
+
+Leave common words off the list. Hash a specific identifying form instead, such as a container name or a `region/city` timezone. Do not paste the token into the test, the commit message, or this document.

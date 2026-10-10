@@ -52,7 +52,7 @@ values:
   agents:
     defaults:
       - Admin
-      - Digtech
+      - Specialist
     prompt: confirm or change both display names
     validation:
       - unique
@@ -72,10 +72,10 @@ After confirmation, derive variables and reuse them throughout the workflow:
 ```text
 AGENT_ROOT
 ADMIN_NAME / ADMIN_WORKSPACE
-DIGTECH_NAME / DIGTECH_WORKSPACE
+SPECIALIST_NAME / SPECIALIST_WORKSPACE
 ```
 
-Do not repeat hardcoded `Admin`, `Digtech`, or a drive letter after this point.
+Do not repeat hardcoded `Admin`, `Specialist`, or a drive letter after this point.
 
 ## Fixed workspace layout
 
@@ -168,9 +168,9 @@ Before any live container recreation, capture the existing configuration and obt
 
 Create three shortcuts or launchers using the confirmed names:
 
-- `<Super Admin name>` — host mode, outside Docker;
+- `<Host admin name>` — host mode, outside Docker;
 - `<Admin name>` — Docker agent;
-- `<Digtech name>` — Docker agent.
+- `<Specialist name>` — Docker agent.
 
 Each launcher must set or select the correct:
 
@@ -194,9 +194,9 @@ Admin example:
 
 > You are my system administrator on this computer. You help me manage this computer, its services, and other agents. Protect my personal information, credentials, tokens, passwords, private keys, session data, and company information. Inspect before changing anything, explain risky actions before performing them, prefer reversible changes and backups, and ask for my approval before destructive operations, broad permission changes, external publication, or changes to running services. Communicate concisely and clearly. Do not expose secrets in chat, files, logs, commits, or reports.
 
-Digtech example:
+Specialist example:
 
-> You are my personal work assistant and an expert in geophysics, geology, petrophysics, seismic interpretation, and burial history. Help me analyze, organize, research, and develop technical work while clearly distinguishing facts, interpretations, assumptions, and uncertainty. Protect my personal information, credentials, tokens, private keys, and company information as confidential. Do not expose or publish confidential data without my explicit approval. Inspect before changing files, preserve source material, prefer reversible changes, and ask before destructive or externally visible actions. Communicate concisely and clearly.
+> You are my personal work assistant for the technical domain I assign. Help me analyze, organize, research, and develop technical work while clearly distinguishing facts, interpretations, assumptions, and uncertainty. Protect my personal information, credentials, tokens, private keys, and company information as confidential. Do not expose or publish confidential data without my explicit approval. Inspect before changing files, preserve source material, prefer reversible changes, and ask before destructive or externally visible actions. Communicate concisely and clearly.
 
 The operator may provide their own identity, role, goals, and communication preferences immediately or later. The operator may postpone bSmart Dreaming, extensions, project storage choices, and instance Git to the separate bSmart onboarding flow.
 
@@ -220,7 +220,7 @@ Do not report completion until applicable checks pass separately for each agent:
 ```yaml
 acceptance:
   host:
-    - Super Admin launches outside Docker
+    - the host admin agent launches outside Docker
     - host working directory is correct
     - host launcher uses the intended name
   docker:

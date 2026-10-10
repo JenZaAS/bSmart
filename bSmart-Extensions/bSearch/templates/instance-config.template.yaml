@@ -1,9 +1,10 @@
 bsearch:
   status: initialized
-  timezone: Europe/Oslo
+  # The operator must replace <operator-timezone> with an IANA zone, falling back to UTC if unset.
+  timezone: <operator-timezone>
   schedule:
     mode: desired_not_scheduled_yet
-    human_label: daily at 03:00 Norwegian time
+    human_label: daily at 03:00 in the operator timezone
     cron_candidate: "0 3 * * *"
   delivery:
     candidate_pool_size: 10

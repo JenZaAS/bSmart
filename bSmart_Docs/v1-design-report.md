@@ -100,7 +100,7 @@ setup_default: yes
 ```yaml
 operator_needed:
   - GitHub repository owner/name for the new bSmart repo
-  - whether to create repo via GitHub UI or let SschwAdmin prepare commands
-  - whether to archive/delete the old Hermatrix repo or just ignore it
+  - whether to create the repo via the GitHub UI or let the admin instance prepare commands
+  - whether to archive or delete the previous repository, or leave it unused
   - when to switch live /workspace/HERMES.md from legacy /workspace/bSmart.md to /workspace/bSmart-System/bSmart.md
 ```

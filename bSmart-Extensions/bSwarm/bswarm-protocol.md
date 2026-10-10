@@ -1,11 +1,11 @@
 # bSwarm chat protocol v1
 
-Use this protocol when Erling asks to run a bSwarm before a dedicated command handler exists.
+Use this protocol when the operator asks to run a bSwarm before a dedicated command handler exists.
 
 ## 1. Draft concise run spec
 
 Show this quick-glance summary before launching agents. Prefer the compact
-workflow keyword interface unless Erling asks for internal branch/stage detail:
+workflow keyword interface unless the operator asks for internal branch/stage detail:
 
 ```text
 ordinary
@@ -253,7 +253,7 @@ audit:
 
 ## 4. Defaults
 
-Use these unless Erling changes them:
+Use these unless the operator changes them:
 
 - simple spec/review work: `mode: unsupervised`, `max_depth: 1`, `max_total_child_agents: 3`;
 - high-assurance work: `mode: supervised`, `max_depth: 2`, `max_total_child_agents: 4`;

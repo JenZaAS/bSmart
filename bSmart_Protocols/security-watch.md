@@ -8,9 +8,9 @@ It is designed to avoid every AI container repeating the same scan. By default, 
 
 ## Default ownership
 
-For Erling's VPS setup:
+For a hosted VPS:
 
-- Default owner: `SschwAdmin`
+- Default owner: the designated admin instance
 - Default cadence: weekly lightweight script-only scan
 - Default delivery: operator/home chat only when findings or check failures occur
 - Default posture: read-only inspection; no deploys, restarts, deletes, chmod/chown, secret disclosure, or host mutation
@@ -26,7 +26,7 @@ During bSmart setup or re-setup, ask:
 Recommended choices:
 
 1. `No — another admin instance owns it` default for ordinary worker/personal containers.
-2. `Yes — this is the designated admin/security instance` for SschwAdmin-style containers.
+2. `Yes — this is the designated admin/security instance` for the admin container.
 3. `Limited local-only watch` for isolated containers that should check only their own workspace/state.
 
 Record the choice in the instance-local `bSmart_Agent.md`; do not hardcode all containers to run the job.

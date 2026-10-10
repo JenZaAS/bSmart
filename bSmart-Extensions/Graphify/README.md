@@ -19,7 +19,7 @@ It includes the evaluation harness and now also the missing runtime-readiness/se
 
 This is not a standalone Graphify runtime. A real Graphify phase requires an installed `graphify` CLI from `graphifyy`, a Graphify PR/local build, or another approved Graphify backend setup.
 
-## Current conclusion from SschwAdmin docs-corpus test
+## Current conclusion from an admin-instance docs-corpus test
 
 - Baseline current: 5 sequential isolated workers, 3,154,518 total tokens, 2.63m average worker time.
 - Graphify Codex-full current: 5 sequential isolated workers, 3,954,159 total tokens, 2.81m average worker time.
@@ -62,7 +62,7 @@ A bSmart setup helper may copy or sync this folder to:
 /workspace/bSmart-Extensions/Graphify
 ```
 
-Other AI containers can then use the prompts/scripts here to run controlled comparisons without inheriting stale conclusions from SschwAdmin.
+Other AI containers can then use the prompts/scripts here to run controlled comparisons without inheriting stale conclusions from one instance's run.
 
 ## Protocol requirements
 
@@ -95,10 +95,10 @@ Core rules:
 
 There is no local bSmart policy forbidding AI-authored GitHub comments, but comments should be:
 
-- explicitly authorized by Erling,
+- explicitly authorized by the operator,
 - transparent that they come from an AI/helper workflow if appropriate,
 - posted through a configured machine user or GitHub App,
 - limited to technical feedback and evidence,
 - never include secrets or private corpus details.
 
-Recommended shared channel: the dedicated GitHub machine user [JenZaAI](https://github.com/JenZaAI), with per-container SSH keys for git and a narrow token/GitHub App permission for API actions such as PR comments.
+Recommended shared channel: the dedicated GitHub machine user `<machine-user>`, with per-container SSH keys for git and a narrow token/GitHub App permission for API actions such as PR comments.

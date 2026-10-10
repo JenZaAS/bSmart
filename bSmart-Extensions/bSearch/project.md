@@ -3,7 +3,7 @@
 ```yaml
 project_name: bSearch extension
 status: packaged_in_bsmart_system
-owner: Erling H Jensen / SschwAdmin
+owner: operator
 objective: Package bSearch as an optional bundled bSmart extension that can be installed into an instance and later implemented as a scheduled AI knowledge-search workflow.
 agent_focus: bSmart extension packaging, initialization design, scoring design, and safe Hermes cron-based automation planning.
 created_utc: 2026-07-14

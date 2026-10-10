@@ -50,7 +50,7 @@ Expected artifacts are normally under:
 
 ## Full semantic extraction with Codex CLI
 
-The SschwAdmin test that processed Markdown/docs used a local Graphify PR build with a `codex-cli` backend and a sanitized child-process environment.
+The docs-corpus test that processed Markdown used a local Graphify PR build with a `codex-cli` backend and a sanitized child-process environment.
 
 Important: do **not** assume the released `graphifyy` package supports this exact path. Verify first:
 

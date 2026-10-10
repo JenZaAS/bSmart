@@ -109,7 +109,7 @@ branches:
 1. Read `bswarm-protocol.md`.
 2. Create a short run spec from `templates/run-spec.yaml`.
 3. Run preflight QC before launch. For `architect`, `bSelective architect`, `cascade`, `cascade critic`, and `cascade critic audit`, verify the active adapter can do true nested dispatch when the architect is expected to spawn coders; under Hermes this means `delegation.orchestrator_enabled=true`, `delegation.max_spawn_depth >= 2`, and `delegation.child_timeout_seconds` large enough for the planned run, commonly `1200` seconds.
-4. Show the concise summary and any blocking settings warning to Erling before launch.
+4. Show the concise summary and any blocking settings warning to the operator before launch.
 5. For editable evaluation runs, duplicate the original target into per-branch files under the run folder.
 6. Keep prior generated-run archive paths out of worker prompts unless explicitly comparing against old generated code.
 7. Run the selected bSwarm through chat/delegation.
@@ -126,6 +126,6 @@ record that it is not true nested architect dispatch.
 
 ## Source ideas and influences
 
-- Operator idea/source: Erling's bSmart coding-feature sequence: `bWorkflow`, `bSelective`, then `bSwarm`.
+- Operator idea/source: the bSmart coding-feature sequence: `bWorkflow`, `bSelective`, then `bSwarm`.
 - External inspiration: RLM / Prime Intellect Prime Agent concepts such as context-as-variable, programmatic inspection, specialist sub-agents, and evidence-oriented harnesses.
 - Boundary: bSwarm borrows coordination and context-management ideas; it is not a Prime Agent clone and does not imply hidden continual self-improvement.

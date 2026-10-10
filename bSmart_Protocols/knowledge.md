@@ -41,11 +41,11 @@ create bKnowledge <source>
 Examples:
 
 ```text
-create bKnowledge DIG_Calibrate
-create bKnowledge DIG_Calibrate.m
+create bKnowledge calibrate_sensor
+create bKnowledge calibrate_sensor.m
 create bKnowledge DTM_ModelTemplates
 create bKnowledge https://example.com/design-document
-create bKnowledge https://github.com/org/repo/blob/main/src/DIG_Calibrate.m
+create bKnowledge https://github.com/org/repo/blob/main/src/calibrate_sensor.m
 ```
 
 The intent creates or refreshes one concise knowledge/navigation Markdown item. It does not modify a project source file or remote source.
@@ -106,7 +106,7 @@ Create the file under:
 Use a lowercase hyphenated slug based on the source basename, retaining a meaningful MATLAB class/function identity. Examples:
 
 ```text
-DIG_Calibrate.m        -> dig-calibrate.md
+calibrate_sensor.m     -> calibrate-sensor.md
 DTM_ModelTemplates.m   -> dtm-modeltemplates.md
 ```
 
