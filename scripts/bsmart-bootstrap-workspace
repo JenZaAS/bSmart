@@ -59,17 +59,25 @@ def write_if_missing(path: Path, content: str) -> bool:
     return True
 
 
+def apply_owner(path: Path, uid: int | None, gid: int | None) -> None:
+    if uid is None and gid is None:
+        return
+    chown = getattr(os, "chown", None)
+    if chown is None:
+        return
+    try:
+        chown(path, -1 if uid is None else uid, -1 if gid is None else gid)
+    except (PermissionError, NotImplementedError, OSError):
+        pass
+
+
 def install_dir(path: Path, uid: int | None, gid: int | None, mode: int = 0o775) -> None:
     path.mkdir(parents=True, exist_ok=True)
     try:
         path.chmod(mode)
-    except PermissionError:
+    except (PermissionError, NotImplementedError, OSError):
         pass
-    if uid is not None or gid is not None:
-        try:
-            os.chown(path, -1 if uid is None else uid, -1 if gid is None else gid)
-        except PermissionError:
-            pass
+    apply_owner(path, uid, gid)
 
 
 def chown_tree(path: Path, uid: int | None, gid: int | None) -> None:
@@ -77,15 +85,8 @@ def chown_tree(path: Path, uid: int | None, gid: int | None) -> None:
         return
     for root, dirs, files in os.walk(path):
         for name in [*dirs, *files]:
-            p = Path(root) / name
-            try:
-                os.chown(p, -1 if uid is None else uid, -1 if gid is None else gid)
-            except PermissionError:
-                pass
-    try:
-        os.chown(path, -1 if uid is None else uid, -1 if gid is None else gid)
-    except PermissionError:
-        pass
+            apply_owner(Path(root) / name, uid, gid)
+    apply_owner(path, uid, gid)
 
 
 def ensure_system_repo(workspace: Path, repo_url: str) -> str:
