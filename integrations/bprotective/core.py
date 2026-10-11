@@ -230,7 +230,7 @@ class Decision:
             detail = f" {self.reason}." if self.reason and self.reason != "policy state is unreadable" else ""
             return f"bProtective blocked the command because its policy state is unreadable.{detail}"
         if self.rule_key == "scan-limit":
-            return f"bProtective blocked this command because it hit a scan limit: {self.reason}."
+            return f"bProtective requires operator approval because this command hit a scan limit: {self.reason}."
         if self.rule_key == "config-invalid":
             return "bProtective blocked the command because its instance config is unreadable."
         if self.action == "block":
@@ -639,7 +639,11 @@ def load_config() -> tuple[Config, str | None]:
 
 
 class ScanLimit(Exception):
-    """The command is too large or took too long to scan. Callers fail closed."""
+    """The command is too large or took too long to scan. Callers ask for approval."""
+
+
+def _scan_limit(reason: str) -> Decision:
+    return Decision("escalate", "scan-limit", reason)
 
 
 def _check_budget(deadline: float | None, tokens: list[str]) -> None:
@@ -1079,18 +1083,26 @@ def _path_key(path: Path) -> str:
 
 
 def _guard_path_keys() -> set[str]:
-    """Absolute paths of the state file, its marker, the armed record, and State/."""
-    keys = {
+    """Absolute paths of the state file, its marker, and the armed record.
+
+    The content-root State directory is not one of these. Files inside it are
+    ordinary instance files. Removing or moving that directory itself is a
+    separate check.
+    """
+    return {
         _path_key(state_path()),
         _path_key(_armed_path(state_path())),
         _path_key(armed_record_path()),
         _path_key(Path.home() / ".bprotective"),
         _path_key(Path.home() / ".bprotective" / "armed.json"),
     }
+
+
+def _state_directory_keys() -> set[str]:
     content = content_root()
-    if content is not None:
-        keys.add(_path_key(content / "State"))
-    return keys
+    if content is None:
+        return set()
+    return {_path_key(content / "State")}
 
 
 def _command_tokens(surface: str) -> list[str]:
@@ -1125,12 +1137,6 @@ def _token_is_guard(token: str, keys: set[str]) -> bool:
     base = lower.rstrip("/").rsplit("/", 1)[-1]
     if base in _STATE_FILE_NAMES:
         return True
-    parts = [part for part in slash.split("/") if part not in {"", "."}]
-    for index in range(len(parts) - 1):
-        if parts[index] == "bSmart" and parts[index + 1] == "State":
-            return True
-    if slash in {"State", "./State"} or slash.startswith("State/") or slash.startswith("./State/"):
-        return True
     try:
         candidate = _path_key(Path(raw))
     except OSError:
@@ -1151,19 +1157,168 @@ def _mentions_guard_path(surface: str, keys: set[str]) -> bool:
     return any(_token_is_guard(token, keys) for token in _command_tokens(surface))
 
 
+def _bare_token(token: str) -> str:
+    return token.strip().strip("'\"")
+
+
+def _is_state_directory_operand(token: str, keys: set[str]) -> bool:
+    """True for the State directory itself, not for a file inside it.
+
+    Relative names are case-sensitive, so ``src/state`` is a different path.
+    An absolute path matches only the content-root State directory.
+    """
+    raw = _bare_token(token)
+    if not raw or raw in {".", ".."}:
+        return False
+    normalized = os.path.normpath(raw.replace("\\", "/")).replace("\\", "/")
+    if normalized.startswith("./"):
+        normalized = normalized[2:]
+    if normalized in {"State", "bSmart/State"}:
+        return True
+    try:
+        candidate = _path_key(Path(raw))
+    except OSError:
+        return False
+    return candidate in keys
+
+
+def _rm_targets_state_dir(argv: list[str], keys: set[str]) -> bool:
+    if not argv or argv[0] != "rm":
+        return False
+    recursive = False
+    operands: list[str] = []
+    ended = False
+    for arg in argv[1:]:
+        bare = _bare_token(arg)
+        if ended:
+            operands.append(bare)
+            continue
+        if bare == "--":
+            ended = True
+            continue
+        if bare in {"--recursive", "--force"} or bare.startswith("--recursive=") or bare.startswith("--force="):
+            if bare.startswith("--recursive"):
+                recursive = True
+            continue
+        if bare.startswith("--"):
+            continue
+        if bare.startswith("-") and len(bare) > 1:
+            if "r" in bare[1:].lower():
+                recursive = True
+            continue
+        operands.append(bare)
+    if not recursive:
+        return False
+    return any(_is_state_directory_operand(item, keys) for item in operands)
+
+
+def _move_targets_state_dir(argv: list[str], keys: set[str]) -> bool:
+    if not argv or argv[0] not in {"mv", "move", "move-item"}:
+        return False
+    sources: list[str] = []
+    used_target = False
+    index = 1
+    while index < len(argv):
+        arg = argv[index]
+        bare = _bare_token(arg)
+        key = bare.lower().split("=", 1)[0]
+        if bare == "--":
+            index += 1
+            continue
+        if key in {"-t", "--target-directory"}:
+            used_target = True
+            if "=" not in bare:
+                index += 1
+            index += 1
+            continue
+        if key in {"-destination", "-newname"}:
+            if "=" not in bare:
+                index += 1
+            index += 1
+            continue
+        if key in {"-path", "-literalpath"}:
+            if "=" in bare:
+                sources.append(_bare_token(bare.split("=", 1)[1]))
+            elif index + 1 < len(argv):
+                sources.append(_bare_token(argv[index + 1]))
+                index += 1
+            index += 1
+            continue
+        if bare.startswith("-"):
+            index += 1
+            continue
+        sources.append(bare)
+        index += 1
+    if not used_target and len(sources) > 1:
+        sources = sources[:-1]
+    return any(_is_state_directory_operand(item, keys) for item in sources)
+
+
+def _remove_item_targets_state_dir(argv: list[str], keys: set[str]) -> bool:
+    if not argv or argv[0] not in {"remove-item", "rmdir", "rd"}:
+        return False
+    if argv[0] == "remove-item":
+        recursive = False
+        for arg in argv[1:]:
+            if _bare_token(arg).lower().split("=", 1)[0] in {"-recurse", "-r"}:
+                recursive = True
+        if not recursive:
+            return False
+    operands: list[str] = []
+    index = 1
+    while index < len(argv):
+        bare = _bare_token(argv[index])
+        key = bare.lower().split("=", 1)[0]
+        if key in {"-path", "-literalpath"}:
+            if "=" in bare:
+                operands.append(_bare_token(bare.split("=", 1)[1]))
+            elif index + 1 < len(argv):
+                operands.append(_bare_token(argv[index + 1]))
+                index += 1
+            index += 1
+            continue
+        if bare.startswith("-") or bare.startswith("/"):
+            index += 1
+            continue
+        operands.append(bare)
+        index += 1
+    return any(_is_state_directory_operand(item, keys) for item in operands)
+
+
+def _removes_or_moves_state_dir(command: str) -> bool:
+    """True when a command recursively removes or moves the State directory itself."""
+    keys = _state_directory_keys()
+    for statement in _split_statements(command):
+        words = _unwrap_sudo(statement.split())
+        if not words:
+            continue
+        if words[0] == "git" and len(words) > 1 and words[1] == "mv":
+            words = ["mv", *words[2:]]
+        if (
+            _rm_targets_state_dir(words, keys)
+            or _move_targets_state_dir(words, keys)
+            or _remove_item_targets_state_dir(words, keys)
+        ):
+            return True
+    return False
+
+
 def _channel_block(command: str) -> Decision | None:
     """Block shell control of the guard and writes that name its real files.
 
-    Quoted text is removed before the path check, so a commit message that
-    says "state" is not a path. The match is the state file, its ``.armed``
-    marker, ``~/.bprotective``, and the content-root ``State`` folder. It is
-    not every path piece named state, and it is not the ``integrations/bprotective``
-    source tree. This is a heuristic for accidental commands. The armed record
-    outside State is what fails closed after a tamper the heuristic missed.
+    Quoted text is removed before the general path check, so a commit message
+    that says "state" is not a path. The file match is the state file, its
+    ``.armed`` marker, and ``~/.bprotective``. A file inside the content-root
+    State directory is not a match. Recursive removal or a move of that
+    directory itself is blocked, for the relative name and the absolute path.
+    This is a heuristic for accidental commands. The armed record outside
+    State is what fails closed after a tamper the heuristic missed.
     """
     surface = _strip_quotes(command)
     if _is_control_command(surface):
         return Decision("block", "guard-control", "changing bProtective from a shell command")
+    if _removes_or_moves_state_dir(command):
+        return Decision("block", "state-dir", "recursive removal or move of the State directory")
     names_file = "bprotective.json" in command.lower()
     if not names_file and not _might_name_guard(surface):
         return None
@@ -1295,14 +1450,14 @@ def policy_decision(
     if _depth > 3:
         return Decision("block", "nested-shell", "nested shell command was not expanded")
     if len(command) > _MAX_COMMAND_CHARS:
-        return Decision("block", "scan-limit", "command exceeds the scan size limit")
+        return _scan_limit("command exceeds the scan size limit")
     deadline = _deadline if _deadline is not None else time.monotonic() + _MAX_SCAN_SECONDS
     if time.monotonic() >= deadline:
-        return Decision("block", "scan-limit", "command scan exceeded the time limit")
+        return _scan_limit("command scan exceeded the time limit")
     try:
         tokens = _tokenize(command, deadline)
     except ScanLimit as exc:
-        return Decision("block", "scan-limit", str(exc))
+        return _scan_limit(str(exc))
     active = config or EMPTY_CONFIG
     structured = _structured_decision(command, tokens, _skip_channel=_skip_channel)
     if structured is not None and structured.action == "block":
@@ -1365,12 +1520,23 @@ def guard(command: str, *, via_hook: bool = False) -> Decision:
     and state-file changes even while protection is off, so the agent cannot
     approve or disable itself through the shell.
     """
-    if len(command) > _MAX_COMMAND_CHARS:
-        return Decision("block", "scan-limit", "command exceeds the scan size limit")
     state = read_state()
     if state.get("error"):
         return Decision("block", "state-invalid", str(state["error"]))
     enabled = bool(state.get("enabled"))
+    # An oversized command is not scanned. While off, that is an allow. While
+    # on, it asks for approval instead of refusing a command the scan cannot
+    # finish. Codex treats that ask like any other escalation.
+    if len(command) > _MAX_COMMAND_CHARS:
+        if not enabled:
+            return Decision("allow", "disabled", "bProtective is off")
+        decision = _scan_limit("command exceeds the scan size limit")
+        allowed = state.get("allow_once")
+        if isinstance(allowed, str) and allowed == command.strip():
+            state["allow_once"] = None
+            write_state(state)
+            return Decision("allow", "allow-once", "operator approved this command once")
+        return decision
     # One channel check per call. via_hook still blocks guard control while off.
     # A direct check while off does not, so `bprotective check` stays quiet.
     if via_hook or enabled:

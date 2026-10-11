@@ -2,7 +2,7 @@
 
 ```yaml
 current_version: 0.1.46-draft
-updated: 2026-10-11 08:34 UTC
+updated: 2026-10-11 08:45 UTC
 status: draft
 ```
 
@@ -31,6 +31,10 @@ Only interactive `bStart` marks news seen. It runs the notice before its update 
 
 ```yaml
 release_type: harness_independent_bprotective
+news: |
+  bProtective can check shell commands before they run. It stays off until you
+  turn it on. From your own terminal, run bprotective on, bprotective off, or
+  bprotective recover, then confirm with bprotective yes.
 scope:
   - move bProtective policy, on/off state, and confirmation gating into one dependency-free Python core
   - cover POSIX shells and Windows PowerShell/cmd, including protected instance paths
@@ -49,14 +53,14 @@ scope:
   - deny Codex blocks without an agent-visible token, and let escalations reach PermissionRequest
   - fail closed when the core cannot load, with Cursor failClosed and BPROTECTIVE_CORE
   - grant Windows state-file ACLs to a SID or DOMAIN\\user, and use Codex commandWindows
-  - stop a single & from hanging the tokenizer, and fail closed on a scan size or time limit
+  - stop a single & from hanging the tokenizer, and ask for approval when a command hits the scan size or time limit while protection is on
   - keep an armed record outside State, and fail closed when that record disagrees with an off or missing state file unless the operator confirmed off
   - add bprotective recover for a missing state file, and require the operator to run on and yes in their own terminal
   - deny Claude Write/Edit/MultiEdit, Cursor Write/Delete, and Codex apply_patch on the state and armed-record paths
   - start Cursor and Claude hooks from run_hook.cmd so Windows does not need sh
   - block wrapped rm, bash -lc, xargs rm of a root, python shutil.rmtree of a root, chmod -R 000 /, chown -R of /, and git push of +main or --delete main
   - state plainly that bProtective is for accidental catastrophic commands, not a deliberately adversarial agent
-  - match guard paths only as the state file, its .armed marker, ~/.bprotective/armed.json, and the content-root State folder, so ordinary state paths stay allowed while protection is off
+  - match the state file, its .armed marker, and the armed record for relative and absolute paths, and block only rm -rf or mv of the State directory itself, so files inside State stay allowed
   - keep the command scan linear and cap it near 16k characters, and run the hook channel check once per call
   - block rm, mv, and redirects of ~/.bprotective, interpreter one-liners that rm -rf a root, and recursive deletes of /home/<user> and C:\Users\<user>
   - warn on stdout or stderr when a hook launcher cannot find Python, and check the Windows launcher out as CRLF so cmd.exe can find its labels

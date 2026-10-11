@@ -399,8 +399,12 @@ class CorePolicyTests(unittest.TestCase):
             "git checkout -- bprotective.json": "block",
             "python3 -c \"import os; os.remove('bprotective.json')\"": "block",
             "rm -rf State": "block",
-            "rm -f State/bprot*": "block",
-            "find State -name '*.json' -delete": "block",
+            "mv State backup": "block",
+            "git add State/instance-git.yaml": "allow",
+            "cp x State/container-storage.yaml": "allow",
+            "rm State/old.yaml": "allow",
+            "rm -f State/bprot*": "allow",
+            "find State -name '*.json' -delete": "allow",
             "bprotective recover": "block",
             "perl -e 'system(\"rm -rf /\")'": "block",
             "perl -e 'print 1'": "allow",
@@ -435,11 +439,13 @@ class CorePolicyTests(unittest.TestCase):
         self.assertLess(time.monotonic() - started, 1.0)
         huge = "a " * (self.core._MAX_COMMAND_CHARS // 2 + 10)
         limited = self.guard(huge)
-        self.assertEqual(limited.action, "block")
+        self.assertEqual(limited.action, "escalate")
         self.assertEqual(limited.rule_key, "scan-limit")
         self.assertIn("scan limit", limited.message)
+        self.assertEqual(self.core.to_hermes(limited), {"action": "approve", "rule_key": "scan-limit", "message": limited.message})
         with patch.object(self.core, "_MAX_SCAN_SECONDS", -1):
             timed = self.guard("echo hi")
+        self.assertEqual(timed.action, "escalate")
         self.assertEqual(timed.rule_key, "scan-limit")
         self.assertIn("time limit", timed.message)
         calls = {"n": 0}
@@ -452,6 +458,51 @@ class CorePolicyTests(unittest.TestCase):
         with patch.object(self.core, "_channel_block", _count):
             self.guard("git status", via_hook=True)
         self.assertEqual(calls["n"], 1)
+
+    def test_state_directory_files_are_allowed_and_the_folder_itself_is_blocked(self):
+        folder = self.home / "State"
+        allowed = (
+            "git add State/instance-git.yaml",
+            "cp x State/container-storage.yaml",
+            "rm State/old.yaml",
+            "git add State",
+            f"git add {folder / 'instance-git.yaml'}",
+            f"cp x {folder / 'container-storage.yaml'}",
+            f"rm {folder / 'old.yaml'}",
+            f"git add {folder}",
+        )
+        blocked = (
+            "rm -rf State",
+            "rm -r ./State",
+            "mv State backup",
+            "mv ./State backup",
+            "rm -rf bSmart/State",
+            "mv bSmart/State backup",
+            "Remove-Item -Recurse State",
+            "Move-Item State backup",
+            "rmdir State",
+            f"rm -rf {folder}",
+            f"mv {folder} {self.home / 'backup'}",
+            f"Remove-Item -Recurse -Path {folder}",
+            f"Move-Item -Path {folder} -Destination {self.home / 'backup'}",
+        )
+        for enabled in (False, True):
+            if enabled:
+                self.enable()
+            for command in allowed:
+                for via_hook in (False, True):
+                    with self.subTest(command=command, enabled=enabled, via_hook=via_hook):
+                        decision = self.guard(command, via_hook=via_hook)
+                        self.assertEqual(decision.action, "allow", command)
+            for command in blocked:
+                with self.subTest(command=command, enabled=enabled, via_hook=True):
+                    decision = self.guard(command, via_hook=True)
+                    self.assertEqual(decision.action, "block", command)
+                    self.assertEqual(decision.rule_key, "state-dir")
+                if enabled:
+                    with self.subTest(command=command, enabled=True, via_hook=False):
+                        decision = self.guard(command, via_hook=False)
+                        self.assertEqual(decision.action, "block", command)
 
     def test_ordinary_state_words_are_allowed_on_and_off(self):
         commands = (
@@ -481,6 +532,14 @@ class CorePolicyTests(unittest.TestCase):
         off = self.guard(under, via_hook=True)
         self.assertLess(time.monotonic() - started, 1.0)
         self.assertEqual(off.action, "allow")
+        heredoc = "cat > file <<EOF\n" + ("y" * 46_000) + "\nEOF"
+        self.assertGreater(len(heredoc), self.core._MAX_COMMAND_CHARS)
+        for size in (self.core._MAX_COMMAND_CHARS + 1, 99_000):
+            started = time.monotonic()
+            allowed = self.guard("&" * size, via_hook=True)
+            self.assertLess(time.monotonic() - started, 0.5)
+            self.assertEqual(allowed.action, "allow")
+        self.assertEqual(self.guard(heredoc, via_hook=True).action, "allow")
         self.enable()
         started = time.monotonic()
         on = self.guard(under, via_hook=True)
@@ -490,10 +549,26 @@ class CorePolicyTests(unittest.TestCase):
         started = time.monotonic()
         self.guard(semicolons, via_hook=True)
         self.assertLess(time.monotonic() - started, 1.0)
+        asked = self.guard(heredoc, via_hook=True)
+        self.assertEqual(asked.action, "escalate")
+        self.assertEqual(asked.rule_key, "scan-limit")
+        payload = {"tool_name": "Bash", "tool_input": {"command": heredoc}}
+        with patch.dict(os.environ, self.env, clear=False):
+            cursor = self.hook.respond("cursor", {"command": heredoc}, self.core)
+            claude = self.hook.respond("claude", payload, self.core)
+            codex = self.hook.respond("codex", payload, self.core)
+            permission = self.hook.respond_permission(payload, self.core)
+        self.assertEqual(cursor["permission"], "ask")
+        self.assertEqual(claude["hookSpecificOutput"]["permissionDecision"], "ask")
+        self.assertIsNone(codex)
+        self.assertIsNone(permission)
+        encoded = json.dumps({"cursor": cursor, "claude": claude})
+        self.assertNotIn("bprotective yes", encoded)
         for size in (self.core._MAX_COMMAND_CHARS + 1, 99_000):
             started = time.monotonic()
             limited = self.guard("&" * size, via_hook=True)
             self.assertLess(time.monotonic() - started, 0.5)
+            self.assertEqual(limited.action, "escalate")
             self.assertEqual(limited.rule_key, "scan-limit")
 
     def test_tamper_without_operator_off_fails_closed(self):
@@ -577,10 +652,31 @@ class CorePolicyTests(unittest.TestCase):
                 {"tool_name": "Delete", "tool_input": {"path": "~/.bprotective"}},
                 self.core,
             )
+            ordinary = self.home / "State" / "instance-git.yaml"
+            ordinary_edits = []
+            for path in ("State/instance-git.yaml", str(ordinary), str(self.home / "State" / "container-storage.yaml")):
+                ordinary_edits.append(
+                    (
+                        path,
+                        self.hook.respond(
+                            "claude",
+                            {"tool_name": "Write", "tool_input": {"file_path": path, "content": "a"}},
+                            self.core,
+                        ),
+                        self.hook.respond(
+                            "cursor",
+                            {"tool_name": "Write", "tool_input": {"path": path, "contents": "a"}},
+                            self.core,
+                        ),
+                    )
+                )
         self.assertEqual(cursor["permission"], "deny")
         self.assertIsNone(untouched)
         self.assertEqual(home_record["hookSpecificOutput"]["permissionDecision"], "deny")
         self.assertEqual(home_dir["permission"], "deny")
+        for path, edited, cursor_edit in ordinary_edits:
+            self.assertIsNone(edited, path)
+            self.assertEqual(cursor_edit["permission"], "allow", path)
 
     def test_hook_launchers_do_not_call_sh(self):
         cursor_hooks = json.loads(
