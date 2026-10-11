@@ -124,6 +124,7 @@ class CorePolicyTests(unittest.TestCase):
             "rd /s /q C:",
             "rmdir /s /q D:\\",
             "del /s /q C:\\*",
+            "DEL /S /Q C:\\*.*",
             "Remove-Item -Recurse $env:USERPROFILE",
             "rd /s /q %USERPROFILE%",
             "Remove-Item -Recurse C:\\Windows",
@@ -412,6 +413,14 @@ class CorePolicyTests(unittest.TestCase):
             "rm -rf /home/alice/": "block",
             "rm -rf /home/alice/*": "block",
             "rm -rf /home/alice/projects": "allow",
+            "rm -rf ///": "block",
+            'dd of="/dev/sda"': "block",
+            "bomb(){ bomb|bomb& };bomb": "block",
+            "foo(){ echo hi; }": "allow",
+            "echo '$(rm -rf /)'": "allow",
+            'echo "python3 scripts/bprotective off"': "allow",
+            "echo 'python3 scripts/bprotective off'": "allow",
+            'git commit -m "please (rm -rf /) later"': "allow",
             "Remove-Item -Recurse C:\\Users\\alice\\Documents": "allow",
             "Remove-Item -Recurse C:\\Users\\alice": "block",
             "rm -rf C:\\Users\\alice": "block",
@@ -625,23 +634,188 @@ class CorePolicyTests(unittest.TestCase):
         self.assertEqual(asked.action, "escalate")
         self.assertEqual(asked.rule_key, "scan-limit")
 
+    def _hook_results(self, command: str):
+        payload = {"tool_name": "Bash", "tool_input": {"command": command}}
+        with patch.dict(os.environ, self.env, clear=False):
+            cursor = self.hook.respond("cursor", {"command": command}, self.core)
+            claude = self.hook.respond("claude", payload, self.core)
+            codex = self.hook.respond("codex", payload, self.core)
+            permission = self.hook.respond_permission(payload, self.core)
+        return cursor, claude, codex, permission
+
+    def _assert_hooks(self, command: str, *, blocked: bool):
+        cursor, claude, codex, permission = self._hook_results(command)
+        encoded = json.dumps(
+            {"cursor": cursor, "claude": claude, "codex": codex, "permission": permission},
+            default=str,
+        )
+        self.assertNotIn("bprotective yes", encoded)
+        if blocked:
+            self.assertEqual(cursor["permission"], "deny", command)
+            self.assertEqual(claude["hookSpecificOutput"]["permissionDecision"], "deny", command)
+            self.assertEqual(codex["hookSpecificOutput"]["permissionDecision"], "deny", command)
+            self.assertEqual(permission["hookSpecificOutput"]["decision"]["behavior"], "deny", command)
+            return
+        self.assertEqual(cursor["permission"], "allow", command)
+        self.assertIsNone(claude, command)
+        self.assertIsNone(codex, command)
+        self.assertIsNone(permission, command)
+
+    def test_grouped_commands_are_scanned_on_and_off(self):
+        catastrophic = (
+            "(rm -rf /)",
+            "( rm -rf / )",
+            "(cd /tmp && rm -rf /)",
+            "echo $(rm -rf /)",
+            "echo `rm -rf /`",
+            "`rm -rf /`",
+            "{ rm -rf /; }",
+            "$(rm -rf ~)",
+            'echo "$(rm -rf /)"',
+        )
+        control = (
+            "(python3 scripts/bprotective off)",
+            "(python3 scripts/bprotective yes ABC123)",
+            "{ python3 scripts/bprotective off; }",
+            "echo $(python3 scripts/bprotective off)",
+            'echo "$(python3 scripts/bprotective off)"',
+        )
+        tamper = (
+            "(rm State/bprotective.json)",
+            "(rm -rf State)",
+            "(rm -rf ~/.bprotective)",
+        )
+        for command in catastrophic:
+            with self.subTest(command=command, enabled=False):
+                self.assertEqual(self.guard(command, via_hook=True).action, "allow", command)
+                self._assert_hooks(command, blocked=False)
+        for command in (*control, *tamper):
+            with self.subTest(command=command, enabled=False):
+                decision = self.guard(command, via_hook=True)
+                self.assertEqual(decision.action, "block", command)
+                self.assertNotEqual(decision.rule_key, "scan-limit")
+                self._assert_hooks(command, blocked=True)
+        self.enable()
+        for command in (*catastrophic, *control, *tamper):
+            with self.subTest(command=command, enabled=True):
+                decision = self.guard(command, via_hook=True)
+                self.assertEqual(decision.action, "block", command)
+                self.assertNotEqual(decision.rule_key, "scan-limit")
+
     def test_oversized_guard_control_stays_blocked_while_off(self):
         filler = "x" * 60_000
         commands = (
             f"echo {filler} ; bprotective off",
             f"echo {filler} ; scripts/bprotective off",
             f"echo {filler} ; scripts/bprotective on",
+            f"echo {filler} ; bprotective yes ABC123",
+            f"echo {filler} ; scripts/bprotective recover",
             f"echo {filler} ; rm State/bprotective.json",
             f"echo {filler} ; rm -rf State",
             f"echo {filler} ; rm -rf ~/.bprotective",
+            f"echo {filler} ; echo x > State/bprotective.json",
         )
         for command in commands:
             self.assertGreater(len(command), self.core._MAX_COMMAND_CHARS)
-            with self.subTest(command=command[:40]):
+            with self.subTest(command=command[:48]):
                 decision = self.guard(command, via_hook=True)
                 self.assertEqual(decision.action, "block", command[:80])
                 self.assertNotEqual(decision.rule_key, "scan-limit")
-        self.assertEqual(self.guard(f"echo {filler} ; rm -rf /", via_hook=True).action, "allow")
+                self._assert_hooks(command, blocked=True)
+        allowed = f"echo {filler} ; rm -rf /"
+        self.assertEqual(self.guard(allowed, via_hook=True).action, "allow")
+        self._assert_hooks(allowed, blocked=False)
+
+    def test_oversized_guard_control_stays_blocked_while_on(self):
+        self.enable()
+        filler = "x" * 60_000
+        commands = (
+            f"echo {filler} ; bprotective off",
+            f"echo {filler} ; scripts/bprotective off",
+            f"echo {filler} ; scripts/bprotective on",
+            f"echo {filler} ; bprotective yes ABC123",
+            f"echo {filler} ; scripts/bprotective recover",
+            f"echo {filler} ; rm State/bprotective.json",
+            f"echo {filler} ; rm -rf State",
+            f"echo {filler} ; rm -rf ~/.bprotective",
+            f"echo {filler} ; echo x > State/bprotective.json",
+            f"echo {filler} ; (python3 scripts/bprotective off)",
+            f"echo {filler} ; (rm -rf /)",
+        )
+        for command in commands:
+            self.assertGreater(len(command), self.core._MAX_COMMAND_CHARS)
+            started = time.monotonic()
+            decision = self.guard(command, via_hook=True)
+            self.assertLess(time.monotonic() - started, 0.5)
+            with self.subTest(command=command[:48]):
+                self.assertEqual(decision.action, "block", command[:80])
+                self.assertNotEqual(decision.rule_key, "scan-limit")
+
+    def test_repeated_delete_verbs_stay_inside_the_scan_deadline(self):
+        self.enable()
+        for verb in ("rm ", "del "):
+            text = verb * 12_000
+            self.assertGreater(len(text), 30_000)
+            started = time.monotonic()
+            decision = self.guard(text, via_hook=True)
+            elapsed = time.monotonic() - started
+            with self.subTest(verb=verb):
+                self.assertLess(elapsed, 0.5)
+                self.assertEqual(decision.action, "escalate")
+                self.assertEqual(decision.rule_key, "scan-limit")
+        hidden = "echo " + ("rm " * 12_000) + "; rm -rf /"
+        started = time.monotonic()
+        decision = self.guard(hidden, via_hook=True)
+        self.assertLess(time.monotonic() - started, 0.5)
+        self.assertEqual(decision.action, "block")
+        self.assertNotEqual(decision.rule_key, "scan-limit")
+        with patch.object(self.core, "_MAX_SCAN_SECONDS", -1):
+            timed = self.guard("y" * 20_000, via_hook=True)
+        self.assertEqual(timed.action, "escalate")
+        self.assertEqual(timed.rule_key, "scan-limit")
+        self.assertIn("time limit", timed.message)
+
+    def test_oversized_scan_matches_more_of_the_under_cap_rules(self):
+        self.enable()
+        filler = "x" * 60_000
+        blocked = (
+            "ri -r c:/",
+            "rm -rf $HOME",
+            "rm -rf ${HOME}",
+            "rm -rf /usr",
+            "rm -rf /home",
+            "Remove-Item -Recurse -Force C:\\Users",
+            "find / -delete",
+            'dd of="/dev/sda"',
+            "DEL /S /Q C:\\*.*",
+            "rm -rf ///",
+            "bomb(){ bomb|bomb& };bomb",
+            "(rm -rf /)",
+        )
+        for command in blocked:
+            text = f"echo {filler} ; {command}"
+            self.assertGreater(len(text), self.core._MAX_COMMAND_CHARS)
+            started = time.monotonic()
+            decision = self.guard(text, via_hook=True)
+            self.assertLess(time.monotonic() - started, 0.5)
+            with self.subTest(command=command):
+                self.assertEqual(decision.action, "block", command)
+                self.assertNotEqual(decision.rule_key, "scan-limit")
+        nested = f"echo {filler} ; Remove-Item -Recurse C:\\Users\\alice\\Documents"
+        decision = self.guard(nested, via_hook=True)
+        self.assertEqual(decision.action, "escalate")
+        self.assertEqual(decision.rule_key, "scan-limit")
+
+    def test_unknown_tilde_user_stays_allowed_while_off(self):
+        for command in ("rm ~bogus/file", "rm -rf ~bogus", "cp ~bogus/a b"):
+            with self.subTest(command=command, enabled=False):
+                decision = self.guard(command, via_hook=True)
+                self.assertEqual(decision.action, "allow", command)
+                self._assert_hooks(command, blocked=False)
+        self.enable()
+        for command in ("rm ~bogus/file", "rm -rf ~bogus"):
+            with self.subTest(command=command, enabled=True):
+                self.assertEqual(self.guard(command, via_hook=True).action, "allow", command)
 
     def test_tamper_without_operator_off_fails_closed(self):
         self.enable()

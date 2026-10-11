@@ -2,7 +2,7 @@
 
 ```yaml
 current_version: 0.1.46-draft
-updated: 2026-10-11 08:56 UTC
+updated: 2026-10-11 09:34 UTC
 status: draft
 ```
 
@@ -63,6 +63,8 @@ scope:
   - state plainly that bProtective is for accidental catastrophic commands, not a deliberately adversarial agent
   - match the state file, its .armed marker, and the armed record for relative and absolute paths, and block only rm -rf or mv of the State directory itself, so files inside State stay allowed
   - keep the command scan linear and cap it near 16k characters, and run the hook channel check once per call
+  - treat parentheses, braces, command substitution, and backticks as statement boundaries, so a grouped rm or bprotective off is still checked
+  - keep the over-cap hard-block scan to one forward pass and stop it at the scan time limit
   - block rm, mv, and redirects of ~/.bprotective, interpreter one-liners that rm -rf a root, and recursive deletes of /home/<user> and C:\Users\<user>
   - warn on stdout or stderr when a hook launcher cannot find Python, and check the Windows launcher out as CRLF so cmd.exe can find its labels
 verification:

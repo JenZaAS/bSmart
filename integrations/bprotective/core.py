@@ -27,7 +27,7 @@ _BLOCK_RULES: tuple[tuple[str, re.Pattern[str], str], ...] = (
     (
         "device-format",
         re.compile(
-            r"\b(?:mkfs(?:\.[\w-]+)?|diskutil\s+(?:eraseDisk|partitionDisk))\b|\bdd\b(?:(?!\n).)*\bof\s*=\s*/dev/",
+            r"\b(?:mkfs(?:\.[\w-]+)?|diskutil\s+(?:eraseDisk|partitionDisk))\b|\bdd\b(?:(?!\n).)*\bof\s*=\s*[\"']?/dev/",
             re.I,
         ),
         "disk formatting or raw-device overwrite",
@@ -109,9 +109,11 @@ _POSIX_ROOTS = (
     "/lib64",
     "/libexec",
 )
-_HOME_OPERANDS = {"~", "~/", "~/*", "$home", "${home}", "$home/*", "${home}/*"}
-# About 16k, under the 15s hook timeout. A quadratic scan of a longer
-# command used to outlive that timeout, and Claude and Codex then ran it.
+_HOME_OPERANDS = {"~", "~/", "~/.", "~/*", "$home", "${home}", "$home/*", "${home}/*"}
+# About 16k, under the 15s hook timeout. Past this size the full tokenizer
+# does not run. A single linear scan still blocks hard cases and stops when
+# the scan time limit is reached, so a hook does not sit until the harness
+# gives up and runs the command.
 _MAX_COMMAND_CHARS = 16_000
 _MAX_TOKENS = 20_000
 _MAX_SCAN_SECONDS = 0.5
@@ -142,6 +144,7 @@ _VALUE_FLAGS = {
     "timeout": {"-k", "--kill-after", "-s", "--signal"},
 }
 _ROOT_PATHS = {"/", "/*", "/.", "/./", "//"}
+_STATEMENT_SEPARATORS = {"&&", "||", ";", "|", "&", "\n", "(", ")", "{", "}", "$(", "`"}
 _DEVICE_REDIRECT = re.compile(
     r"(?:^|[\s;&|])>{1,2}\s*(/dev/(?:sd|nvme|vd|xvd|mmcblk|disk)\S*)",
     re.I,
@@ -700,30 +703,64 @@ def _tokenize(text: str, deadline: float | None = None) -> list[str]:
             tokens.append(text[i:j])
             i = j
             continue
+        if text.startswith("$(", i):
+            tokens.append("$(")
+            i += 2
+            continue
+        if text[i] in "(){}`":
+            tokens.append(text[i])
+            i += 1
+            continue
         if text[i] in {"'", '"'}:
             quote = text[i]
             i += 1
             buf: list[str] = []
+            interrupted = False
             while i < n and text[i] != quote:
+                # $(...) and backticks run inside double quotes. A plain
+                # parenthesis does not, so a quoted "(rm ...)" stays text.
+                if quote == '"' and (text[i] == "`" or text.startswith("$(", i)):
+                    if buf:
+                        tokens.append("".join(buf))
+                    tokens.append("`" if text[i] == "`" else "$(")
+                    i += 1 if text[i] == "`" else 2
+                    interrupted = True
+                    break
                 if text[i] == "\\" and quote == '"' and i + 1 < n:
                     buf.append(text[i + 1])
                     i += 2
                     continue
                 buf.append(text[i])
                 i += 1
+            if interrupted:
+                continue
             if i < n and text[i] == quote:
                 i += 1
             tokens.append("".join(buf))
             continue
         start = i
         buf = []
-        while i < n and text[i] not in " \t\r\n;|&<>":
-            if text[i] == "\\" and i + 1 < n:
-                buf.append(text[i + 1])
-                i += 2
-                continue
+        param = 0
+        while i < n and text[i] not in " \t\r\n;|&<>(){}`":
+            if text.startswith("$(", i):
+                break
             buf.append(text[i])
             i += 1
+        # The stop set above leaves ${HOME} intact: "{" after "$" is the
+        # expansion, not a brace group. Resume when the word loop parked on it.
+        while i < n and param == 0 and i > start and buf and buf[-1] == "$" and text[i] == "{":
+            param = 1
+            buf.append("{")
+            i += 1
+            while i < n and param:
+                if text[i] == "{":
+                    param += 1
+                elif text[i] == "}":
+                    param -= 1
+                elif text[i] in " \t\r\n;|&<>()`" or text.startswith("$(", i):
+                    break
+                buf.append(text[i])
+                i += 1
         if i == start:
             i += 1
             continue
@@ -736,7 +773,7 @@ def _statements(tokens: list[str]) -> list[list[str]]:
     groups: list[list[str]] = []
     current: list[str] = []
     for token in tokens:
-        if token in {"&&", "||", ";", "|", "&", "\n"}:
+        if token in _STATEMENT_SEPARATORS:
             if current:
                 groups.append(current)
                 current = []
@@ -789,6 +826,8 @@ def _strip_quotes(text: str) -> str:
 
 
 def _posix_root_operand(value: str, cwd: str | None) -> bool:
+    if value and set(value) <= {"/"}:
+        return True
     if value in _ROOT_PATHS:
         return True
     for root in _POSIX_ROOTS:
@@ -995,23 +1034,73 @@ def _redirect_block(surface: str) -> Decision | None:
 
 
 def _split_statements(text: str) -> list[str]:
-    """Split on statement separators. One pass, no nested quantifiers."""
+    """Split on statement separators, groups, and substitutions. One pass.
+
+    ``( ) { } $(`` and backticks are boundaries, so a grouped ``rm`` is its
+    own statement. Quotes stay intact, and ``${name}`` stays one span.
+    ``$(`` and a backtick inside double quotes are still boundaries, because
+    the shell runs them. A parenthesis inside quotes is not.
+    """
     parts: list[str] = []
     buf: list[str] = []
     i = 0
     n = len(text)
+    quote = ""
+    param = 0
     while i < n:
-        if text.startswith("&&", i) or text.startswith("||", i):
+        ch = text[i]
+        if quote == "'":
+            buf.append(ch)
+            if ch == "'":
+                quote = ""
+            i += 1
+            continue
+        if quote == '"':
+            if ch == "\\" and i + 1 < n:
+                buf.append(ch)
+                buf.append(text[i + 1])
+                i += 2
+                continue
+            if ch == "`" or text.startswith("$(", i):
+                parts.append("".join(buf))
+                buf = []
+                i += 1 if ch == "`" else 2
+                quote = ""
+                continue
+            buf.append(ch)
+            if ch == '"':
+                quote = ""
+            i += 1
+            continue
+        if param:
+            buf.append(ch)
+            if ch == "{":
+                param += 1
+            elif ch == "}":
+                param -= 1
+            i += 1
+            continue
+        if ch in "'\"":
+            quote = ch
+            buf.append(ch)
+            i += 1
+            continue
+        if text.startswith("&&", i) or text.startswith("||", i) or text.startswith("$(", i):
             parts.append("".join(buf))
             buf = []
             i += 2
             continue
-        if text[i] in ";&|\n":
+        if ch == "{" and buf and buf[-1] == "$":
+            buf.append(ch)
+            param = 1
+            i += 1
+            continue
+        if ch in ";&|\n(){}`":
             parts.append("".join(buf))
             buf = []
             i += 1
             continue
-        buf.append(text[i])
+        buf.append(ch)
         i += 1
     parts.append("".join(buf))
     return parts
@@ -1079,7 +1168,12 @@ def _is_control_command(surface: str) -> bool:
 
 
 def _path_key(path: Path) -> str:
-    return os.path.normcase(os.path.normpath(str(path.expanduser().absolute())))
+    """Stable path key. An unknown ``~user`` must not raise and become a deny."""
+    try:
+        expanded = path.expanduser()
+    except (RuntimeError, ValueError, OSError):
+        expanded = path
+    return os.path.normcase(os.path.normpath(str(expanded.absolute())))
 
 
 def _guard_path_keys() -> set[str]:
@@ -1306,19 +1400,36 @@ def _removes_or_moves_state_dir(command: str) -> bool:
 def _channel_block(command: str) -> Decision | None:
     """Block shell control of the guard and writes that name its real files.
 
-    Quoted text is removed before the general path check, so a commit message
-    that says "state" is not a path. The file match is the state file, its
-    ``.armed`` marker, and ``~/.bprotective``. A file inside the content-root
-    State directory is not a match. Recursive removal or a move of that
-    directory itself is blocked, for the relative name and the absolute path.
-    This is a heuristic for accidental commands. The armed record outside
-    State is what fails closed after a tamper the heuristic missed.
+    Groups, subshells, ``$(...)``, and backticks are statement boundaries, so
+    each piece is checked on its own. Quoted text is removed before the
+    general path check, so a commit message that says "state" is not a path.
+    The file match is the state file, its ``.armed`` marker, and
+    ``~/.bprotective``. A file inside the content-root State directory is not
+    a match. Recursive removal or a move of that directory itself is blocked,
+    for the relative name and the absolute path. This is a heuristic for
+    accidental commands. The armed record outside State is what fails closed
+    after a tamper the heuristic missed.
     """
-    surface = _strip_quotes(command)
-    if _is_control_command(surface):
+    # Control can span statements: `B=scripts/bprotective; python3 $B off`.
+    # Keep the raw text so `$(...)` inside double quotes is still visible.
+    # Groups are already boundaries inside that check.
+    if _is_control_command(command):
         return Decision("block", "guard-control", "changing bProtective from a shell command")
     if _removes_or_moves_state_dir(command):
         return Decision("block", "state-dir", "recursive removal or move of the State directory")
+    for statement in _split_statements(command):
+        if not statement.strip():
+            continue
+        decision = _channel_statement(statement)
+        if decision is not None:
+            return decision
+    return None
+
+
+def _channel_statement(command: str) -> Decision | None:
+    surface = _strip_quotes(command).strip()
+    if not surface:
+        return None
     names_file = "bprotective.json" in command.lower()
     if not names_file and not _might_name_guard(surface):
         return None
@@ -1330,6 +1441,28 @@ def _channel_block(command: str) -> Decision | None:
         return None
     if names_file or _mentions_guard_path(surface, _guard_path_keys()):
         return Decision("block", "state-file", "write, delete, or move of the bProtective state file")
+    return None
+
+
+def _dd_block(argv: list[str]) -> Decision | None:
+    """Block ``dd of=/dev/...`` including ``of="/dev/sda"``. Quote stripping would hide that."""
+    if not argv or _basename(argv[0]) != "dd":
+        return None
+    for index, arg in enumerate(argv):
+        compact = arg.replace('"', "").replace("'", "").lower()
+        if "of=/dev" in compact:
+            return Decision("block", "device-format", "disk formatting or raw-device overwrite")
+        if compact != "of":
+            continue
+        if index + 1 >= len(argv):
+            continue
+        nxt = argv[index + 1].replace('"', "").replace("'", "")
+        if nxt == "=" and index + 2 < len(argv):
+            device = argv[index + 2].replace('"', "").replace("'", "").lower()
+        else:
+            device = nxt[1:].lower() if nxt.startswith("=") else nxt.lower()
+        if device.startswith("/dev"):
+            return Decision("block", "device-format", "disk formatting or raw-device overwrite")
     return None
 
 
@@ -1391,7 +1524,7 @@ def _xargs_rm_block(statements: list[list[str]], tokens: list[str], cwd: str | N
         direct = _rm_block(rm_argv, cwd)
         if direct is not None:
             return direct
-        if any(_posix_root_operand(token, cwd) for token in tokens if token not in {"&&", "||", ";", "|", "&", "\n"}):
+        if any(_posix_root_operand(token, cwd) for token in tokens if token not in _STATEMENT_SEPARATORS):
             return Decision("block", "root-recursive-delete", "recursive deletion of a protected root or home path")
     return None
 
@@ -1428,6 +1561,7 @@ def _structured_decision(command: str, tokens: list[str], *, _skip_channel: bool
             _git_decision(argv),
             _python_rmtree_block(argv),
             _interpreter_exec_block(argv),
+            _dd_block(argv),
         )
         for decision in checks:
             if decision is None:
@@ -1465,11 +1599,83 @@ def _linear_fork_bomb(lowered: str) -> bool:
         start = index + 3
 
 
+def _named_fork_bomb(text: str) -> bool:
+    """True for ``name(){ name|name& };name``. One forward scan, bounded window."""
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if not (ch.isalpha() or ch == "_"):
+            i += 1
+            continue
+        start = i
+        i += 1
+        while i < n and (text[i].isalnum() or text[i] == "_"):
+            i += 1
+        name = text[start:i]
+        j = i
+        while j < n and text[j] in " \t":
+            j += 1
+        if j + 1 >= n or text[j] != "(" or text[j + 1] != ")":
+            continue
+        j += 2
+        while j < n and text[j] in " \t\r\n":
+            j += 1
+        if j >= n or text[j] != "{":
+            continue
+        if _fork_body_calls_itself(text[j + 1 : j + 1 + 64 + 2 * len(name)], name):
+            return True
+    return False
+
+
+def _fork_body_calls_itself(window: str, name: str) -> bool:
+    k = 0
+    m = len(window)
+
+    def skip_space() -> None:
+        nonlocal k
+        while k < m and window[k] in " \t\r\n":
+            k += 1
+
+    skip_space()
+    if not window.startswith(name, k):
+        return False
+    k += len(name)
+    skip_space()
+    if k >= m or window[k] != "|":
+        return False
+    k += 1
+    skip_space()
+    if not window.startswith(name, k):
+        return False
+    k += len(name)
+    skip_space()
+    if k >= m or window[k] != "&":
+        return False
+    k += 1
+    skip_space()
+    if k >= m or window[k] != "}":
+        return False
+    k += 1
+    skip_space()
+    if k >= m or window[k] != ";":
+        return False
+    k += 1
+    skip_space()
+    return window.startswith(name, k)
+
+
 def _command_statements(text: str) -> list[list[str]]:
-    """Split on statement separators. One pass, no regular expressions."""
+    """Split on statement separators, groups, and substitutions. One pass.
+
+    ``${name}`` stays one word. ``$(`` and backticks are boundaries even when
+    a double quote is sitting on them, so ``bash -c "rm -rf /"`` still splits
+    into words the operand check can see.
+    """
     statements: list[list[str]] = []
     current: list[str] = []
     buf: list[str] = []
+    param = 0
 
     def flush_word() -> None:
         if buf:
@@ -1486,15 +1692,28 @@ def _command_statements(text: str) -> list[list[str]]:
     n = len(text)
     while i < n:
         ch = text[i]
+        if param:
+            buf.append(ch)
+            if ch == "{":
+                param += 1
+            elif ch == "}":
+                param -= 1
+            i += 1
+            continue
         if ch in " \t\r":
             flush_word()
             i += 1
             continue
-        if text.startswith("&&", i) or text.startswith("||", i):
+        if text.startswith("&&", i) or text.startswith("||", i) or text.startswith("$(", i):
             flush_statement()
             i += 2
             continue
-        if ch in ";&|\n":
+        if ch == "{" and buf and buf[-1] == "$":
+            buf.append(ch)
+            param = 1
+            i += 1
+            continue
+        if ch in ";&|\n(){}`":
             flush_statement()
             i += 1
             continue
@@ -1519,107 +1738,150 @@ def _is_recursive_rm_flag(arg: str) -> bool:
     return False
 
 
-def _is_root_delete_operand(arg: str) -> bool:
-    """True for ``/``, ``~``, or a drive root such as ``C:\\``. Not ``C:\\Windows``."""
-    bare = _bare_word(arg)
-    if bare in {"/", "/*", "/.", "/./", "//", "~", "~/", "~/.", "~/*"}:
+def _is_windows_root_operand(bare: str) -> bool:
+    """True for a drive root, ``C:\\*.*``, or ``C:\\Users`` and one user under it."""
+    text = bare.replace("/", "\\")
+    if len(text) < 2 or not text[0].isalpha() or text[1] != ":":
+        return False
+    rest = text[2:].lower()
+    if rest in {
+        "",
+        "\\",
+        "\\*",
+        "\\*.*",
+        "\\windows",
+        "\\users",
+        "\\program files",
+        "\\program files (x86)",
+    }:
         return True
-    if len(bare) >= 2 and bare[0].isalpha() and bare[1] == ":":
-        rest = bare[2:].replace("\\", "/")
-        return rest in {"", "/", "/*"}
+    prefix = "\\users\\"
+    if rest.startswith(prefix):
+        tail = rest[len(prefix) :].rstrip("\\")
+        if tail.endswith("\\*"):
+            tail = tail[:-2]
+        return bool(tail) and "\\" not in tail and tail not in {".", ".."}
     return False
 
 
-def _statement_root_delete(words: list[str]) -> Decision | None:
-    posix = {"rm"}
-    windows = {"remove-item", "ri", "del", "erase", "rd", "rmdir"}
+def _is_root_delete_operand(arg: str) -> bool:
+    """True for ``/``, ``~``, ``$HOME``, ``/usr``, or a drive root. Not ``C:\\Windows\\Temp``."""
+    bare = _bare_word(arg)
+    if not bare:
+        return False
+    if _posix_root_operand(bare, None):
+        return True
+    return _is_windows_root_operand(bare)
+
+
+def _past_deadline(deadline: float | None) -> bool:
+    return deadline is not None and time.monotonic() >= deadline
+
+
+def _scan_words(words: list[str], deadline: float | None) -> Decision | None:
+    """Every hard-block check for one statement, in one forward pass."""
+    seen_rm = False
+    seen_windows = False
+    recursive = False
+    root = False
+    mkfs = False
+    dd = False
+    of_dev = False
+    pending_of = False
+    pending_eq = False
+    format_verb = False
+    format_volume = False
+    diskpart = False
+    seen_find = False
+    seen_delete = False
+    find_root = False
     for index, word in enumerate(words):
-        name = _basename(_bare_word(word))
-        if name not in posix and name not in windows:
-            continue
-        recursive = False
-        root = False
-        for arg in words[index + 1 :]:
-            if _is_recursive_rm_flag(arg):
+        if index % 256 == 0 and _past_deadline(deadline):
+            return _scan_limit("command scan exceeded the time limit")
+        bare = _bare_word(word)
+        name = _basename(bare)
+        lower = bare.replace('"', "").replace("'", "").lower()
+        if name == "rm":
+            seen_rm = True
+        elif name in {"remove-item", "ri", "del", "erase", "rd", "rmdir"}:
+            seen_windows = True
+        elif name == "mkfs" or name.startswith("mkfs."):
+            mkfs = True
+        elif name == "dd":
+            dd = True
+        elif name == "format-volume":
+            format_volume = True
+        elif name in {"format", "format.com"}:
+            format_verb = True
+        elif name == "diskpart":
+            diskpart = True
+        elif name == "find":
+            seen_find = True
+        if bare == "-delete":
+            seen_delete = True
+        if "of=/dev" in lower:
+            of_dev = True
+        if pending_eq and lower.startswith("/dev"):
+            of_dev = True
+        pending_eq = pending_of and bare == "="
+        pending_of = lower == "of" and bare != "="
+        if (seen_rm or seen_windows) and name not in {"rm", "remove-item", "ri", "del", "erase", "rd", "rmdir"}:
+            if _is_recursive_rm_flag(word):
                 recursive = True
-            elif _is_root_delete_operand(arg):
+            elif _is_root_delete_operand(word):
                 root = True
-        if not (recursive and root):
-            continue
-        if name in windows:
+        if _is_root_delete_operand(word):
+            find_root = True
+        if recursive and root and (seen_rm or seen_windows):
+            if seen_rm:
+                return Decision(
+                    "block",
+                    "root-recursive-delete",
+                    "recursive deletion of a protected root or home path",
+                )
             return Decision(
                 "block",
                 "windows-root-recursive-delete",
                 "recursive deletion of a Windows root, system, or home path",
             )
-        return Decision("block", "root-recursive-delete", "recursive deletion of a protected root or home path")
+        if mkfs or (dd and of_dev):
+            return Decision("block", "device-format", "disk formatting or raw-device overwrite")
+        if format_volume or (format_verb and _is_root_delete_operand(word) and name not in {"format", "format.com"}):
+            return Decision("block", "windows-format", "disk formatting")
+        if diskpart:
+            return Decision("block", "diskpart", "diskpart can erase or repartition disks")
+        if seen_find and seen_delete and find_root:
+            return Decision("block", "find-delete", "find -delete of a protected root")
     return None
 
 
-def _statement_has_mkfs(words: list[str]) -> bool:
-    for word in words:
-        name = _basename(_bare_word(word))
-        if name == "mkfs" or name.startswith("mkfs."):
-            return True
-    return False
-
-
-def _statement_has_dd_of_dev(words: list[str]) -> bool:
-    if not any(_basename(_bare_word(word)) == "dd" for word in words):
-        return False
-    for index, word in enumerate(words):
-        bare = _bare_word(word).lower()
-        if "of=/dev" in bare:
-            return True
-        if bare == "of" and index + 2 < len(words) and words[index + 1] == "=":
-            if _bare_word(words[index + 2]).lower().startswith("/dev"):
-                return True
-    return False
-
-
-def _statement_formats_drive(words: list[str]) -> bool:
-    for index, word in enumerate(words):
-        name = _basename(_bare_word(word))
-        if name == "format-volume":
-            return True
-        if name not in {"format", "format.com"}:
-            continue
-        for arg in words[index + 1 :]:
-            if _is_root_delete_operand(arg):
-                return True
-    return False
-
-
-def _statement_has_diskpart(words: list[str]) -> bool:
-    return any(_basename(_bare_word(word)) == "diskpart" for word in words)
-
-
-def _oversized_hard_block(command: str) -> Decision | None:
+def _oversized_hard_block(command: str, deadline: float | None = None) -> Decision | None:
     """Block catastrophic commands in text past the tokenizer cap.
 
-    One forward scan. It does not tokenize quotes or run the nested policy
-    patterns. A match blocks. No match lets the caller ask.
+    One forward scan. It does not run the full tokenizer. A match blocks.
+    Past the time limit the caller asks instead of scanning until the harness
+    gives up. No match lets the caller ask.
     """
+    if deadline is None:
+        deadline = time.monotonic() + _MAX_SCAN_SECONDS
+    if _past_deadline(deadline):
+        return _scan_limit("command scan exceeded the time limit")
     lowered = command.lower()
-    if _linear_fork_bomb(lowered):
+    if _linear_fork_bomb(lowered) or _named_fork_bomb(command):
         return Decision("block", "fork-bomb", "fork bomb")
+    if _past_deadline(deadline):
+        return _scan_limit("command scan exceeded the time limit")
     if not any(
         token in lowered
-        for token in ("mkfs", "dd", "format", "diskpart", "rm", "remove-item", "rmdir", "del", "rd")
+        for token in ("mkfs", "dd", "format", "diskpart", "rm", "remove-item", "rmdir", "del", "rd", "ri", "erase", "find")
     ):
         return None
     for words in _command_statements(command):
-        deleted = _statement_root_delete(words)
-        if deleted is not None:
-            return deleted
-        if _statement_has_mkfs(words):
-            return Decision("block", "device-format", "disk formatting or raw-device overwrite")
-        if _statement_has_dd_of_dev(words):
-            return Decision("block", "device-format", "disk formatting or raw-device overwrite")
-        if _statement_formats_drive(words):
-            return Decision("block", "windows-format", "disk formatting")
-        if _statement_has_diskpart(words):
-            return Decision("block", "diskpart", "diskpart can erase or repartition disks")
+        if _past_deadline(deadline):
+            return _scan_limit("command scan exceeded the time limit")
+        decision = _scan_words(words, deadline)
+        if decision is not None:
+            return decision
     return None
 
 
@@ -1634,11 +1896,12 @@ def policy_decision(
     if _depth > 3:
         return Decision("block", "nested-shell", "nested shell command was not expanded")
     if len(command) > _MAX_COMMAND_CHARS:
+        deadline = _deadline if _deadline is not None else time.monotonic() + _MAX_SCAN_SECONDS
         if not _skip_channel:
             channel = _channel_block(command)
             if channel is not None:
                 return channel
-        hard = _oversized_hard_block(command)
+        hard = _oversized_hard_block(command, deadline)
         if hard is not None:
             return hard
         return _scan_limit("command exceeds the scan size limit")
@@ -1654,6 +1917,8 @@ def policy_decision(
     if structured is not None and structured.action == "block":
         return structured
     surface = _strip_quotes(command)
+    if _named_fork_bomb(command):
+        return Decision("block", "fork-bomb", "fork bomb")
     for rule_key, pattern, reason in _BLOCK_RULES:
         if pattern.search(surface):
             return Decision("block", rule_key, reason)
@@ -1719,15 +1984,16 @@ def guard(command: str, *, via_hook: bool = False) -> Decision:
     # hard-block scan over the whole text. Ask only when neither matches.
     # On and off follow the same rules as a command under the cap.
     if len(command) > _MAX_COMMAND_CHARS:
+        deadline = time.monotonic() + _MAX_SCAN_SECONDS
         if via_hook or enabled:
             channel = _channel_block(command)
             if channel is not None:
                 return channel
         if enabled:
-            hard = _oversized_hard_block(command)
-            if hard is not None:
+            hard = _oversized_hard_block(command, deadline)
+            if hard is not None and hard.action == "block":
                 return hard
-            decision = _scan_limit("command exceeds the scan size limit")
+            decision = hard if hard is not None else _scan_limit("command exceeds the scan size limit")
             allowed = state.get("allow_once")
             if isinstance(allowed, str) and allowed == command.strip():
                 state["allow_once"] = None
@@ -1947,7 +2213,8 @@ def _mentions_windows_root(command: str) -> bool:
         (?:^|[\s"'=`])
         (?:\\\\\?\\)?
         (?:
-            [a-z]:\\users\\[^\\\s"'`]+\\?\*?
+            [a-z]:\\\*\.\*
+            | [a-z]:\\users\\[^\\\s"'`]+\\?\*?
             | [a-z]:(?:\\(?:\*|windows|users|program\ files(?:\ \(x86\))?)?)?
             | %(?:systemdrive|systemroot|userprofile|homedrive)%\\?\*?
             | \$(?:env:)?(?:systemdrive|systemroot|userprofile|home)\\?\*?
