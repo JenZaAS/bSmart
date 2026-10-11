@@ -40,21 +40,26 @@ jobs:
         run: |
           set BPROTECTIVE_STATE_FILE=%TEMP%\bprotective-hook-state.json
           set BPROTECTIVE_ARMED_FILE=%TEMP%\bprotective-hook-armed.json
-          python -c "import json,os; open(os.path.join(os.environ['TEMP'],'bprotective-hook-in.json'),'w',encoding='utf-8').write(json.dumps({'command':'echo hi'}))"
+          rem Cursor reads a top-level command. Claude reads tool_input.command.
+          python -c "import json,os; t=os.environ['TEMP']; open(os.path.join(t,'bprotective-hook-in.json'),'w',encoding='utf-8').write(json.dumps({'command':'echo hi'})); open(os.path.join(t,'bprotective-hook-claude-in.json'),'w',encoding='utf-8').write(json.dumps({'tool_name':'Bash','tool_input':{'command':'echo hi'}}))"
+          if errorlevel 1 exit /b 1
           rem call script.cmd ^< payload makes cmd parse the payload as the script. call cmd.exe returns, and the redirect belongs to that process.
           call cmd /c integrations\cursor\bprotective-plugin\scripts\run_hook.cmd < "%TEMP%\bprotective-hook-in.json" > "%TEMP%\bprotective-hook-cursor.json"
           if errorlevel 1 exit /b 1
-          call cmd /c integrations\claude\bprotective-plugin\scripts\run_hook.cmd < "%TEMP%\bprotective-hook-in.json" > "%TEMP%\bprotective-hook-claude.json"
+          call cmd /c integrations\claude\bprotective-plugin\scripts\run_hook.cmd < "%TEMP%\bprotective-hook-claude-in.json" > "%TEMP%\bprotective-hook-claude.json"
           if errorlevel 1 exit /b 1
-          python -c "import json,os,pathlib; root=os.environ['TEMP']; raw=pathlib.Path(root,'bprotective-hook-cursor.json').read_bytes(); print(raw); data=json.loads(raw); assert data.get('permission')=='allow', data; claude=pathlib.Path(root,'bprotective-hook-claude.json').read_text(encoding='utf-8').strip(); print(claude); assert claude=='', claude"
+          python -c "import json,os,pathlib; root=os.environ['TEMP']; raw=pathlib.Path(root,'bprotective-hook-cursor.json').read_bytes(); print(raw); data=json.loads(raw); assert data.get('permission')=='allow', data; claude=pathlib.Path(root,'bprotective-hook-claude.json').read_bytes(); print(claude); assert claude.decode('utf-8').strip()=='', claude"
+          if errorlevel 1 exit /b 1
           findstr /C:"sh -c" integrations\cursor\bprotective-plugin\hooks\hooks.json >nul && exit /b 1
           findstr /C:"run_hook.cmd" integrations\cursor\bprotective-plugin\hooks\hooks.json >nul || exit /b 1
-          python -c "import json,os; open(os.environ['BPROTECTIVE_STATE_FILE'],'w',encoding='utf-8').write(json.dumps({'enabled': True})); open(os.path.join(os.environ['TEMP'],'bprotective-hook-deny.json'),'w',encoding='utf-8').write(json.dumps({'command':'rm -rf /'}))"
+          python -c "import json,os; t=os.environ['TEMP']; open(os.environ['BPROTECTIVE_STATE_FILE'],'w',encoding='utf-8').write(json.dumps({'enabled': True})); open(os.path.join(t,'bprotective-hook-deny.json'),'w',encoding='utf-8').write(json.dumps({'command':'rm -rf /'})); open(os.path.join(t,'bprotective-hook-claude-deny-in.json'),'w',encoding='utf-8').write(json.dumps({'tool_name':'Bash','tool_input':{'command':'rm -rf /'}}))"
+          if errorlevel 1 exit /b 1
           call cmd /c integrations\cursor\bprotective-plugin\scripts\run_hook.cmd < "%TEMP%\bprotective-hook-deny.json" > "%TEMP%\bprotective-hook-cursor-deny.json"
           if errorlevel 1 exit /b 1
-          call cmd /c integrations\claude\bprotective-plugin\scripts\run_hook.cmd < "%TEMP%\bprotective-hook-deny.json" > "%TEMP%\bprotective-hook-claude-deny.json"
+          call cmd /c integrations\claude\bprotective-plugin\scripts\run_hook.cmd < "%TEMP%\bprotective-hook-claude-deny-in.json" > "%TEMP%\bprotective-hook-claude-deny.json"
           if errorlevel 1 exit /b 1
-          python -c "import json,os,pathlib; root=os.environ['TEMP']; raw=pathlib.Path(root,'bprotective-hook-cursor-deny.json').read_bytes(); print(raw); data=json.loads(raw); assert data.get('permission')=='deny', data; assert 'unreadable' not in data.get('user_message',''), data; claude=json.loads(pathlib.Path(root,'bprotective-hook-claude-deny.json').read_text(encoding='utf-8')); print(claude); assert claude['hookSpecificOutput']['permissionDecision']=='deny', claude"
+          python -c "import json,os,pathlib; root=os.environ['TEMP']; raw=pathlib.Path(root,'bprotective-hook-cursor-deny.json').read_bytes(); print(raw); data=json.loads(raw); assert data.get('permission')=='deny', data; assert 'unreadable' not in data.get('user_message',''), data; craw=pathlib.Path(root,'bprotective-hook-claude-deny.json').read_bytes(); print(craw); claude=json.loads(craw); assert claude['hookSpecificOutput']['permissionDecision']=='deny', claude"
+          if errorlevel 1 exit /b 1
       - name: Windows hook launcher via PowerShell
         if: runner.os == 'Windows'
         shell: pwsh
@@ -68,17 +73,20 @@ jobs:
           $parsed = $out | ConvertFrom-Json
           if ($parsed.permission -ne 'allow') { throw "cursor launcher returned $out" }
           $claude = '.\integrations\claude\bprotective-plugin\scripts\run_hook.cmd'
-          $claudeOut = $payload | & $claude
+          $claudePayload = '{"tool_name":"Bash","tool_input":{"command":"echo hi"}}'
+          $claudeOut = $claudePayload | & $claude
           if ($LASTEXITCODE -ne 0) { throw "claude launcher exit $LASTEXITCODE output=$claudeOut" }
           if ($claudeOut) { throw "claude launcher printed a decision: $claudeOut" }
           python -c "import json,os; open(os.environ['BPROTECTIVE_STATE_FILE'],'w',encoding='utf-8').write(json.dumps({'enabled': True}))"
+          if ($LASTEXITCODE -ne 0) { throw "could not enable protection" }
           $deny = '{"command":"rm -rf /"}'
           $cursorDeny = $deny | & $cursor
           if ($LASTEXITCODE -ne 0) { throw "cursor deny launcher exit $LASTEXITCODE output=$cursorDeny" }
           $parsedDeny = $cursorDeny | ConvertFrom-Json
           if ($parsedDeny.permission -ne 'deny') { throw "cursor deny launcher returned $cursorDeny" }
           if ($parsedDeny.user_message -match 'unreadable') { throw "cursor deny was a state error: $cursorDeny" }
-          $claudeDeny = $deny | & $claude
+          $claudeDenyPayload = '{"tool_name":"Bash","tool_input":{"command":"rm -rf /"}}'
+          $claudeDeny = $claudeDenyPayload | & $claude
           if ($LASTEXITCODE -ne 0) { throw "claude deny launcher exit $LASTEXITCODE output=$claudeDeny" }
           $parsedClaude = $claudeDeny | ConvertFrom-Json
           if ($parsedClaude.hookSpecificOutput.permissionDecision -ne 'deny') { throw "claude deny launcher returned $claudeDeny" }
