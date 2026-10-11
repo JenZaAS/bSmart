@@ -1160,7 +1160,7 @@ def _split_statements(text: str) -> list[str]:
                 buf.append(text[i + 1])
                 i += 2
                 continue
-            if ch == "`" or text.startswith("$(", i):
+            if ch == "`" or (ch == "$" and i + 1 < n and text[i + 1] == "("):
                 parts.append("".join(buf))
                 buf = []
                 i += 1 if ch == "`" else 2
@@ -1172,11 +1172,11 @@ def _split_statements(text: str) -> list[str]:
             i += 1
             continue
         if param:
-            if text.startswith("$(", i) or ch == "`":
+            if ch == "`" or (ch == "$" and i + 1 < n and text[i + 1] == "("):
                 parts.append("".join(buf))
                 buf = []
                 param = 0
-                i += 2 if text.startswith("$(", i) else 1
+                i += 1 if ch == "`" else 2
                 continue
             buf.append(ch)
             if ch == "{":
@@ -1190,7 +1190,11 @@ def _split_statements(text: str) -> list[str]:
             buf.append(ch)
             i += 1
             continue
-        if text.startswith("&&", i) or text.startswith("||", i) or text.startswith("$(", i):
+        if i + 1 < n and (
+            (ch == "&" and text[i + 1] == "&")
+            or (ch == "|" and text[i + 1] == "|")
+            or (ch == "$" and text[i + 1] == "(")
+        ):
             parts.append("".join(buf))
             buf = []
             i += 2
@@ -1211,14 +1215,28 @@ def _split_statements(text: str) -> list[str]:
     return parts
 
 
-def _nested_shell_texts(command: str) -> list[str]:
+def _mentions_nested_shell(text: str) -> bool:
+    """True when the text can name bash/sh, eval, cmd, or powershell.
+
+    ``bash``, ``zsh``, ``dash``, ``ksh``, ``powershell``, and ``pwsh`` all
+    contain ``sh``. A command with none of these letters has no nested script.
+    """
+    lowered = text.lower()
+    return "sh" in lowered or "cmd" in lowered or "eval" in lowered
+
+
+def _nested_shell_texts(command: str, statements: list[str] | None = None) -> list[str]:
     """Scripts passed to bash/sh -c, eval, cmd /c, or powershell -Command.
 
     ``echo`` of those words is not a shell.
     """
+    if not _mentions_nested_shell(command):
+        return []
     bodies: list[str] = []
     seen: set[str] = set()
-    for statement in _split_statements(command):
+    if statements is None:
+        statements = _split_statements(command)
+    for statement in statements:
         if not statement.strip():
             continue
         words = _unwrap_sudo(_quoted_words(statement))
@@ -1504,10 +1522,12 @@ def _remove_item_targets_state_dir(argv: list[str], keys: set[str]) -> bool:
     return any(_is_state_directory_operand(item, keys) for item in operands)
 
 
-def _removes_or_moves_state_dir(command: str) -> bool:
+def _removes_or_moves_state_dir(command: str, statements: list[str] | None = None) -> bool:
     """True when a command recursively removes or moves the State directory itself."""
     keys = _state_directory_keys()
-    for statement in _split_statements(command):
+    if statements is None:
+        statements = _split_statements(command)
+    for statement in statements:
         words = _unwrap_sudo(statement.split())
         if not words:
             continue
@@ -1542,16 +1562,17 @@ def _channel_block(command: str, _depth: int = 0) -> Decision | None:
     # Groups are already boundaries inside that check.
     if _is_control_command(command):
         return Decision("block", "guard-control", "changing bProtective from a shell command")
-    if _removes_or_moves_state_dir(command):
+    statements = _split_statements(command)
+    if _removes_or_moves_state_dir(command, statements):
         return Decision("block", "state-dir", "recursive removal or move of the State directory")
-    for statement in _split_statements(command):
+    for statement in statements:
         if not statement.strip():
             continue
         decision = _channel_statement(statement)
         if decision is not None:
             return decision
     if _depth < 3:
-        for body in _nested_shell_texts(command):
+        for body in _nested_shell_texts(command, statements):
             nested = _channel_block(body, _depth + 1)
             if nested is not None:
                 return nested
@@ -1826,10 +1847,10 @@ def _command_statements(text: str) -> list[list[str]]:
     while i < n:
         ch = text[i]
         if param:
-            if text.startswith("$(", i) or ch == "`":
+            if ch == "`" or (ch == "$" and i + 1 < n and text[i + 1] == "("):
                 flush_statement()
                 param = 0
-                i += 2 if text.startswith("$(", i) else 1
+                i += 1 if ch == "`" else 2
                 continue
             buf.append(ch)
             if ch == "{":
@@ -1842,7 +1863,11 @@ def _command_statements(text: str) -> list[list[str]]:
             flush_word()
             i += 1
             continue
-        if text.startswith("&&", i) or text.startswith("||", i) or text.startswith("$(", i):
+        if i + 1 < n and (
+            (ch == "&" and text[i + 1] == "&")
+            or (ch == "|" and text[i + 1] == "|")
+            or (ch == "$" and text[i + 1] == "(")
+        ):
             flush_statement()
             i += 2
             continue
