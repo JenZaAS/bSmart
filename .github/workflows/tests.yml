@@ -41,17 +41,18 @@ jobs:
           set BPROTECTIVE_STATE_FILE=%TEMP%\bprotective-hook-state.json
           set BPROTECTIVE_ARMED_FILE=%TEMP%\bprotective-hook-armed.json
           python -c "import json,os; open(os.path.join(os.environ['TEMP'],'bprotective-hook-in.json'),'w',encoding='utf-8').write(json.dumps({'command':'echo hi'}))"
-          call integrations\cursor\bprotective-plugin\scripts\run_hook.cmd < %TEMP%\bprotective-hook-in.json > %TEMP%\bprotective-hook-cursor.json
+          rem Calling a .cmd with stdin redirected makes cmd parse the payload as the script. cmd /c returns, and the child keeps the redirect.
+          call cmd /c "integrations\cursor\bprotective-plugin\scripts\run_hook.cmd < %TEMP%\bprotective-hook-in.json > %TEMP%\bprotective-hook-cursor.json"
           if errorlevel 1 exit /b 1
-          call integrations\claude\bprotective-plugin\scripts\run_hook.cmd < %TEMP%\bprotective-hook-in.json > %TEMP%\bprotective-hook-claude.json
+          call cmd /c "integrations\claude\bprotective-plugin\scripts\run_hook.cmd < %TEMP%\bprotective-hook-in.json > %TEMP%\bprotective-hook-claude.json"
           if errorlevel 1 exit /b 1
           python -c "import json,os; root=os.environ['TEMP']; data=json.load(open(os.path.join(root,'bprotective-hook-cursor.json'),encoding='utf-8')); assert data.get('permission')=='allow', data; claude=open(os.path.join(root,'bprotective-hook-claude.json'),encoding='utf-8').read().strip(); assert claude=='', claude"
           findstr /C:"sh -c" integrations\cursor\bprotective-plugin\hooks\hooks.json >nul && exit /b 1
           findstr /C:"run_hook.cmd" integrations\cursor\bprotective-plugin\hooks\hooks.json >nul || exit /b 1
           python -c "import json,os; open(os.environ['BPROTECTIVE_STATE_FILE'],'w',encoding='utf-8').write(json.dumps({'enabled': True})); open(os.path.join(os.environ['TEMP'],'bprotective-hook-deny.json'),'w',encoding='utf-8').write(json.dumps({'command':'rm -rf /'}))"
-          call integrations\cursor\bprotective-plugin\scripts\run_hook.cmd < %TEMP%\bprotective-hook-deny.json > %TEMP%\bprotective-hook-cursor-deny.json
+          call cmd /c "integrations\cursor\bprotective-plugin\scripts\run_hook.cmd < %TEMP%\bprotective-hook-deny.json > %TEMP%\bprotective-hook-cursor-deny.json"
           if errorlevel 1 exit /b 1
-          call integrations\claude\bprotective-plugin\scripts\run_hook.cmd < %TEMP%\bprotective-hook-deny.json > %TEMP%\bprotective-hook-claude-deny.json
+          call cmd /c "integrations\claude\bprotective-plugin\scripts\run_hook.cmd < %TEMP%\bprotective-hook-deny.json > %TEMP%\bprotective-hook-claude-deny.json"
           if errorlevel 1 exit /b 1
           python -c "import json,os; root=os.environ['TEMP']; data=json.load(open(os.path.join(root,'bprotective-hook-cursor-deny.json'),encoding='utf-8')); assert data.get('permission')=='deny', data; assert 'unreadable' not in data.get('user_message',''), data; claude=json.load(open(os.path.join(root,'bprotective-hook-claude-deny.json'),encoding='utf-8')); assert claude['hookSpecificOutput']['permissionDecision']=='deny', claude"
       - name: Windows hook launcher via PowerShell
