@@ -15,23 +15,21 @@ Run this flow whenever a user asks to initialize, set up or connect bAccountant 
 
 Show this warning in full and clearly marked as a warning. Then continue with step 1 when the user is ready. Optionally record in the init record that it was shown, with the date.
 
-> **WARNING - read before connecting your accounting data to an AI tool**
+> **WARNING**
 >
-> 1. **Your data goes to your AI provider.** Everything the agent reads from Tripletex (balances, postings, invoices, reports) is sent to the AI tool you use and its model provider. Whether a data-processing agreement (DPA) covers this depends on your plan. Some providers offer no DPA on individual or personal plans (for example, Cursor's individual plans have none), while team or business plans may include one. Without a DPA, your account data is processed by that provider without the contractual protections a DPA gives.
-> 2. **Keep salary and ID data out.** Salary data and national identity numbers (for example the Norwegian fodselsnummer and D-number) must be kept out wherever possible. bAccountant v1 switches off payroll and employee tools and will not ask for this data, but some reports or postings can still contain it.
-> 3. **Invoices and ledgers contain personal data too.** Names, email addresses, phone numbers and other details of customer and supplier contacts (and of sole traders) are personal data under the GDPR, even when they appear inside invoices or ledger postings.
-> 4. **The legal responsibility is yours.** Making sure there is a valid legal basis for this processing (GDPR, a DPA with the AI provider where needed, transfers outside the EU/EEA, and the Tripletex/Visma terms) is the responsibility of you and your company. It is **not** the responsibility of bSmart or of this agent, and neither gives legal advice or any assurance of compliance.
-> 5. **Read-only, and you can stop at any time.** This setup is read-only. You can abort now or later, and disconnect and revoke access whenever you want.
+> - It is your responsibility to make sure you have the rights to do what you are about to do (legal basis, terms and permissions). bSmart and this agent give no legal advice or assurance.
+> - Depending on your model setup, there may be issues with data going to a third-party model provider. You might run a model locally. Sharing personal or confidential data and secrets can raise GDPR and other issues.
+> - This setup is read-only. You can stop and disconnect at any time.
 
-Warning version: 1 (2026-10-11).
+Warning version: 2 (2026-10-11).
 
 ## Step 1 - Admin enables the beta (admin, in Tripletex)
 
 A Tripletex account administrator turns on **Tripletex MCP (beta)** under **Company > My subscription > Integrations** and accepts the MCP terms. Ask the user to confirm it is done (record only that it was confirmed, not account details).
 
-## Step 2 - Add the server in the client (user)
+## Step 2 - Add the server in the client the onboarding is running in (user)
 
-Add `https://mcp.tripletex.no` as a remote MCP server named `tripletex` in the AI client, using the snippet for that client in `tripletex-mcp-readonly.md` section 4. Disable any MCP servers the user does not fully trust for sessions where Tripletex is enabled. Confirm before continuing.
+Add `https://mcp.tripletex.no` as a remote MCP server named `tripletex` in the client the onboarding is running in. `tripletex-mcp-readonly.md` section 4 has example snippets; they are not a recommendation of any client. If that client is not listed, use the generic MCP client section. Disable any MCP servers the user does not fully trust for sessions where Tripletex is enabled. Confirm before continuing.
 
 ## Step 3 - Sign in (user)
 
