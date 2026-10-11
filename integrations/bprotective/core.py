@@ -111,10 +111,12 @@ _POSIX_ROOTS = (
 )
 _HOME_OPERANDS = {"~", "~/", "~/.", "~/*", "$home", "${home}", "$home/*", "${home}/*"}
 # About 16k, under the 15s hook timeout. Past this size the full tokenizer
-# does not run. A single linear scan still blocks hard cases and stops when
-# the scan time limit is reached, so a hook does not sit until the harness
-# gives up and runs the command.
+# does not run. A single linear scan still blocks hard cases. Past the hard
+# size ceiling, or when that scan runs out of time, the command is blocked
+# while protection is on, so a hook does not sit until the harness gives up
+# and runs the command. Between the cap and the ceiling, a clean scan asks.
 _MAX_COMMAND_CHARS = 16_000
+_MAX_HARD_CHARS = 256 * 1024
 _MAX_TOKENS = 20_000
 _MAX_SCAN_SECONDS = 0.5
 _WRAPPERS = {"sudo", "command", "exec", "env", "nice", "nohup", "timeout", "busybox"}
@@ -649,6 +651,11 @@ def _scan_limit(reason: str) -> Decision:
     return Decision("escalate", "scan-limit", reason)
 
 
+def _scan_closed(reason: str) -> Decision:
+    """Block. A timed-out or over-ceiling scan must not become an ask."""
+    return Decision("block", "scan-ceiling", reason)
+
+
 def _check_budget(deadline: float | None, tokens: list[str]) -> None:
     if deadline is not None and time.monotonic() >= deadline:
         raise ScanLimit("command scan exceeded the time limit")
@@ -753,12 +760,18 @@ def _tokenize(text: str, deadline: float | None = None) -> list[str]:
             buf.append("{")
             i += 1
             while i < n and param:
+                # $(...) and backticks run inside ${...}. Leave the marker so
+                # the main loop emits it as a boundary. ${HOME} has neither.
+                if text.startswith("$(", i) or text[i] == "`":
+                    param = 0
+                    break
+                if text[i] in " \t\r\n;|&<>()":
+                    param = 0
+                    break
                 if text[i] == "{":
                     param += 1
                 elif text[i] == "}":
                     param -= 1
-                elif text[i] in " \t\r\n;|&<>()`" or text.startswith("$(", i):
-                    break
                 buf.append(text[i])
                 i += 1
         if i == start:
@@ -1033,13 +1046,64 @@ def _redirect_block(surface: str) -> Decision | None:
     return None
 
 
+def _quoted_words(text: str) -> list[str]:
+    """Split on whitespace outside quotes and drop one layer of quotes.
+
+    The inside of a quote stays one word, so ``bash -c "rm -rf /"`` yields
+    the script ``rm -rf /`` rather than a quoted mention.
+    """
+    words: list[str] = []
+    buf: list[str] = []
+    i = 0
+    n = len(text)
+    quote = ""
+    while i < n:
+        ch = text[i]
+        if quote == "'":
+            if ch == "'":
+                quote = ""
+            else:
+                buf.append(ch)
+            i += 1
+            continue
+        if quote == '"':
+            if ch == "\\" and i + 1 < n:
+                buf.append(ch)
+                buf.append(text[i + 1])
+                i += 2
+                continue
+            if ch == '"':
+                quote = ""
+                i += 1
+                continue
+            buf.append(ch)
+            i += 1
+            continue
+        if ch in "'\"":
+            quote = ch
+            i += 1
+            continue
+        if ch in " \t\r\n":
+            if buf:
+                words.append("".join(buf))
+                buf = []
+            i += 1
+            continue
+        buf.append(ch)
+        i += 1
+    if buf:
+        words.append("".join(buf))
+    return words
+
+
 def _split_statements(text: str) -> list[str]:
     """Split on statement separators, groups, and substitutions. One pass.
 
     ``( ) { } $(`` and backticks are boundaries, so a grouped ``rm`` is its
     own statement. Quotes stay intact, and ``${name}`` stays one span.
-    ``$(`` and a backtick inside double quotes are still boundaries, because
-    the shell runs them. A parenthesis inside quotes is not.
+    ``$(`` and a backtick inside double quotes, or inside ``${...}``, are
+    still boundaries, because the shell runs them. A parenthesis inside
+    quotes is not.
     """
     parts: list[str] = []
     buf: list[str] = []
@@ -1073,6 +1137,12 @@ def _split_statements(text: str) -> list[str]:
             i += 1
             continue
         if param:
+            if text.startswith("$(", i) or ch == "`":
+                parts.append("".join(buf))
+                buf = []
+                param = 0
+                i += 2 if text.startswith("$(", i) else 1
+                continue
             buf.append(ch)
             if ch == "{":
                 param += 1
@@ -1104,6 +1174,23 @@ def _split_statements(text: str) -> list[str]:
         i += 1
     parts.append("".join(buf))
     return parts
+
+
+def _nested_shell_texts(command: str) -> list[str]:
+    """Scripts passed to bash/sh -c or eval. ``echo`` of those words is not a shell."""
+    bodies: list[str] = []
+    seen: set[str] = set()
+    for statement in _split_statements(command):
+        if not statement.strip():
+            continue
+        words = _unwrap_sudo(_quoted_words(statement))
+        for body in _shell_bodies(words):
+            text = body.strip()
+            if not text or text == command or text in seen:
+                continue
+            seen.add(text)
+            bodies.append(text)
+    return bodies
 
 
 def _is_cli_word(word: str) -> bool:
@@ -1397,11 +1484,13 @@ def _removes_or_moves_state_dir(command: str) -> bool:
     return False
 
 
-def _channel_block(command: str) -> Decision | None:
+def _channel_block(command: str, _depth: int = 0) -> Decision | None:
     """Block shell control of the guard and writes that name its real files.
 
     Groups, subshells, ``$(...)``, and backticks are statement boundaries, so
-    each piece is checked on its own. Quoted text is removed before the
+    each piece is checked on its own. ``$(`` and a backtick inside ``${...}``
+    are boundaries too. The script argument of bash, sh, or eval is checked
+    the same way. Quoted text is removed before the
     general path check, so a commit message that says "state" is not a path.
     The file match is the state file, its ``.armed`` marker, and
     ``~/.bprotective``. A file inside the content-root State directory is not
@@ -1423,6 +1512,11 @@ def _channel_block(command: str) -> Decision | None:
         decision = _channel_statement(statement)
         if decision is not None:
             return decision
+    if _depth < 3:
+        for body in _nested_shell_texts(command):
+            nested = _channel_block(body, _depth + 1)
+            if nested is not None:
+                return nested
     return None
 
 
@@ -1668,9 +1762,10 @@ def _fork_body_calls_itself(window: str, name: str) -> bool:
 def _command_statements(text: str) -> list[list[str]]:
     """Split on statement separators, groups, and substitutions. One pass.
 
-    ``${name}`` stays one word. ``$(`` and backticks are boundaries even when
-    a double quote is sitting on them, so ``bash -c "rm -rf /"`` still splits
-    into words the operand check can see.
+    ``${name}`` stays one word. ``$(`` and backticks are boundaries inside
+    ``${...}`` and even when a double quote is sitting on them, so
+    ``bash -c "rm -rf /"`` and ``${a:-$(rm -rf /)}`` still split into words
+    the operand check can see.
     """
     statements: list[list[str]] = []
     current: list[str] = []
@@ -1693,6 +1788,11 @@ def _command_statements(text: str) -> list[list[str]]:
     while i < n:
         ch = text[i]
         if param:
+            if text.startswith("$(", i) or ch == "`":
+                flush_statement()
+                param = 0
+                i += 2 if text.startswith("$(", i) else 1
+                continue
             buf.append(ch)
             if ch == "{":
                 param += 1
@@ -1797,7 +1897,7 @@ def _scan_words(words: list[str], deadline: float | None) -> Decision | None:
     find_root = False
     for index, word in enumerate(words):
         if index % 256 == 0 and _past_deadline(deadline):
-            return _scan_limit("command scan exceeded the time limit")
+            return _scan_closed("command scan exceeded the time limit")
         bare = _bare_word(word)
         name = _basename(bare)
         lower = bare.replace('"', "").replace("'", "").lower()
@@ -1855,33 +1955,40 @@ def _scan_words(words: list[str], deadline: float | None) -> Decision | None:
     return None
 
 
-def _oversized_hard_block(command: str, deadline: float | None = None) -> Decision | None:
+def _oversized_hard_block(
+    command: str, deadline: float | None = None, _depth: int = 0
+) -> Decision | None:
     """Block catastrophic commands in text past the tokenizer cap.
 
     One forward scan. It does not run the full tokenizer. A match blocks.
-    Past the time limit the caller asks instead of scanning until the harness
-    gives up. No match lets the caller ask.
+    Past the time limit this blocks too, instead of scanning until the harness
+    gives up and then asking. No match lets the caller ask, unless the command
+    is over the hard size ceiling.
     """
     if deadline is None:
         deadline = time.monotonic() + _MAX_SCAN_SECONDS
     if _past_deadline(deadline):
-        return _scan_limit("command scan exceeded the time limit")
+        return _scan_closed("command scan exceeded the time limit")
     lowered = command.lower()
     if _linear_fork_bomb(lowered) or _named_fork_bomb(command):
         return Decision("block", "fork-bomb", "fork bomb")
     if _past_deadline(deadline):
-        return _scan_limit("command scan exceeded the time limit")
-    if not any(
-        token in lowered
-        for token in ("mkfs", "dd", "format", "diskpart", "rm", "remove-item", "rmdir", "del", "rd", "ri", "erase", "find")
-    ):
-        return None
-    for words in _command_statements(command):
-        if _past_deadline(deadline):
-            return _scan_limit("command scan exceeded the time limit")
-        decision = _scan_words(words, deadline)
-        if decision is not None:
-            return decision
+        return _scan_closed("command scan exceeded the time limit")
+    keywords = ("mkfs", "dd", "format", "diskpart", "rm", "remove-item", "rmdir", "del", "rd", "ri", "erase", "find")
+    if any(token in lowered for token in keywords):
+        for words in _command_statements(command):
+            if _past_deadline(deadline):
+                return _scan_closed("command scan exceeded the time limit")
+            decision = _scan_words(words, deadline)
+            if decision is not None:
+                return decision
+    if _depth < 3:
+        for body in _nested_shell_texts(command):
+            if _past_deadline(deadline):
+                return _scan_closed("command scan exceeded the time limit")
+            nested = _oversized_hard_block(body, deadline, _depth + 1)
+            if nested is not None and nested.action == "block":
+                return nested
     return None
 
 
@@ -1895,6 +2002,8 @@ def policy_decision(
     """Return allow, escalate, or block from the command text. Ignores on/off state."""
     if _depth > 3:
         return Decision("block", "nested-shell", "nested shell command was not expanded")
+    if len(command) > _MAX_HARD_CHARS:
+        return _scan_closed("command exceeds the hard size limit")
     if len(command) > _MAX_COMMAND_CHARS:
         deadline = _deadline if _deadline is not None else time.monotonic() + _MAX_SCAN_SECONDS
         if not _skip_channel:
@@ -1980,10 +2089,15 @@ def guard(command: str, *, via_hook: bool = False) -> Decision:
     if state.get("error"):
         return Decision("block", "state-invalid", str(state["error"]))
     enabled = bool(state.get("enabled"))
-    # Past the tokenizer cap, still run the linear channel check and a linear
-    # hard-block scan over the whole text. Ask only when neither matches.
-    # On and off follow the same rules as a command under the cap.
+    # Past the tokenizer cap, a command over the hard size ceiling blocks
+    # while protection is on. Under that ceiling, still run the linear channel
+    # check and a linear hard-block scan. A scan that runs out of time blocks.
+    # Ask only when that check is clean. On and off follow the same guard
+    # rules as a command under the cap. While off, a huge command is not
+    # ceiling-blocked, so the channel check can still see guard control.
     if len(command) > _MAX_COMMAND_CHARS:
+        if enabled and len(command) > _MAX_HARD_CHARS:
+            return _scan_closed("command exceeds the hard size limit")
         deadline = time.monotonic() + _MAX_SCAN_SECONDS
         if via_hook or enabled:
             channel = _channel_block(command)

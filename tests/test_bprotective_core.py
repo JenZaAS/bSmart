@@ -771,9 +771,10 @@ class CorePolicyTests(unittest.TestCase):
         self.assertNotEqual(decision.rule_key, "scan-limit")
         with patch.object(self.core, "_MAX_SCAN_SECONDS", -1):
             timed = self.guard("y" * 20_000, via_hook=True)
-        self.assertEqual(timed.action, "escalate")
-        self.assertEqual(timed.rule_key, "scan-limit")
+        self.assertEqual(timed.action, "block")
+        self.assertEqual(timed.rule_key, "scan-ceiling")
         self.assertIn("time limit", timed.message)
+        self.assertNotIn("operator approval", timed.message)
 
     def test_oversized_scan_matches_more_of_the_under_cap_rules(self):
         self.enable()
@@ -805,6 +806,151 @@ class CorePolicyTests(unittest.TestCase):
         decision = self.guard(nested, via_hook=True)
         self.assertEqual(decision.action, "escalate")
         self.assertEqual(decision.rule_key, "scan-limit")
+
+    def test_hard_size_ceiling_blocks_while_on_and_not_while_off(self):
+        huge = "x" * (self.core._MAX_HARD_CHARS + 1)
+        self.assertGreater(len(huge), self.core._MAX_HARD_CHARS)
+        started = time.monotonic()
+        off = self.guard(huge, via_hook=True)
+        self.assertLess(time.monotonic() - started, 0.5)
+        self.assertEqual(off.action, "allow")
+        control = huge + " ; python3 scripts/bprotective off"
+        started = time.monotonic()
+        guarded = self.guard(control, via_hook=True)
+        self.assertLess(time.monotonic() - started, 0.5)
+        self.assertEqual(guarded.action, "block")
+        self.assertEqual(guarded.rule_key, "guard-control")
+        self.enable()
+        started = time.monotonic()
+        decision = self.guard(huge, via_hook=True)
+        self.assertLess(time.monotonic() - started, 0.5)
+        self.assertEqual(decision.action, "block")
+        self.assertEqual(decision.rule_key, "scan-ceiling")
+        self.assertIn("hard size", decision.message)
+        self.assertEqual(self.core.to_hermes(decision)["action"], "block")
+        self._assert_hooks(huge, blocked=True)
+        hidden = huge + " ; rm -rf /"
+        started = time.monotonic()
+        hidden_decision = self.guard(hidden, via_hook=True)
+        self.assertLess(time.monotonic() - started, 0.5)
+        self.assertEqual(hidden_decision.action, "block")
+        self.assertEqual(hidden_decision.rule_key, "scan-ceiling")
+        with patch.dict(os.environ, self.env, clear=False):
+            state = self.core.read_state()
+            state["allow_once"] = huge
+            self.core.write_state(state)
+            overridden = self.core.guard(huge, via_hook=True)
+        self.assertEqual(overridden.action, "block")
+        self.assertEqual(overridden.rule_key, "scan-ceiling")
+        medium = "y" * 200_000
+        self.assertGreater(len(medium), self.core._MAX_COMMAND_CHARS)
+        self.assertLess(len(medium), self.core._MAX_HARD_CHARS)
+        started = time.monotonic()
+        asked = self.guard(medium, via_hook=True)
+        self.assertLess(time.monotonic() - started, 0.5)
+        self.assertEqual(asked.action, "escalate")
+        self.assertEqual(asked.rule_key, "scan-limit")
+        with patch.dict(os.environ, self.env, clear=False):
+            evaluated = self.core.policy_decision(huge)
+        self.assertEqual(evaluated.action, "block")
+        self.assertEqual(evaluated.rule_key, "scan-ceiling")
+
+    def test_param_expansion_keeps_command_substitution_as_a_boundary(self):
+        tokens = self.core._tokenize("echo ${a:-$(rm -rf /)}")
+        self.assertIn("$(", tokens)
+        self.assertIn("rm", tokens)
+        self.assertIn("${HOME}", self.core._tokenize("rm -rf ${HOME}"))
+        statements = self.core._command_statements("echo ${a:-$(rm -rf /)}")
+        self.assertIn(["rm", "-rf", "/"], statements)
+        parts = self.core._split_statements("echo ${a:-$(python3 scripts/bprotective off)}")
+        self.assertTrue(any("python3 scripts/bprotective off" in part for part in parts))
+        self.enable()
+        blocked = (
+            "echo ${a:-$(python3 scripts/bprotective off)}",
+            "x=${y:-$(rm State/bprotective.json)}",
+            "echo ${a:-`python3 scripts/bprotective off`}",
+            "x=${y:-`rm State/bprotective.json`}",
+            "echo ${a:-$(rm -rf /)}",
+            "echo ${a:-`rm -rf /`}",
+            "rm -rf ${HOME}",
+        )
+        for command in blocked:
+            with self.subTest(command=command):
+                decision = self.guard(command, via_hook=True)
+                self.assertEqual(decision.action, "block", command)
+                self.assertNotEqual(decision.rule_key, "scan-limit")
+        allowed = (
+            "echo '${a:-$(python3 scripts/bprotective off)}'",
+            "echo '${a:-$(rm State/bprotective.json)}'",
+            'echo "bash -c python3 scripts/bprotective off"',
+            "echo bash -c true",
+            'echo "rm -rf / is dangerous"',
+        )
+        for command in allowed:
+            with self.subTest(command=command):
+                self.assertEqual(self.guard(command, via_hook=True).action, "allow", command)
+
+    def test_nested_shell_guard_control_is_blocked_through_hooks_while_off(self):
+        blocked = (
+            'bash -c "python3 scripts/bprotective off"',
+            'bash -c "rm State/bprotective.json"',
+            "sh -c 'python3 scripts/bprotective off'",
+            "sh -c 'rm State/bprotective.json'",
+            'bash -c "(python3 scripts/bprotective off)"',
+            "eval '(rm -rf State)'",
+        )
+        for command in blocked:
+            with self.subTest(command=command, via_hook=True):
+                decision = self.guard(command, via_hook=True)
+                self.assertEqual(decision.action, "block", command)
+                self.assertNotEqual(decision.rule_key, "scan-limit")
+                self._assert_hooks(command, blocked=True)
+            with self.subTest(command=command, via_hook=False):
+                self.assertEqual(self.guard(command, via_hook=False).action, "allow", command)
+        allowed = (
+            'bash -c "rm -rf /"',
+            'echo "python3 scripts/bprotective off"',
+            'echo "rm State/bprotective.json"',
+            "echo '${a:-$(python3 scripts/bprotective off)}'",
+            "echo bash -c true",
+        )
+        for command in allowed:
+            with self.subTest(command=command):
+                self.assertEqual(self.guard(command, via_hook=True).action, "allow", command)
+                self._assert_hooks(command, blocked=False)
+
+    def test_oversized_nested_shells_and_param_substitution_block(self):
+        self.enable()
+        filler = "x" * 60_000
+        prefix = f"echo {filler}; "
+        commands = (
+            prefix + 'bash -c "python3 scripts/bprotective off"',
+            prefix + "sh -c 'python3 scripts/bprotective off'",
+            prefix + 'bash -c "(python3 scripts/bprotective off)"',
+            prefix + 'bash -c "{ python3 scripts/bprotective off; }"',
+            prefix + 'eval "(python3 scripts/bprotective off)"',
+            prefix + 'bash -c "(rm State/bprotective.json)"',
+            prefix + "bash -c '(rm -rf State)'",
+            prefix + 'bash -c "(rm -rf ~/.bprotective)"',
+            prefix + "sh -c '(echo {} > State/bprotective.json)'",
+            prefix + "echo ${a:-$(rm -rf /)}",
+            prefix + "echo ${a:-`rm -rf /`}",
+            prefix + "echo ${a:-$(python3 scripts/bprotective off)}",
+            prefix + "x=${y:-$(rm State/bprotective.json)}",
+        )
+        for command in commands:
+            self.assertGreater(len(command), self.core._MAX_COMMAND_CHARS)
+            self.assertLess(len(command), self.core._MAX_HARD_CHARS)
+            started = time.monotonic()
+            decision = self.guard(command, via_hook=True)
+            self.assertLess(time.monotonic() - started, 0.5)
+            with self.subTest(command=command[:80]):
+                self.assertEqual(decision.action, "block", command[:120])
+                self.assertNotEqual(decision.rule_key, "scan-limit")
+        mentioned = prefix + 'echo "bash -c python3 scripts/bprotective off"'
+        self.assertEqual(self.guard(mentioned, via_hook=True).action, "escalate")
+        plain = prefix + "echo bash -c true"
+        self.assertEqual(self.guard(plain, via_hook=True).action, "escalate")
 
     def test_unknown_tilde_user_stays_allowed_while_off(self):
         for command in ("rm ~bogus/file", "rm -rf ~bogus", "cp ~bogus/a b"):

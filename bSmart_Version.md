@@ -2,7 +2,7 @@
 
 ```yaml
 current_version: 0.1.46-draft
-updated: 2026-10-11 09:34 UTC
+updated: 2026-10-11 09:52 UTC
 status: draft
 ```
 
@@ -65,6 +65,9 @@ scope:
   - keep the command scan linear and cap it near 16k characters, and run the hook channel check once per call
   - treat parentheses, braces, command substitution, and backticks as statement boundaries, so a grouped rm or bprotective off is still checked
   - keep the over-cap hard-block scan to one forward pass and stop it at the scan time limit
+  - past the scan cap, block when the linear scan runs out of time, and block a command over the hard size ceiling while protection is on
+  - look inside bash, sh, and eval string arguments during the over-cap checks, including through a hook while protection is off
+  - treat command substitution and backticks inside ${...} as statement boundaries
   - block rm, mv, and redirects of ~/.bprotective, interpreter one-liners that rm -rf a root, and recursive deletes of /home/<user> and C:\Users\<user>
   - warn on stdout or stderr when a hook launcher cannot find Python, and check the Windows launcher out as CRLF so cmd.exe can find its labels
 verification:
