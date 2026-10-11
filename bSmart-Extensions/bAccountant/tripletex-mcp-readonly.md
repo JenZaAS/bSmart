@@ -6,7 +6,7 @@ This is a practical protocol, not legal advice. The authoritative sources are Tr
 
 ## 0. Guided initialization
 
-To set bAccountant up for an agent, follow the step-by-step flow in `init-flow.md`: a privacy and responsibility warning, then admin enables the beta, add the server, sign in, switch tools off, review the tool list, enable approved read tools, and verify. The flow is resumable and can be aborted at any step. The sections below are its reference material.
+To set bAccountant up for an agent, follow the step-by-step flow in `init-flow.md`: a privacy and responsibility warning, then admin enables the beta, add the server in the client the onboarding is running in, sign in, switch tools off, review the tool list, enable approved read tools, and verify. The flow is resumable and can be aborted at any step. The sections below are its reference material.
 
 ## 1. What v1 does
 
@@ -46,23 +46,19 @@ Important: the server's toolset is large and **includes write and filing tools**
 
 ## 4. Connecting, per client
 
+Add the Tripletex MCP server in the agent framework or client the onboarding is running in. If onboarding runs in Codex, add it in Codex. If it runs in a Grok Bot agent, add it there as a connector. Do the same for any other client: add the server there.
+
 All clients use the same URL and the same browser sign-in. Choose a server name such as `tripletex`; it becomes the prefix of tool names in some clients. Never put credentials or tokens into these files: the sign-in handles that.
 
-### Cursor
+The snippets below are examples, not a recommendation. No client is the default. If the client the onboarding is running in is not listed (Codex and a Grok Bot agent included), follow Generic MCP client.
 
-Project-level (`<project>/.cursor/mcp.json`) or user-level (`<user-config-dir>/.cursor/mcp.json`):
+### Generic MCP client
 
-```json
-{
-  "mcpServers": {
-    "tripletex": {
-      "url": "https://mcp.tripletex.no"
-    }
-  }
-}
-```
+Any client that supports MCP streamable HTTP with OAuth (dynamic client registration) can connect to `https://mcp.tripletex.no`. Clients Tripletex does not recognise show an extra "do you trust this client" step at sign-in. The client must allow per-tool blocking, or the operator must place a filtering proxy in front of it; otherwise do not use it for v1.
 
-Then open Cursor's MCP settings, start the sign-in for `tripletex`, complete the Visma Connect login in the browser, and **before first use** switch off every tool that is not on the allowlist (Cursor lists each tool of a server with its own toggle).
+### Claude (web/desktop) and ChatGPT
+
+Add a custom connector / remote MCP server with URL `https://mcp.tripletex.no` and OAuth authentication, complete the sign-in, and use that client's per-tool controls if it has them. If it cannot switch individual tools off, do not use it for bAccountant v1.
 
 ### Claude Code
 
@@ -84,13 +80,21 @@ Then run `/mcp` inside Claude Code and complete the sign-in. Enforce the denylis
 
 Add one entry per denied tool from the recorded inventory (see `tool-policy.md`). Keep "ask before running" on for the remaining Tripletex tools until the inventory is reviewed.
 
-### Claude (web/desktop), ChatGPT and other clients
+### Cursor
 
-Add a custom connector / remote MCP server with URL `https://mcp.tripletex.no` and OAuth authentication, complete the sign-in, and use the client's per-tool controls if it has them. If a client cannot switch individual tools off, do not use it for bAccountant v1.
+Project-level (`<project>/.cursor/mcp.json`) or user-level (`<user-config-dir>/.cursor/mcp.json`):
 
-### Generic MCP client
+```json
+{
+  "mcpServers": {
+    "tripletex": {
+      "url": "https://mcp.tripletex.no"
+    }
+  }
+}
+```
 
-Any client that supports MCP streamable HTTP with OAuth (dynamic client registration) can connect to `https://mcp.tripletex.no`. Clients Tripletex does not recognise show an extra "do you trust this client" step at sign-in. The client must allow per-tool blocking, or the operator must place a filtering proxy in front of it; otherwise do not use it for v1.
+Then open Cursor's MCP settings, start the sign-in for `tripletex`, complete the Visma Connect login in the browser, and **before first use** switch off every tool that is not on the allowlist (Cursor lists each tool of a server with its own toggle).
 
 ## 5. Tool policy (summary)
 

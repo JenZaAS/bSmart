@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.47-draft
-updated: 2026-10-11 10:48 UTC
+current_version: 0.1.48-draft
+updated: 2026-10-11 20:16 UTC
 status: draft
 ```
 
@@ -26,6 +26,23 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.48-draft
+
+```yaml
+release_type: baccountant_init_warning
+news: |
+  The bAccountant setup warning is a few short lines. When you connect
+  Tripletex, add the MCP server in the client you are onboarding in. The
+  per-client snippets are examples of how some clients connect.
+scope:
+  - shorten the initialization privacy and responsibility warning to a few lines and mark it warning version 2 (shown, not a gate)
+  - keep salary and identity-data rules in the agent instructions and the tool policy
+  - add the Tripletex MCP server in the client the onboarding is running in
+  - treat the per-client connection snippets as examples, with the generic MCP client section covering any client that is not listed
+verification:
+  - documentation only; no runtime code changed
+```
 
 ## 0.1.47-draft
 
