@@ -206,7 +206,6 @@ commands:
 - Features — Show available bSmart capabilities.
 - bPrivate — Optionally encode sensitive content before online-model use and decode local results.
 - bProtective — Optionally block catastrophic commands and escalate risky ones.
-- bAccountant — Optionally turn an agent into a cautious accountant assistant.
 - bADR — Add and maintain standardized Architecture Decision Records in projects.
 
 ## Feature details
@@ -733,19 +732,29 @@ notes:
 ```yaml
 name: bAccountant
 group: Finance
-status: planned
+status: v1_read_only
 visibility: user-facing
 optional: true
 short_description: Optionally turn an agent into a cautious accountant assistant.
 files:
   - /workspace/bSmart-System/bSmart-Extensions/bAccountant/
+  - /workspace/bSmart-System/bSmart-Extensions/bAccountant/tripletex-mcp-readonly.md
+  - /workspace/bSmart-System/bSmart-Extensions/bAccountant/init-flow.md
+  - /workspace/bSmart-System/bSmart-Extensions/bAccountant/tool-policy.md
+  - /workspace/bSmart-System/bSmart-Extensions/bAccountant/agent-instructions.md
+  - /workspace/bSmart-System/bSmart-Extensions/bAccountant/starter-tasks.md
+  - /workspace/bSmart-System/bSmart-Extensions/bAccountant/templates/
   - /workspace/bSmart-System/bSmart_Protocols/bAccountant-onboarding.md
-description: Provides a conservative accountant-oriented mode with sequential business-context onboarding, Tripletex MCP as the initial integration, explicit operating modes, human approval for accounting changes, fail-closed behavior, complete interaction logging, learning comparisons against human account coding, and daily reporting.
+description: Provides a conservative accountant-oriented mode with sequential business-context onboarding, Tripletex MCP as the initial integration, explicit operating modes, human approval for accounting changes, fail-closed behavior, complete interaction logging, learning comparisons against human account coding, and daily reporting. v1 is read-only through the official Tripletex-hosted MCP server, with a guided initialization, a default-deny tool policy, and no Tripletex integration code of its own.
 commands:
-  - enable bAccountant
-  - configure bAccountant
-  - bAccountant status
+  - initialize bAccountant (natural-language request; runs init-flow.md)
+  - enable bAccountant (planned)
+  - configure bAccountant (planned)
+  - bAccountant status (planned)
 included_capabilities:
+  - v1 guided read-only Tripletex MCP initialization with a privacy and responsibility warning
+  - v1 default-deny tool policy that blocks write, payroll, employee, and script tools
+  - v1 read-only starter tasks and instance-local init, tool-inventory, and session-log records
   - One-question-at-a-time onboarding with options and recommendations
   - Business, accounting bureau, and division-of-labour context
   - Country-specific law and VAT research workflow
@@ -758,4 +767,7 @@ notes:
   - Read-only mode is the default and overrides other modes.
   - Bookkeeping and salary modes never bypass approval or safety controls.
   - Tripletex capabilities must be checked before duplicating functionality.
+  - Exception queue, rules engine, daily report, and emergency stop are planned; v1 ships the read-only connection layer only.
+  - Never claims legal compliance; the legal basis for processing is the user's and their company's responsibility.
+  - Any future Tripletex adapter code is written solely in-house; no copied third-party Tripletex code.
 ```
