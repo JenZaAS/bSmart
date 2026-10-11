@@ -1439,6 +1439,190 @@ def _structured_decision(command: str, tokens: list[str], *, _skip_channel: bool
     return escalation
 
 
+def _fork_bomb_at(text: str) -> bool:
+    """True when ``text`` starts with a fork bomb. The window is bounded."""
+    if not text.startswith(":()"):
+        return False
+    j = 3
+    n = len(text)
+    for ch in "{:|:&};:":
+        while j < n and text[j] in " \t\r":
+            j += 1
+        if j >= n or text[j] != ch:
+            return False
+        j += 1
+    return True
+
+
+def _linear_fork_bomb(lowered: str) -> bool:
+    start = 0
+    while True:
+        index = lowered.find(":()", start)
+        if index < 0:
+            return False
+        if _fork_bomb_at(lowered[index : index + 48]):
+            return True
+        start = index + 3
+
+
+def _command_statements(text: str) -> list[list[str]]:
+    """Split on statement separators. One pass, no regular expressions."""
+    statements: list[list[str]] = []
+    current: list[str] = []
+    buf: list[str] = []
+
+    def flush_word() -> None:
+        if buf:
+            current.append("".join(buf))
+            buf.clear()
+
+    def flush_statement() -> None:
+        flush_word()
+        if current:
+            statements.append(list(current))
+            current.clear()
+
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if ch in " \t\r":
+            flush_word()
+            i += 1
+            continue
+        if text.startswith("&&", i) or text.startswith("||", i):
+            flush_statement()
+            i += 2
+            continue
+        if ch in ";&|\n":
+            flush_statement()
+            i += 1
+            continue
+        buf.append(ch)
+        i += 1
+    flush_statement()
+    return statements
+
+
+def _bare_word(word: str) -> str:
+    return word.strip().strip("'\"")
+
+
+def _is_recursive_rm_flag(arg: str) -> bool:
+    bare = _bare_word(arg).lower()
+    if bare in {"--recursive", "-recurse", "/s"} or bare.startswith("--recursive="):
+        return True
+    if bare.startswith("-") and not bare.startswith("--"):
+        letters = bare[1:]
+        # rm clusters are short (-rf). Do not treat -Force as recursive.
+        return letters.isalpha() and "r" in letters and len(letters) <= 4
+    return False
+
+
+def _is_root_delete_operand(arg: str) -> bool:
+    """True for ``/``, ``~``, or a drive root such as ``C:\\``. Not ``C:\\Windows``."""
+    bare = _bare_word(arg)
+    if bare in {"/", "/*", "/.", "/./", "//", "~", "~/", "~/.", "~/*"}:
+        return True
+    if len(bare) >= 2 and bare[0].isalpha() and bare[1] == ":":
+        rest = bare[2:].replace("\\", "/")
+        return rest in {"", "/", "/*"}
+    return False
+
+
+def _statement_root_delete(words: list[str]) -> Decision | None:
+    posix = {"rm"}
+    windows = {"remove-item", "ri", "del", "erase", "rd", "rmdir"}
+    for index, word in enumerate(words):
+        name = _basename(_bare_word(word))
+        if name not in posix and name not in windows:
+            continue
+        recursive = False
+        root = False
+        for arg in words[index + 1 :]:
+            if _is_recursive_rm_flag(arg):
+                recursive = True
+            elif _is_root_delete_operand(arg):
+                root = True
+        if not (recursive and root):
+            continue
+        if name in windows:
+            return Decision(
+                "block",
+                "windows-root-recursive-delete",
+                "recursive deletion of a Windows root, system, or home path",
+            )
+        return Decision("block", "root-recursive-delete", "recursive deletion of a protected root or home path")
+    return None
+
+
+def _statement_has_mkfs(words: list[str]) -> bool:
+    for word in words:
+        name = _basename(_bare_word(word))
+        if name == "mkfs" or name.startswith("mkfs."):
+            return True
+    return False
+
+
+def _statement_has_dd_of_dev(words: list[str]) -> bool:
+    if not any(_basename(_bare_word(word)) == "dd" for word in words):
+        return False
+    for index, word in enumerate(words):
+        bare = _bare_word(word).lower()
+        if "of=/dev" in bare:
+            return True
+        if bare == "of" and index + 2 < len(words) and words[index + 1] == "=":
+            if _bare_word(words[index + 2]).lower().startswith("/dev"):
+                return True
+    return False
+
+
+def _statement_formats_drive(words: list[str]) -> bool:
+    for index, word in enumerate(words):
+        name = _basename(_bare_word(word))
+        if name == "format-volume":
+            return True
+        if name not in {"format", "format.com"}:
+            continue
+        for arg in words[index + 1 :]:
+            if _is_root_delete_operand(arg):
+                return True
+    return False
+
+
+def _statement_has_diskpart(words: list[str]) -> bool:
+    return any(_basename(_bare_word(word)) == "diskpart" for word in words)
+
+
+def _oversized_hard_block(command: str) -> Decision | None:
+    """Block catastrophic commands in text past the tokenizer cap.
+
+    One forward scan. It does not tokenize quotes or run the nested policy
+    patterns. A match blocks. No match lets the caller ask.
+    """
+    lowered = command.lower()
+    if _linear_fork_bomb(lowered):
+        return Decision("block", "fork-bomb", "fork bomb")
+    if not any(
+        token in lowered
+        for token in ("mkfs", "dd", "format", "diskpart", "rm", "remove-item", "rmdir", "del", "rd")
+    ):
+        return None
+    for words in _command_statements(command):
+        deleted = _statement_root_delete(words)
+        if deleted is not None:
+            return deleted
+        if _statement_has_mkfs(words):
+            return Decision("block", "device-format", "disk formatting or raw-device overwrite")
+        if _statement_has_dd_of_dev(words):
+            return Decision("block", "device-format", "disk formatting or raw-device overwrite")
+        if _statement_formats_drive(words):
+            return Decision("block", "windows-format", "disk formatting")
+        if _statement_has_diskpart(words):
+            return Decision("block", "diskpart", "diskpart can erase or repartition disks")
+    return None
+
+
 def policy_decision(
     command: str,
     config: Config | None = None,
@@ -1450,6 +1634,13 @@ def policy_decision(
     if _depth > 3:
         return Decision("block", "nested-shell", "nested shell command was not expanded")
     if len(command) > _MAX_COMMAND_CHARS:
+        if not _skip_channel:
+            channel = _channel_block(command)
+            if channel is not None:
+                return channel
+        hard = _oversized_hard_block(command)
+        if hard is not None:
+            return hard
         return _scan_limit("command exceeds the scan size limit")
     deadline = _deadline if _deadline is not None else time.monotonic() + _MAX_SCAN_SECONDS
     if time.monotonic() >= deadline:
@@ -1524,19 +1715,26 @@ def guard(command: str, *, via_hook: bool = False) -> Decision:
     if state.get("error"):
         return Decision("block", "state-invalid", str(state["error"]))
     enabled = bool(state.get("enabled"))
-    # An oversized command is not scanned. While off, that is an allow. While
-    # on, it asks for approval instead of refusing a command the scan cannot
-    # finish. Codex treats that ask like any other escalation.
+    # Past the tokenizer cap, still run the linear channel check and a linear
+    # hard-block scan over the whole text. Ask only when neither matches.
+    # On and off follow the same rules as a command under the cap.
     if len(command) > _MAX_COMMAND_CHARS:
-        if not enabled:
-            return Decision("allow", "disabled", "bProtective is off")
-        decision = _scan_limit("command exceeds the scan size limit")
-        allowed = state.get("allow_once")
-        if isinstance(allowed, str) and allowed == command.strip():
-            state["allow_once"] = None
-            write_state(state)
-            return Decision("allow", "allow-once", "operator approved this command once")
-        return decision
+        if via_hook or enabled:
+            channel = _channel_block(command)
+            if channel is not None:
+                return channel
+        if enabled:
+            hard = _oversized_hard_block(command)
+            if hard is not None:
+                return hard
+            decision = _scan_limit("command exceeds the scan size limit")
+            allowed = state.get("allow_once")
+            if isinstance(allowed, str) and allowed == command.strip():
+                state["allow_once"] = None
+                write_state(state)
+                return Decision("allow", "allow-once", "operator approved this command once")
+            return decision
+        return Decision("allow", "disabled", "bProtective is off")
     # One channel check per call. via_hook still blocks guard control while off.
     # A direct check while off does not, so `bprotective check` stays quiet.
     if via_hook or enabled:

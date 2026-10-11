@@ -12,7 +12,7 @@ The core has no third-party dependencies. It covers POSIX shells and Windows Pow
 | `escalate` | Risky. Do not run it until the operator approves that command. |
 | `block` | Catastrophic. Refuse it. Do not ask for an override. |
 
-A command past the scan cap is not fully scanned. While protection is on, that is escalate, so the operator can approve it. Codex keeps the same rule it uses for every escalation: PreToolUse and PermissionRequest return no decision, and neither one denies the command or returns a token. While protection is off, an oversized command is allowed and is not scanned.
+A command past the scan cap is not fully tokenized. A linear check still blocks guard control, state-file changes, and catastrophic commands such as `rm -rf /`, `rm -rf ~`, `mkfs`, `dd of=/dev`, `format C:`, `diskpart`, and a fork bomb. Guard control and state changes stay blocked through a hook while protection is off. Anything else is escalate while protection is on, so the operator can approve it, and is allowed while protection is off. Codex keeps the same rule it uses for every escalation: PreToolUse and PermissionRequest return no decision, and neither one denies the command or returns a token. A block is still a deny.
 
 A missing state file is off only when this install was never armed. After the operator has confirmed on, a missing state file fails closed while the outside armed record or the local marker remains. A state file that reads off without a recorded operator-confirmed off also fails closed. Unreadable state fails closed for a shell command. An invalid instance config fails closed only while the guard is on. A missing config file adds nothing. A missing core blocks terminal commands.
 

@@ -2,7 +2,7 @@
 
 ```yaml
 current_version: 0.1.46-draft
-updated: 2026-10-11 08:45 UTC
+updated: 2026-10-11 08:56 UTC
 status: draft
 ```
 
@@ -33,8 +33,9 @@ Only interactive `bStart` marks news seen. It runs the notice before its update 
 release_type: harness_independent_bprotective
 news: |
   bProtective can check shell commands before they run. It stays off until you
-  turn it on. From your own terminal, run bprotective on, bprotective off, or
-  bprotective recover, then confirm with bprotective yes.
+  turn it on. From your own terminal, run python3 scripts/bprotective on,
+  python3 scripts/bprotective off, or python3 scripts/bprotective recover,
+  then confirm with python3 scripts/bprotective yes.
 scope:
   - move bProtective policy, on/off state, and confirmation gating into one dependency-free Python core
   - cover POSIX shells and Windows PowerShell/cmd, including protected instance paths
@@ -53,7 +54,7 @@ scope:
   - deny Codex blocks without an agent-visible token, and let escalations reach PermissionRequest
   - fail closed when the core cannot load, with Cursor failClosed and BPROTECTIVE_CORE
   - grant Windows state-file ACLs to a SID or DOMAIN\\user, and use Codex commandWindows
-  - stop a single & from hanging the tokenizer, and ask for approval when a command hits the scan size or time limit while protection is on
+  - stop a single & from hanging the tokenizer, and past the scan cap still block catastrophic commands and guard changes with a linear check; ask only when that check is clean
   - keep an armed record outside State, and fail closed when that record disagrees with an off or missing state file unless the operator confirmed off
   - add bprotective recover for a missing state file, and require the operator to run on and yes in their own terminal
   - deny Claude Write/Edit/MultiEdit, Cursor Write/Delete, and Codex apply_patch on the state and armed-record paths

@@ -571,6 +571,78 @@ class CorePolicyTests(unittest.TestCase):
             self.assertEqual(limited.action, "escalate")
             self.assertEqual(limited.rule_key, "scan-limit")
 
+    def test_oversized_hard_blocks_stay_blocks(self):
+        def padded(command: str, size: int, where: str) -> str:
+            filler = "x" * size
+            if where == "front":
+                return f"echo {filler} ; {command}"
+            if where == "back":
+                return f"{command} ; echo {filler}"
+            if where == "quotes":
+                return f'echo "{filler}" ; {command}'
+            if where == "comment":
+                return f"{command} # {filler}"
+            if where == "heredoc":
+                return f"cat > file <<EOF\n{filler}\nEOF\n{command}"
+            raise AssertionError(where)
+
+        dangerous = (
+            "rm -rf /",
+            "rm -rf ~",
+            "mkfs.ext4 /dev/sda",
+            "dd of=/dev/sda",
+            "format C:",
+            "Remove-Item -Recurse -Force C:\\",
+            ":(){ :|:& };:",
+            'bash -c "rm -rf /"',
+        )
+        self.enable()
+        for command in dangerous:
+            for where in ("front", "back", "quotes", "comment", "heredoc"):
+                for size in (60_000, 120_000):
+                    text = padded(command, size, where)
+                    self.assertGreater(len(text), self.core._MAX_COMMAND_CHARS)
+                    started = time.monotonic()
+                    decision = self.guard(text, via_hook=True)
+                    self.assertLess(time.monotonic() - started, 0.5)
+                    with self.subTest(command=command, where=where, size=size):
+                        self.assertEqual(decision.action, "block", text[:80])
+                        self.assertNotEqual(decision.rule_key, "scan-limit")
+        root = padded("rm -rf /", 60_000, "front")
+        payload = {"tool_name": "Bash", "tool_input": {"command": root}}
+        with patch.dict(os.environ, self.env, clear=False):
+            cursor = self.hook.respond("cursor", {"command": root}, self.core)
+            claude = self.hook.respond("claude", payload, self.core)
+            codex = self.hook.respond("codex", payload, self.core)
+            permission = self.hook.respond_permission(payload, self.core)
+        self.assertEqual(cursor["permission"], "deny")
+        self.assertEqual(claude["hookSpecificOutput"]["permissionDecision"], "deny")
+        self.assertEqual(codex["hookSpecificOutput"]["permissionDecision"], "deny")
+        self.assertEqual(permission["hookSpecificOutput"]["decision"]["behavior"], "deny")
+        self.assertNotIn("bprotective yes", json.dumps(cursor))
+        heredoc = "cat > file <<EOF\n" + ("y" * 46_000) + "\nEOF"
+        asked = self.guard(heredoc, via_hook=True)
+        self.assertEqual(asked.action, "escalate")
+        self.assertEqual(asked.rule_key, "scan-limit")
+
+    def test_oversized_guard_control_stays_blocked_while_off(self):
+        filler = "x" * 60_000
+        commands = (
+            f"echo {filler} ; bprotective off",
+            f"echo {filler} ; scripts/bprotective off",
+            f"echo {filler} ; scripts/bprotective on",
+            f"echo {filler} ; rm State/bprotective.json",
+            f"echo {filler} ; rm -rf State",
+            f"echo {filler} ; rm -rf ~/.bprotective",
+        )
+        for command in commands:
+            self.assertGreater(len(command), self.core._MAX_COMMAND_CHARS)
+            with self.subTest(command=command[:40]):
+                decision = self.guard(command, via_hook=True)
+                self.assertEqual(decision.action, "block", command[:80])
+                self.assertNotEqual(decision.rule_key, "scan-limit")
+        self.assertEqual(self.guard(f"echo {filler} ; rm -rf /", via_hook=True).action, "allow")
+
     def test_tamper_without_operator_off_fails_closed(self):
         self.enable()
         state = json.loads(self.state.read_text(encoding="utf-8"))
