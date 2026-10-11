@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.46-draft
-updated: 2026-10-11 10:24 UTC
+current_version: 0.1.47-draft
+updated: 2026-10-11 10:48 UTC
 status: draft
 ```
 
@@ -26,6 +26,30 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.47-draft
+
+```yaml
+release_type: baccountant_v1_readonly
+news: |
+  bAccountant v1 is available as an opt-in, read-only feature. Ask your agent
+  to initialize bAccountant and it walks you through connecting the official
+  Tripletex MCP server step by step, starting with a privacy warning. It only
+  reads; it never writes to your accounts.
+scope:
+  - add bAccountant v1 read-only protocol for the official Tripletex-hosted MCP server, with per-client connection examples, a privacy checklist, and disconnect and revoke steps
+  - add a guided, resumable and abortable initialization flow that starts with a privacy and responsibility warning (shown, not a gate)
+  - add a default-deny tool policy that blocks write, sending, approval, payroll, employee, script, client-account, and feedback tools, and a first-connect tool recording procedure
+  - add accountant agent instructions, read-only starter task templates, and init, tool-inventory, and session-log record templates
+  - state that the extension holds no Tripletex integration code and that any future adapter is written solely in-house
+  - the agent never claims legal compliance; the legal basis is the user's and their company's responsibility
+  - list bAccountant once, under Finance, in bSmart_Features.md, mark its commands as planned, and add it to the extension docs and the bundled extension list
+  - point the onboarding protocol's Tripletex connection question to the initialization flow
+verification:
+  - documentation and templates only; no runtime code changed
+  - not live-tested against a Tripletex account; tool names must be confirmed on first connect
+  - python and node tests pass, including the public-tree privacy guard
+```
 
 ## 0.1.46-draft
 

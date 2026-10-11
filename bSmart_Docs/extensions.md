@@ -132,3 +132,20 @@ setup_default: yes
 ```
 
 bQAbuild is a normal bSmart feature. Its packaged handler is an implementation detail; session state remains instance-local under `/workspace/bSmart/QABuild`.
+
+## bAccountant
+
+```yaml
+name: bAccountant
+path: /workspace/bSmart-Extensions/bAccountant
+source_path: /workspace/bSmart-System/bSmart-Extensions/bAccountant
+status: optional_bundled_extension
+purpose:
+  - accountant-oriented agent mode, disabled by default
+  - v1 read-only access through the official Tripletex-hosted MCP server
+  - guided initialization, default-deny tool policy, and instance-local records
+install_model: copy_or_sync_from_bundled_source
+setup_default: no
+```
+
+bAccountant is opt-in. It contains no Tripletex integration code. Instance records (init record, tool inventory, session logs) live in the instance's or project's own data area, never in the extension folder.

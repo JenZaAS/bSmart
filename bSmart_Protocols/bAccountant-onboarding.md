@@ -21,7 +21,7 @@ Ask in this order, adapting only when an answer makes a question irrelevant:
 5. Accounting bureau involvement. **Recommendation:** identify the bureau and what it is responsible for.
 6. Division of labour. **Recommendation:** name who prepares, reviews, approves, posts, pays, reconciles, and submits reports.
 7. Human escalation contact. **Recommendation:** one named person with authority to decide uncertain accounting questions.
-8. Tripletex company/tenant and MCP connection. **Recommendation:** verify identity and use read-only access first.
+8. Tripletex company/tenant and MCP connection. **Recommendation:** verify identity and use read-only access first. Set up the connection with `bSmart-Extensions/bAccountant/init-flow.md`.
 9. Available Tripletex/MCP operations. **Recommendation:** start with the minimum required permissions.
 10. Initial mode settings. **Recommendation:** read-only on; learning on if the user wants comparison data; salary and bookkeeping off.
 11. Approval policy. **Recommendation:** explicit approval per item until the workflow is proven safe.
