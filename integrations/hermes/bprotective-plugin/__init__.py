@@ -1,182 +1,86 @@
-"""Hermes adapter and local policy core for bProtective."""
+"""Hermes adapter for the shared bProtective core."""
 
 from __future__ import annotations
 
-import json
+import importlib.util
 import os
-import re
-import secrets
-import subprocess
-import tempfile
-import time
+import sys
 from pathlib import Path
 from typing import Any
 
-_DEFAULT_STATE = Path.home() / ".hermes" / "bprotective.json"
 _TERMINAL_TOOLS = {"terminal", "shell", "bash", "execute_shell"}
 
-_BLOCK_RULES = (
-    ("root-recursive-delete", re.compile(r"\brm\b(?:(?!\n).)*\s-[^\s]*r[^\s]*f[^\s]*\s+(?:/|/\*|~(?:/\*)?|\$HOME(?:/\*)?)(?:\s|$)", re.I), "recursive deletion of a protected root or home path"),
-    ("device-format", re.compile(r"\b(?:mkfs(?:\.[\w-]+)?|diskutil\s+(?:eraseDisk|partitionDisk))\b|\bdd\b(?:(?!\n).)*\bof\s*=\s*/dev/", re.I), "disk formatting or raw-device overwrite"),
-    ("fork-bomb", re.compile(r":\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:", re.I), "fork bomb"),
-    ("secret-export", re.compile(r"\b(?:bw|bws|lpass|keepassxc-cli|rbw|nordpass|pass)\b|\b(?:op\s+(?:read|run|inject|document)|security\s+(?:find|dump-keychain))\b|\bgpg\s+--export-secret", re.I), "credential or secret-store access"),
-    ("remote-installer", re.compile(r"\b(?:curl|wget)\b(?:(?!\n).)*(?:\||;|&&)\s*(?:sudo\s+)?(?:sh|bash|zsh)\b", re.I), "piped remote script execution"),
-    ("destructive-git", re.compile(r"\bgit\s+(?:push\b(?:(?!\n).)*(?:--force\s*|\s-f\b)|reflog\s+expire\b|gc\b(?:(?!\n).)*--prune(?:=now|=all))|\bgh\s+(?:repo|release|secret|ssh-key|gpg-key)\s+delete\b", re.I), "destructive Git or GitHub history/resource operation"),
-)
 
-_APPROVAL_RULES = (
-    ("privileged-command", re.compile(r"(?:^|[;&|]\s*)sudo\b|\b(?:systemctl|service|ufw|iptables|nft)\b", re.I), "privileged service or firewall operation"),
-    ("docker-runtime", re.compile(r"\bdocker\b|\bdokploy\b", re.I), "Docker or Dokploy runtime operation"),
-    ("permissions", re.compile(r"\b(?:chmod|chown|chgrp|setfacl)\b", re.I), "permission or ownership change"),
-    ("external-publication", re.compile(r"\bgit\s+push\b|\bgh\s+(?:pr|release|repo|issue)\b", re.I), "external Git or GitHub operation"),
-    ("package-install", re.compile(r"\b(?:apt|apt-get|brew|npm|pnpm|yarn|pip|uv)\s+(?:install|add)\b", re.I), "package installation"),
-)
-
-
-def _state_path() -> Path:
-    return Path(os.environ.get("BPROTECTIVE_STATE_FILE", str(_DEFAULT_STATE))).expanduser().resolve()
+def _core_dir() -> Path:
+    candidates: list[Path] = []
+    if os.environ.get("BPROTECTIVE_CORE"):
+        candidates.append(Path(os.environ["BPROTECTIVE_CORE"]).expanduser())
+    if os.environ.get("BSMART_SYSTEM_ROOT"):
+        candidates.append(Path(os.environ["BSMART_SYSTEM_ROOT"]).expanduser() / "integrations" / "bprotective")
+    here = Path(__file__).resolve()
+    candidates.append(here.parents[2] / "bprotective")
+    for parent in here.parents:
+        candidates.append(parent / "integrations" / "bprotective")
+        candidates.append(parent / "bSmart-System" / "integrations" / "bprotective")
+    for candidate in candidates:
+        if (candidate / "core.py").is_file():
+            return candidate
+    raise ImportError("bProtective core not found. Set BSMART_SYSTEM_ROOT to the bSmart-System checkout.")
 
 
-def _read_state() -> dict[str, Any]:
-    path = _state_path()
-    if not path.is_file():
-        return {"enabled": False, "pending": None}
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {"enabled": False, "pending": None, "error": "state file is unreadable"}
-    return value if isinstance(value, dict) else {"enabled": False, "pending": None, "error": "state file is invalid"}
+def _load_core() -> Any:
+    name = "bprotective_core"
+    cached = sys.modules.get(name)
+    if cached is not None and hasattr(cached, "guard"):
+        return cached
+    path = _core_dir() / "core.py"
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"bProtective core not found: {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
-def _restrict_private(fd: int, temp_name: str) -> None:
-    """Best-effort owner-only access for the private state file.
-
-    On POSIX, mode 0o600 is owner read/write. On Windows, os.chmod only
-    toggles the read-only attribute, so it does not limit access to the
-    owner. There, call System32\\icacls.exe by full path, drop inherited
-    ACEs, and grant the current user read, write, and delete. Delete is
-    required to replace the file on a share where the user only has Modify.
-    A failed or timed-out ACL change must not block the write.
-    """
-    if hasattr(os, "fchmod"):
-        os.fchmod(fd, 0o600)
-    else:
-        os.chmod(temp_name, 0o600)
-    if os.name != "nt":
-        return
-    user = os.environ.get("USERNAME")
-    if not user:
-        return
-    system_root = os.environ.get("SystemRoot") or r"C:\Windows"
-    icacls = system_root.rstrip("\\/") + "\\System32\\icacls.exe"
-    try:
-        subprocess.run(
-            [icacls, temp_name, "/inheritance:r", "/grant:r", f"{user}:(R,W,D)"],
-            check=False,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=10,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        pass
-
-
-def _write_state(value: dict[str, Any]) -> None:
-    path = _state_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
-    opened = False
-    try:
-        _restrict_private(fd, temp_name)
-        with os.fdopen(fd, "w", encoding="utf-8") as stream:
-            opened = True
-            json.dump(value, stream, sort_keys=True)
-            stream.write("\n")
-        os.replace(temp_name, path)
-    except Exception:
-        if not opened:
-            try:
-                os.close(fd)
-            except OSError:
-                pass
-        try:
-            os.unlink(temp_name)
-        except OSError:
-            pass
-        raise
-
-
-def _confirmation(operation: str) -> str:
-    state = _read_state()
-    token = secrets.token_urlsafe(12)
-    state["pending"] = {"id": token, "operation": operation, "expires_at": int(time.time()) + 300}
-    _write_state(state)
-    return token
-
-
-def _command(raw_args: str) -> str:
-    return (raw_args or "").strip()
-
-
-def _handle_command(raw_args: str) -> str:
-    args = _command(raw_args).split()
-    state = _read_state()
-    if state.get("error"):
-        return f"bProtective unavailable: {state['error']}."
-    if not args or args == ["status"]:
-        return f"bProtective is {'on' if state.get('enabled') else 'off'}."
-    if args in (["on"], ["off"]):
-        operation = args[0]
-        if bool(state.get("enabled")) == (operation == "on"):
-            return f"bProtective is already {operation}."
-        token = _confirmation(operation)
-        return f"Confirmation required to turn bProtective {operation}. Reply: /bprotective yes {token}"
-    if len(args) == 2 and args[0] == "yes":
-        pending = state.get("pending") or {}
-        if not pending or pending.get("id") != args[1]:
-            return "No matching bProtective confirmation; it may be missing or already used."
-        if int(pending.get("expires_at", 0)) < int(time.time()):
-            state["pending"] = None
-            _write_state(state)
-            return "bProtective confirmation expired; request the change again."
-        if pending.get("operation") not in {"on", "off"}:
-            return "Invalid bProtective confirmation."
-        state["enabled"] = pending["operation"] == "on"
-        state["pending"] = None
-        _write_state(state)
-        return f"bProtective {pending['operation']} enabled." if state["enabled"] else "bProtective off; guard disabled."
-    if len(args) == 2 and args[0] == "no":
-        pending = state.get("pending") or {}
-        if not pending or pending.get("id") != args[1]:
-            return "No matching bProtective confirmation; it may be missing or already used."
-        state["pending"] = None
-        _write_state(state)
-        return "bProtective change cancelled."
-    return "Usage: /bprotective [status|on|off|yes ID|no ID]"
+_core = None
+_load_error: BaseException | None = None
+try:
+    _core = _load_core()
+except Exception as exc:  # noqa: BLE001 — a missing core must still register a blocking hook
+    _load_error = exc
+    print(f"bProtective core failed to load: {exc}", file=sys.stderr)
 
 
 def evaluate(command: str) -> dict[str, str] | None:
-    """Return a Hermes pre_tool_call directive, or None to allow."""
-    for rule_key, pattern, reason in _BLOCK_RULES:
-        if pattern.search(command):
-            return {"action": "block", "rule_key": rule_key, "message": f"bProtective blocked this command: {reason}."}
-    for rule_key, pattern, reason in _APPROVAL_RULES:
-        if pattern.search(command):
-            return {"action": "approve", "rule_key": rule_key, "message": f"bProtective requires operator approval: {reason}."}
-    return None
+    """Return a Hermes directive for the built-in and instance policy, ignoring the on/off gate."""
+    if _core is None:
+        return {"action": "block", "rule_key": "core-missing", "message": "bProtective core failed to load."}
+    config, error = _core.load_config()
+    if error:
+        return _core.to_hermes(_core.Decision("block", "config-invalid", error))
+    return _core.to_hermes(_core.policy_decision(command, config))
+
+
+def _handle_command(raw_args: str) -> str:
+    if _core is None:
+        detail = f": {_load_error}" if _load_error else ""
+        return f"bProtective unavailable: core failed to load{detail}."
+    args = (raw_args or "").strip().split()
+    text, _code = _core.handle_control(args, reply_prefix="/bprotective")
+    return text
 
 
 def _pre_tool_call(*, tool_name: str = "", args: dict[str, Any] | None = None, **_: Any) -> dict[str, str] | None:
-    state = _read_state()
     if tool_name not in _TERMINAL_TOOLS:
-        return None
-    if state.get("error"):
-        return {"action": "block", "rule_key": "state-invalid", "message": "bProtective blocked the command because its policy state is unreadable."}
-    if not state.get("enabled"):
         return None
     payload = args or {}
     command = payload.get("command") or payload.get("cmd") or ""
-    return evaluate(str(command)) if command else None
+    if not command:
+        return None
+    if _core is None:
+        return {"action": "block", "rule_key": "core-missing", "message": "bProtective core failed to load."}
+    return _core.to_hermes(_core.guard(str(command), via_hook=True))
 
 
 def register(ctx: Any) -> None:

@@ -1,6 +1,12 @@
 # Normalize text in Git for cross-platform agents/editors.
 * text=auto eol=lf
 
+# cmd.exe looks up goto labels unreliably in LF-only files. These polyglots
+# stay CRLF in the working tree. The shell half ends each line with a comment
+# so the carriage return is not glued onto the command.
+integrations/cursor/bprotective-plugin/scripts/run_hook.cmd text eol=crlf
+integrations/claude/bprotective-plugin/scripts/run_hook.cmd text eol=crlf
+
 # Common binary assets/documents.
 *.png binary
 *.jpg binary

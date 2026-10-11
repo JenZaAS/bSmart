@@ -582,7 +582,8 @@ class RealChangelogTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertNotIn(ROLES_NEWS, result.stdout)
-            self.assertNotIn("bSmart news:", result.stdout)
+            self.assertIn("0.1.46-draft:", result.stdout)
+            self.assertIn("bProtective can check shell commands before they run.", result.stdout)
 
     def test_startup_instructions_tell_the_agent_to_relay_news(self) -> None:
         relay = "relay that news briefly in the first reply, once"

@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": "./scripts/run_hook.cmd",
+        "timeout": 15,
+        "failClosed": true
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "./scripts/run_hook.cmd",
+        "matcher": "Write|Delete",
+        "timeout": 15,
+        "failClosed": true
+      }
+    ]
+  }
+}

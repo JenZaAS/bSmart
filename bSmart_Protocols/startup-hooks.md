@@ -86,3 +86,7 @@ Do not reset hooks merely because they differ. Inspect and ask first unless the 
 Cursor, Codex, and Claude do not load the Hermes slash-command plugin. Their packages live under `integrations/cursor/bsmart-plugin/`, `integrations/codex/bsmart-plugin/`, and `integrations/claude/bsmart-plugin/`. Each startup hook runs `bStart.py` through `integrations/client_session_start.py`.
 
 The workspace `AGENTS.md` contract still requires one startup run. A `bSmart — Startup` block already present in the session counts as that run. Cursor may drop `sessionStart` context, so this workspace also enables the same hook from `.cursor/hooks.json`. The Claude package is not yet verified in the Claude app.
+
+## bProtective
+
+Startup hooks do not enable command protection. While bProtective is on, follow `bprotective_preflight` in `bSmart_Protocols/operations.md` before a shell command on the operator's machines. While it is off, do not run that check. Run the check with `python3`, then `python`, or `py -3` on Windows, when `python3` is missing or fails. The check itself is not an operation tag. The guard stays off until the operator runs both `bprotective on` and `bprotective yes <ID>` in their own terminal. A missing core blocks terminal commands. bProtective is for accidental catastrophic commands, not a deliberately adversarial agent.
