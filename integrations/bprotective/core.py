@@ -1017,15 +1017,50 @@ def _shell_bodies(argv: list[str]) -> list[str]:
     if not argv:
         return []
     bodies: list[str] = []
-    if argv[0] in _SHELLS or argv[0] == "eval":
-        if argv[0] == "eval" and len(argv) > 1:
+    name = _basename(argv[0])
+    if name in _SHELLS or name == "eval":
+        if name == "eval" and len(argv) > 1:
             bodies.append(" ".join(argv[1:]))
         else:
             for index, arg in enumerate(argv):
                 script = _shell_script_arg(argv, index, arg)
                 if script is not None:
                     bodies.append(script)
+    else:
+        windows = _windows_shell_body(argv)
+        if windows:
+            bodies.append(windows)
     return bodies
+
+
+def _windows_shell_body(argv: list[str]) -> str | None:
+    """Script after ``cmd /c`` or ``/k``, or ``powershell``/``pwsh -c``/``-Command``.
+
+    The match is case-insensitive and accepts ``cmd.exe`` and ``powershell.exe``.
+    Switches before ``-Command``, such as ``-NoProfile``, stay in front of the script.
+    The remainder is the inline command, quoted or not. ``echo`` of these words is
+    not a shell, because the caller only passes the command's own argv.
+    """
+    if len(argv) < 2:
+        return None
+    name = _basename(argv[0])
+    if name == "cmd":
+        flags = {"/c", "/k"}
+    elif name in {"powershell", "pwsh"}:
+        flags = {"-c", "-command", "/c", "/command"}
+    else:
+        return None
+    for index, arg in enumerate(argv[1:], start=1):
+        flag = arg.lower()
+        if flag in flags:
+            rest = argv[index + 1 :]
+            text = " ".join(rest).strip()
+            return text or None
+        if name != "cmd" and (flag.startswith("-command=") or flag.startswith("/command=")):
+            value = arg.split("=", 1)[1]
+            text = " ".join([value, *argv[index + 1 :]]).strip()
+            return text or None
+    return None
 
 
 def _shell_script_arg(argv: list[str], index: int, arg: str) -> str | None:
@@ -1177,7 +1212,10 @@ def _split_statements(text: str) -> list[str]:
 
 
 def _nested_shell_texts(command: str) -> list[str]:
-    """Scripts passed to bash/sh -c or eval. ``echo`` of those words is not a shell."""
+    """Scripts passed to bash/sh -c, eval, cmd /c, or powershell -Command.
+
+    ``echo`` of those words is not a shell.
+    """
     bodies: list[str] = []
     seen: set[str] = set()
     for statement in _split_statements(command):
@@ -1489,8 +1527,8 @@ def _channel_block(command: str, _depth: int = 0) -> Decision | None:
 
     Groups, subshells, ``$(...)``, and backticks are statement boundaries, so
     each piece is checked on its own. ``$(`` and a backtick inside ``${...}``
-    are boundaries too. The script argument of bash, sh, or eval is checked
-    the same way. Quoted text is removed before the
+    are boundaries too. The script argument of bash, sh, eval, cmd /c, or
+    powershell -Command is checked the same way. Quoted text is removed before the
     general path check, so a commit message that says "state" is not a path.
     The file match is the state file, its ``.armed`` marker, and
     ``~/.bprotective``. A file inside the content-root State directory is not

@@ -952,6 +952,59 @@ class CorePolicyTests(unittest.TestCase):
         plain = prefix + "echo bash -c true"
         self.assertEqual(self.guard(plain, via_hook=True).action, "escalate")
 
+    def test_windows_shell_wrappers_are_scanned_on_and_off(self):
+        blocked = (
+            r"cmd /c python scripts\bprotective off",
+            r'cmd /c "python scripts\bprotective yes ABC"',
+            r'powershell -c "python scripts\bprotective off"',
+            r'powershell -Command "python scripts\bprotective yes ABC"',
+            r'pwsh -c "python3 scripts/bprotective off"',
+            r'powershell -c "Remove-Item State\bprotective.json"',
+            r'cmd /c "del State\bprotective.json"',
+            r"cmd.exe /C python scripts\bprotective off",
+            r'cmd /k "python scripts\bprotective off"',
+            r'powershell.exe -NoProfile -Command "python scripts\bprotective off"',
+            r'pwsh -command "python3 scripts/bprotective off"',
+        )
+        allowed = (
+            "cmd /c dir",
+            "cmd /c npm test",
+            'powershell -c "Get-ChildItem"',
+            'pwsh -c "npm test"',
+        )
+        for command in blocked:
+            with self.subTest(command=command, enabled=False, via_hook=True):
+                decision = self.guard(command, via_hook=True)
+                self.assertEqual(decision.action, "block", command)
+                self.assertNotEqual(decision.rule_key, "scan-limit")
+                self._assert_hooks(command, blocked=True)
+            with self.subTest(command=command, enabled=False, via_hook=False):
+                self.assertEqual(self.guard(command, via_hook=False).action, "allow", command)
+        for command in allowed:
+            with self.subTest(command=command, enabled=False):
+                self.assertEqual(self.guard(command, via_hook=True).action, "allow", command)
+                self._assert_hooks(command, blocked=False)
+        self.enable()
+        for command in blocked:
+            with self.subTest(command=command, enabled=True):
+                decision = self.guard(command, via_hook=True)
+                self.assertEqual(decision.action, "block", command)
+                self.assertNotEqual(decision.rule_key, "scan-limit")
+        for command in allowed:
+            with self.subTest(command=command, enabled=True):
+                self.assertEqual(self.guard(command, via_hook=True).action, "allow", command)
+        filler = "x" * 60_000
+        for command in blocked[:7]:
+            padded = f"echo {filler}; {command}"
+            self.assertGreater(len(padded), self.core._MAX_COMMAND_CHARS)
+            self.assertLess(len(padded), self.core._MAX_HARD_CHARS)
+            started = time.monotonic()
+            decision = self.guard(padded, via_hook=True)
+            self.assertLess(time.monotonic() - started, 0.5)
+            with self.subTest(command=command, padded=True):
+                self.assertEqual(decision.action, "block", command)
+                self.assertNotEqual(decision.rule_key, "scan-limit")
+
     def test_unknown_tilde_user_stays_allowed_while_off(self):
         for command in ("rm ~bogus/file", "rm -rf ~bogus", "cp ~bogus/a b"):
             with self.subTest(command=command, enabled=False):
