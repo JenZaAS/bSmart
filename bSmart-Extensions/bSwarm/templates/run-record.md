@@ -12,6 +12,7 @@
 - A/B: off | report | self_improving
 - bSelective: all_off | all_on | mixed_ab
 - Branch shape: direct_worker | architect_coder | mixed
+- Role models (configured -> actually used): architect `<id> -> <id>`; coder `<id> -> <id>`; critics `same_as_reviewed -> <id>`; fallback to session model: yes | no (<reason>)
 - Recommendation: <one line>
 - Next step: <one line>
 

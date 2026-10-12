@@ -183,8 +183,15 @@ bswarm_run:
     excluded_worker_paths:
       - "previous-generated-runs/"
 
+  # Per-role models: capability only. The shared system assigns no models.
+  # Each instance sets its own in role_models_file (copy of
+  # templates/role-models.template.yaml). Precedence: a `model:` set here for
+  # this run > instance file > session model. See bswarm-protocol.md
+  # section 4, "Per-role models".
+  role_models_file: "./bSmart/State/bswarm-role-models.yaml"
   role_defaults:
     architect:
+      model: session
       # Default architect handoff budget: compact by default so coder receives a plan, not transcripts.
       handoff_kind: context-budget artifact
       target_words: 350-500
@@ -202,3 +209,7 @@ bswarm_run:
         - do_not_implement
         - risks
         - verification_checks
+    coder:
+      model: session
+    critic:
+      model: same_as_reviewed
