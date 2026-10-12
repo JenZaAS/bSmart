@@ -262,6 +262,38 @@ Use these unless the operator changes them:
 - `statistics: on`;
 - `safety: read_only`.
 
+### Per-role models
+
+bSwarm can run each role on its own model. The shared system only provides
+this capability; it assigns no models. Which models are used is instance
+configuration.
+
+- Instance file: `./bSmart/State/bswarm-role-models.yaml`, copied from
+  `templates/role-models.template.yaml`. It sets `architect`, `coder`, and
+  `critic` to `session`, `same_as_reviewed` (critic only), or a
+  `<provider-model-id>`. Read it at run start; a missing file means every role
+  uses the session model. Auditors stay in `bswarm-audit-models.yaml`.
+- Precedence per role: `role_defaults.<role>.model` in the run spec, when set
+  to something other than `session` > instance file > session model.
+- `same_as_reviewed` means the critic uses the model of the role it reviews:
+  `architect_critic` uses the architect model, `programmer_critic` the coder
+  model. This keeps section 3: internal critics stay same-model.
+- Agent tools name models differently. Map the configured id to the name the
+  tool accepts and record both.
+- Fallback rule. The configured models (architect, coder, critic, audit) are
+  the instance's intended defaults, but not every agent tool (Cursor, Codex,
+  Claude Code, and others) can switch models. When the tool cannot use the
+  configured model for a role:
+  - if the current session model is the only one available, use it, do the
+    best job possible, and log the fallback;
+  - if other models are available, propose them to the user and let the user
+    choose; never silently settle on a weaker substitute.
+  Never fail a run only because a role model cannot be chosen. Auditors are
+  the exception: they must still differ from the implementing and critic
+  models, so a one-model tool records the audit as `not launched` (section 3).
+- The run record logs, per role, the configured model, the model actually
+  used, and whether a fallback happened.
+
 ## 4. Top-level modes
 
 ### unsupervised

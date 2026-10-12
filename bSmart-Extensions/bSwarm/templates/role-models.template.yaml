@@ -1,0 +1,16 @@
+# bSwarm role model template
+
+# Instance-local configuration only. Do not add secrets here.
+# Copy to ./bSmart/State/bswarm-role-models.yaml and set this instance's own
+# models. The shared system assigns no models to roles.
+#
+# Values:
+#   session            use the session model (default)
+#   same_as_reviewed   critic only: use the model of the role it reviews
+#   <provider-model-id> a model id the agent tool accepts
+#
+# Auditors are configured in bswarm-audit-models.yaml, not here.
+role_models:
+  architect: session
+  coder: session
+  critic: same_as_reviewed

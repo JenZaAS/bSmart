@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.47-draft
-updated: 2026-10-11 10:48 UTC
+current_version: 0.1.48-draft
+updated: 2026-10-12 07:40 UTC
 status: draft
 ```
 
@@ -26,6 +26,21 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.48-draft
+
+```yaml
+release_type: bswarm_role_models
+scope:
+  - add per-role model capability to bSwarm without assigning models in the shared system
+  - add a neutral role-models template that each instance copies to ./bSmart/State/bswarm-role-models.yaml
+  - run-spec role_defaults default to session (critic same_as_reviewed) and reference the instance file
+  - add a per-role model rule to bswarm-protocol.md section 4 with precedence (run spec > instance file > session model), a fallback rule (use the session model only when it is the sole option, otherwise propose the available models to the user), and run-record logging
+  - add a role-models line to the run-record template
+verification:
+  - templates and protocol only; no runtime code changed
+  - python and node tests pass, including the public-tree privacy guard
+```
 
 ## 0.1.47-draft
 
