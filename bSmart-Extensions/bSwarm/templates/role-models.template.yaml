@@ -9,6 +9,10 @@
 #   same_as_reviewed   critic only: use the model of the role it reviews
 #   <provider-model-id> a model id the agent tool accepts
 #
+# Review against the models currently available before each run, balance
+# price, speed and strength per role, and propose the setup to the operator
+# before launch (protocol section 4, "Choosing role models").
+#
 # Auditors are configured in bswarm-audit-models.yaml, not here.
 role_models:
   architect: session

@@ -187,6 +187,25 @@ These rules apply only to `cascade critic audit`. Internal critics remain
 same-model; external auditors use other models from the ordered instance-local
 list.
 
+### Finding classes
+
+Critics and auditors propose a class for each finding; the parent agent
+re-sorts. Unsure means `decision`. Sections 3 and 7 use these classes.
+
+| Class | Meaning | Who acts |
+|---|---|---|
+| `automatic` | Wrong or incomplete against the spec, ADRs, tests, or an obvious local pattern | Agent fixes |
+| `decision` | Needs a product or design choice | Operator decides, then the run continues |
+| `optional` | Nit, hygiene, taste, or speculative extra | Nobody by default |
+
+`optional` findings never block progress and never cause another round or
+auditor. They may be fixed along the way when the same code is already being
+changed for an `automatic` or `decision` finding and the fix is clearly
+relevant. Record them as a count only.
+
+Critics and auditors check against the existing spec, tests, and ADRs. They
+must not invent product rules; a gap goes to the operator as `decision`.
+
 ### Instance audit model list
 
 Each instance owns one ordered list for both design and code audits. The system
@@ -198,7 +217,12 @@ The list is intentionally empty by default: an empty list means the audit is
 
 Preflight must fail closed when the list is empty or every entry is the same
 model as the implementing/critic model. Show the configured list in order and
-ask the operator to change it; never silently audit with the same model. If the
+ask the operator to change it; never silently audit with the same model.
+Prefer auditors from other vendors/providers than the working team
+(architect, coder, critics, parent agent); when every entry shares the
+team's vendor, say so at preflight and offer any other-vendor model the tool
+can use. Put a strong reviewer first: later auditors run only on `automatic`
+or `decision` findings, so the first entry is the one that always runs. If the
 adapter cannot name or select models, retain the intended order and record that
 the auditor could not be launched.
 
@@ -293,6 +317,26 @@ configuration.
   models, so a one-model tool records the audit as `not launched` (section 3).
 - The run record logs, per role, the configured model, the model actually
   used, and whether a fallback happened.
+
+### Choosing role models
+
+The system names no models; these principles guide the operator and parent
+agent when filling in or reviewing the instance files.
+
+- **Review every run.** Before a `cascade critic` or `cascade critic audit`
+  run, check which models the agent tool can use now and compare them with the
+  instance files. New models appear often; a list can go stale.
+- **Balance per role.** Weigh price, speed, and strength for each role
+  separately. The architect needs a strong model, because plans are product
+  and design reasoning and a weak architect tends to invent rules (a cheaper
+  model may do purely mechanical task splits). The coder gets the cheapest
+  model that does the work reliably, since it produces most tokens. Critics
+  follow `same_as_reviewed`; auditors follow section 3.
+- **Propose, then start.** Before launch, show the operator the proposed setup
+  (role, model, one-line reason) and let them accept or change it. This
+  applies on every run, not only in the fallback case. Record the accepted
+  setup in the run record; update the instance files only when the operator
+  asks to keep the change.
 
 ## 4. Top-level modes
 
@@ -537,7 +581,9 @@ Rules:
 
 - maximum delegation depth is 3;
 - maximum `max_critique_rounds` is 3;
-- stop at 8 or higher;
+- stop at 8 or higher; the score and the round limit count only `automatic`
+  and `decision` issues, so `optional` items alone never keep a loop going;
+- critics must not invent product rules (section 3, finding classes);
 - retries require diagnosed issues, not vague dissatisfaction;
 - extract only concise durable lessons/general knowledge into `bKnowledge`;
 - architects and programmers consult relevant `bKnowledge` before acting.

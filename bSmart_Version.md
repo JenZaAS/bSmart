@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.48-draft
-updated: 2026-10-12 07:40 UTC
+current_version: 0.1.49-draft
+updated: 2026-10-16 10:50 UTC
 status: draft
 ```
 
@@ -26,6 +26,24 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.49-draft
+
+```yaml
+release_type: bswarm_model_selection
+news: |
+  Before a cascade critic run, the agent now checks which models are
+  available and proposes a model per role for you to accept or change.
+scope:
+  - add model-neutral "Choosing role models" principles to bswarm-protocol.md section 4 (review every run, balance price/speed/strength per role, strong architect, cheapest capable coder, propose the setup before every run)
+  - define the automatic/decision/optional finding classes once in section 3; optional is non-blocking and may be fixed along the way
+  - prefer external auditors from other vendors/providers than the working team, with a strong reviewer first
+  - critcascade stop rule counts only automatic and decision issues; critics must not invent product rules
+  - matching comments in the role-models and audit-models templates
+verification:
+  - templates and protocol only; no runtime code changed
+  - python and node tests pass, including the public-tree privacy guard
+```
 
 ## 0.1.48-draft
 
