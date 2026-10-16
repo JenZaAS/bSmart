@@ -3,4 +3,6 @@
 # Instance-local configuration only. Do not add secrets here.
 # Keep models in operator-selected order. An empty list blocks
 # `cascade critic audit` until configured.
+# Prefer auditors from other vendors/providers than the working team. Put a
+# strong reviewer first; later entries run only on automatic/decision findings.
 audit_models: []
