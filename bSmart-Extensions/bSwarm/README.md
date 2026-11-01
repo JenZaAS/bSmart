@@ -10,21 +10,44 @@ V1 is a chat-driven protocol, not a command handler. Use it by drafting a concis
 
 ## Modes
 
+When Erling asks to “use bSwarm” without naming a workflow, choose critic cascade
+for work with multiple/dependent tasks, unresolved design uncertainty, or
+meaningful risk. For one bounded, low-risk deliverable, choose the smallest
+suitable mode; ask Erling when applicability or scope is unclear. The
+`critcascade` run-spec value is the substantial-work default, not a universal
+setting.
+
+For applicable work:
+bSelective architect → preferably independent-model architect critic →
+architect revision/readiness decision → worker → preferably
+independent-model worker critic → architect re-plan before the next task.
+The architect critic reviews the plan before implementation; the worker critic
+reviews each completed task. Integrate the explain-back, strict ready-to-build,
+and authoritative decision-record checks into those existing architect
+review/revision steps—not as a separate mandatory gate.
+
+Keep test suites proportional: for small, focused components only, default to at
+most 10 distinct scenarios. For a small component, exceeding 10 requires architect
+rationale and critic approval. Larger scopes have no numeric cap; select tests by
+justified risk. Always retain reported-issue regressions, and exclude scenarios
+that are both implausible and harmless. Code-only `.m`/MATLAB checks are
+programming-specific.
+
 Compact user-facing workflow keywords:
 
-- `ordinary` — direct ordinary coder; no bSelective context tooling.
-- `bSelective` — direct bSelective-enabled coder.
-- `architect` — ordinary architect → ordinary coder, using one compact handoff.
-- `bSelective architect` — bSelective architect → bSelective coder, using one compact handoff.
+- `ordinary` — direct ordinary worker; no bSelective context tooling.
+- `bSelective` — direct bSelective-enabled worker.
+- `architect` — ordinary architect → ordinary worker, using one compact handoff.
+- `bSelective architect` — bSelective architect → bSelective worker, using one compact handoff.
 - `cascade` — bSelective architect-led stepwise workflow.
-- `cascade critic` — bSelective cascade with architect and programmer critics, bounded score-based repair loops.
+- `cascade critic` — default bSwarm cascade for substantial work: bSelective architect and worker, with critics on both the plan and completed work; prefer a different model for each critic and record any same-model fallback. The architect revises the plan before work and re-plans after each completed task.
 - `cascade critic audit` — `cascade critic` plus external design and code audits.
 
 `bSelective cascade` remains a compatibility synonym for `cascade`. bSelective
 is on for every cascade phrase; opt out only by explicitly requesting ordinary
 (non-bSelective) context tools.
 
-Mixed architect/coder context modes are internal experimental overrides, not normal user-facing modes.
+Mixed architect/worker context modes are internal experimental overrides, not normal user-facing modes.
 
 Top-level modes:
 
@@ -35,7 +58,7 @@ Explicit subagent stage modes:
 
 - `supervisor` — creates/validates run folders, duplicates allowed files, dispatches stages, verifies child self-reports, and records statistics. It does not directly edit target implementation files unless explicitly asked.
 - `architect` — discovers context and writes a concise implementation plan. It must not edit implementation files. Its handoff is a default context-budget artifact: target 350-500 words, hard max 700 words, max 6 relevant regions, max 6 `must_implement` bullets, no tool transcripts, no long source quotes, and no full bSelective output.
-- `coder` — implements in the allowed branch duplicate file and verifies the result.
+- `coder` (programming alias for `worker`) — implements in the allowed branch duplicate file and verifies the result.
 
 `gauntlet` is retained only as the source/metaphor for pressure-testing.
 
@@ -50,15 +73,15 @@ Explicit subagent stage modes:
 - `all_on` — all relevant subagents use bSelective.
 - `mixed_ab` — some branches use bSelective and some do not, to evaluate its value.
 
-## Branch patterns
+## Programming-specific branch patterns
 
-- `direct_worker` — one ordinary coder/worker plans and edits directly in its duplicate file.
+- `direct_worker` — one ordinary worker plans and edits directly in its duplicate file.
 - `architect_coder` — architect discovers context and writes `architect-plan.md`; coder implements from that plan.
 - `architect_taskflow` — architect decomposes, dispatches one bounded coder task, evaluates, re-plans, then continues within cascade limits.
-- `critcascade` — depth-3 bSelective cascade: architect spec → architect critic → programmer → programmer critic → architect-directed fix programmer, one task at a time.
+- `critcascade` — depth-3 bSelective cascade: architect plan → independent-model-preferred architect critic → architect readiness revision → worker → independent-model-preferred worker critic → architect re-plan, one task at a time.
 - `critcascade_audit` — `critcascade` with a design audit after the first plan and a code audit after the task list is empty (or at an explicit `audit_after_task` point).
 
-Example A/B/C run shape:
+Programming-specific A/B/C example:
 
 ```yaml
 branches:
@@ -108,7 +131,7 @@ branches:
 
 1. Read `bswarm-protocol.md`.
 2. Create a short run spec from `templates/run-spec.yaml`.
-3. Run preflight QC before launch. For `architect`, `bSelective architect`, `cascade`, `cascade critic`, and `cascade critic audit`, verify the active adapter can do true nested dispatch when the architect is expected to spawn coders; under Hermes this means `delegation.orchestrator_enabled=true`, `delegation.max_spawn_depth >= 2`, and `delegation.child_timeout_seconds` large enough for the planned run, commonly `1200` seconds.
+3. Run preflight QC before launch. For `architect`, `bSelective architect`, `cascade`, `cascade critic`, and `cascade critic audit`, verify the active adapter can do true nested dispatch when the architect is expected to spawn workers; under Hermes this means `delegation.orchestrator_enabled=true`, `delegation.max_spawn_depth >= 2`, and `delegation.child_timeout_seconds` large enough for the planned run, commonly `1200` seconds.
 4. Show the concise summary and any blocking settings warning to Erling before launch.
 5. For editable evaluation runs, duplicate the original target into per-branch files under the run folder.
 6. Keep prior generated-run archive paths out of worker prompts unless explicitly comparing against old generated code.
@@ -129,3 +152,7 @@ record that it is not true nested architect dispatch.
 - Operator idea/source: Erling's bSmart coding-feature sequence: `bWorkflow`, `bSelective`, then `bSwarm`.
 - External inspiration: RLM / Prime Intellect Prime Agent concepts such as context-as-variable, programmatic inspection, specialist sub-agents, and evidence-oriented harnesses.
 - Boundary: bSwarm borrows coordination and context-management ideas; it is not a Prime Agent clone and does not imply hidden continual self-improvement.
+
+## Verification
+
+For each criterion or claim, record the evidence/check, expected signal, actual result, and reference. Code tests are one domain-specific method; `.m`, classdef, and MATLAB checks are programming-specific.

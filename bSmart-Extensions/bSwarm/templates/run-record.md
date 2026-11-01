@@ -11,7 +11,7 @@
 - Mode: unsupervised | supervised
 - A/B: off | report | self_improving
 - bSelective: all_off | all_on | mixed_ab
-- Branch shape: direct_worker | architect_coder | mixed
+- Branch shape: direct_worker | architect_worker | mixed
 - Recommendation: <one line>
 - Next step: <one line>
 
@@ -43,33 +43,40 @@ bswarm_run:
   branches:
     ordinary:
       pattern: direct_worker
-      stages: [coder]
+      stages: [worker]
     bselective:
       pattern: direct_worker
-      stages: [coder]
+      stages: [worker]
     architect:
-      pattern: architect_coder
-      stages: [architect, coder]
+      pattern: architect_worker
+      stages: [architect, worker]
       artifacts:
         architect_plan: architect/architect-plan.md
     bselective_architect:
-      pattern: architect_coder
-      stages: [architect, coder]
+      pattern: architect_worker
+      stages: [architect, worker]
       artifacts:
         architect_plan: bselective-architect/architect-plan.md
     cascade:
       pattern: architect_taskflow
-      stages: [architect, coder, architect_evaluation]
+      stages: [architect, worker, architect_evaluation]
     bselective_cascade:
       pattern: architect_taskflow
-      stages: [architect, coder, architect_evaluation]
+      stages: [architect, worker, architect_evaluation]
       artifacts:
         architect_plan: bselective-cascade/architect-plan.md
   budgets:
     max_depth: ...
     max_total_child_agents: ...
     max_iterations: ...
-    max_critique_rounds: 3
+    critique_loop:
+      target_score: 8
+      stop_requires_no_critical_issues: true
+      stop_requires_no_required_issues: true
+      no_hard_round_cap: true
+      initial_round_budget: 10
+      extension_rounds: 10
+      continue_until_target: true
     max_worker_attempts_per_supervisor: ...
   safety: ...
 ```
@@ -106,10 +113,9 @@ preflight_qc:
     warning_to_user: <exact warning shown, or none>
 ```
 
-## External audits
+## Critic model and external audits
 
-Only include for `cascade critic audit`. Internal critics remain same-model;
-external auditors use other models from the ordered instance-local list.
+External audit rows apply only to `cascade critic audit`. In every `cascade critic` run, record the author and critic model IDs and whether the critic was independent. Prefer a different model; record same-model fallbacks as reduced independence. External audit model IDs come from the ordered instance-local list.
 
 | Model ID | Kind | Finding | Class | Status | Stop reason |
 |---|---|---|---|---|---|
@@ -129,6 +135,7 @@ run_stats:
   elapsed_seconds: unknown
   supervisor_count: ...
   architect_count: ...
+  # Programming-only compatibility metric; use worker_count for generic runs.
   coder_count: ...
   worker_count: ...
   retry_count: ...
@@ -153,16 +160,16 @@ run_stats:
 
 Record one row per branch stage. Use `unknown` rather than inventing unavailable provider numbers.
 
-| Branch | Stage | Duration seconds | API calls | Tool calls | Tool calls by type | bSelective calls | Whole-file reads | Input tokens | Output tokens | Reasoning tokens | Cache-read tokens | Fresh total tokens | Total with cache-read tokens | Tool-output chars | Target-related chars | MATLAB/runtime verification |
+| Branch | Stage | Duration seconds | API calls | Tool calls | Tool calls by type | bSelective calls | Whole-file reads | Input tokens | Output tokens | Reasoning tokens | Cache-read tokens | Fresh total tokens | Total with cache-read tokens | Tool-output chars | Target-related chars | [programming-only] MATLAB/runtime verification |
 |---|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| ordinary | coder | unknown | unknown | unknown | unknown | 0 | unknown | unknown | unknown | unknown | unknown | unknown | unknown | unknown | unknown | not_run |
+| ordinary | worker | unknown | unknown | unknown | unknown | 0 | unknown | unknown | unknown | unknown | unknown | unknown | unknown | unknown | unknown | not_run |
 
 Machine fields for each row:
 
 ```yaml
 stage_stats:
   branch_id: ordinary
-  stage: coder
+  stage: worker
   duration_seconds: unknown
   api_calls: unknown
   tool_calls: unknown
@@ -184,17 +191,17 @@ stage_stats:
 
 ## Branch total statistics
 
-Record combined architect+coder totals for architect/coder branches, and direct totals for direct-worker branches.
+Record combined architect+worker totals for architect/worker branches, and direct totals for direct-worker branches.
 
 | Branch | Pattern | Stages | Duration seconds | Tool calls | bSelective calls | Whole-file reads | Fresh total tokens | Total with cache-read tokens | Tool-output chars | Target-related chars | Diff + / - | Verification |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
-| bselective_architect_coder | architect_coder | architect,coder | unknown | unknown | unknown | unknown | unknown | unknown | unknown | unknown | +unknown/-unknown | not_run |
+| bselective_architect_worker | architect_worker | architect,worker | unknown | unknown | unknown | unknown | unknown | unknown | unknown | unknown | +unknown/-unknown | not_run |
 
 ## Role plan
 
-- Shape: coder | architect -> coder | coder -> supervisor | architect -> coder -> supervisor
+- Shape: worker | architect -> worker | worker -> supervisor | architect -> worker -> supervisor
 - Architect context brief: <exact files/functions/regions, required changes, forbidden changes>
-- Coder brief: <architect-plan.md path, allowed duplicate file, verification checks>
+- Worker brief: <architect-plan.md path, allowed artifact, verification checks>
 - Supervisor acceptance criteria: <compact pass/fail criteria>
 
 ## Architect handoff defaults
@@ -226,7 +233,7 @@ Architect plans should include one-line region reasons only and should not paste
 
 | Branch | Stage/Role | Variant | Outcome | Confidence | Summary | Artifact |
 |---|---|---|---|---|---|---|
-| ordinary | coder | ordinary direct_worker | partial | medium | ... | <branch-output.md> |
+| ordinary | worker | ordinary direct_worker | partial | medium | ... | <branch-output.md> |
 | bselective_architect | architect | bSelective architect | partial | medium | ... | bselective-architect/architect-plan.md |
 
 ## Critcascade review
@@ -234,27 +241,68 @@ Architect plans should include one-line region reasons only and should not paste
 Only include for `critcascade` runs. Complete and verify one task before the next;
 the architect reviews and updates the remaining plan before each next task.
 
+- Architect-plan explain-back by a reviewer without the architect's working context: `<summary/result>`
+- Strict ready-to-build decision: `ready | blocked | revise` — `<rationale>`
+- `decisions.md` / authoritative decision-record cross-check: `<checked files and result>`
+- Architect critic model: `<model ID>`; independent from architect: `yes | no | unknown`
+- Worker critic model: `<model ID>`; independent from worker: `yes | no | unknown`
+- Architect re-plan after each completed task: `<artifact/reference>`
+- Critique rounds / extension blocks used: `<round count / block count>`
+- Critique stop reason: `target_reached | plateau | safety_block | operator_stop`
+- Critique success fields: `target_score: 8`; `stop_requires_no_critical_issues: true`; `stop_requires_no_required_issues: true`; `no_hard_round_cap: true`
+- Success only when: `score >= 8 AND critical_issues == 0 AND required_changes == 0`
+- Rounds: initial `1–10`; extensions are successive 10-round blocks (`11–20`, `21–30`, ...)
+- Progress events: finding closed with evidence; previously open required check completed with evidence; or same-rubric score increase with rationale
+- At each complete block, zero progress events means record plateau and pause/ask; any safety blocker stops immediately
+
+| Block | Round range | Progress events (count) | Evidence/reference | Decision |
+|---|---|---:|---|---|
+| Initial | 1–10 | ... | ... | extend / plateau / stop |
+| Extension 1 | 11–20 | ... | ... | extend / plateau / stop |
+
 | Round | Critic | Score (1-10) | Critical issues | Required changes | Status | Decision |
 |---:|---|---:|---|---|---|---|
 | 1 | architect_critic | ... | ... | ... | complete | pass |
-| 1 | programmer_critic | ... | ... | ... | complete | revise |
+| 1 | worker_critic | ... | ... | ... | complete | revise |
 
 - Knowledge consulted: `<bKnowledge references>`
 - Concise durable lessons extracted: `<none or entries>`
+
+## Test selection
+
+Only include when tests were added or changed.
+
+- Planned / actual distinct scenarios: `<count / count>`; small-component default target: `10`
+- Reported issue regressions: `<issue IDs or none>`
+- Small-component scenarios above 10: `<architect rationale and critic approval, or not applicable>`
+- Removed or deferred speculative/duplicate cases: `<brief or none>`
+
+| Scenario | Requirement/issue/risk | Likelihood | Impact | Test added? | Rationale |
+|---|---|---|---|---|---|
+| `<scenario>` | `<reference>` | plausible / remote | low / meaningful / high | yes / no | `<brief>` |
 
 ## Evidence
 
 - `<reference>` — <short note>
 
-## Verification
+## Verification (general evidence is per-criterion)
 
-- `branch file exists` — passed | failed | partial | not_run — <short note>
-- `no conflict markers` — passed | failed | partial | not_run — <short note>
-- `exactly one classdef` — passed | failed | partial | not_run — <short note>
-- `expected UI scaffolding strings` — passed | failed | partial | not_run — <short note>
-- `diff stat against original source` — passed | failed | partial | not_run — <short note>
-- `original source unchanged` — passed | failed | partial | not_run — <short note>
-- `MATLAB/runtime verification` — passed | failed | partial | not_run — <short note>
+Use the table as the primary general verification record; add domain-specific
+checks only where relevant.
+
+| criterion_or_claim | evidence_or_check | expected_signal | actual_result | reference |
+|---|---|---|---|---|
+| `<claim>` | `<check/evidence>` | `<expected>` | `<actual>` | `<reference>` |
+
+Generic checks may include branch-file existence or absence of conflict markers.
+
+## Programming-only verification examples
+
+- `[programming-only] exactly one classdef` — passed | failed | partial | not_run — <short note>
+- `[programming-only] expected UI scaffolding strings` — passed | failed | partial | not_run — <short note>
+- `[programming-only] diff stat against original source` — passed | failed | partial | not_run — <short note>
+- `[programming-only] original source unchanged` — passed | failed | partial | not_run — <short note>
+- `[programming-only] MATLAB/runtime verification` — passed | failed | partial | not_run — <short note>
 
 ## A/B/C comparison
 
@@ -264,8 +312,8 @@ Only include when A/B or A/B/C is enabled.
 - Variants: ordinary vs bselective vs architect vs bselective_architect vs cascade vs bselective_cascade
 - Winner: ordinary | bselective | architect | bselective_architect | cascade | bselective_cascade | tie | inconclusive | none
 - Did bSelective reduce architect discovery context? yes | no | inconclusive
-- Did coder avoid repeating discovery? yes | no | inconclusive
-- Did architect/coder improve quality? yes | no | inconclusive
+- Did the worker avoid repeating discovery? yes | no | inconclusive
+- Did the architect/worker split improve quality? yes | no | inconclusive
 - Cost/quality tradeoff: <short note>
 
 ## bSelective context

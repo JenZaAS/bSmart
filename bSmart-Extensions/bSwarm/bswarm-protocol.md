@@ -2,6 +2,23 @@
 
 Use this protocol when Erling asks to run a bSwarm before a dedicated command handler exists.
 
+## Default when the user says “bSwarm”
+
+For substantial work, an unspecified bSwarm request defaults to `cascade critic`.
+Use this cascade when work has multiple or dependent tasks, unresolved design uncertainty,
+or meaningful risk. For one bounded low-risk deliverable, choose the smallest
+suitable workflow; ask Erling when the classification or scope is unclear:
+
+```text
+architect → architect_critic → architect_revision/readiness →
+worker → worker_critic → architect_replan → loop control: next task
+```
+
+This is an integrated strengthening of the cascade, not a separate universal
+gate. Use the smallest suitable workflow for trivial tasks; ask Erling only when
+the task's suitability or intended scope is genuinely unclear. Keep the
+established explicit workflow keywords available for intentional overrides.
+
 ## 1. Draft concise run spec
 
 Show this quick-glance summary before launching agents. Prefer the compact
@@ -21,27 +38,28 @@ Keyword meanings:
 
 | Keyword | Meaning |
 |---|---|
-| `ordinary` | Direct ordinary coder; no bSelective context tooling. |
-| `bSelective` | Direct bSelective-enabled coder. |
-| `architect` | Ordinary architect → ordinary coder, using one compact handoff. |
-| `bSelective architect` | bSelective architect → bSelective coder, using one compact handoff. |
-| `cascade` | bSelective architect-led stepwise workflow: decompose, dispatch one coder task, evaluate, re-plan, continue. |
-| `cascade critic` | bSelective cascade with same-model architect/programmer critics and bounded score-based repair loops. |
+| `ordinary` | Direct ordinary worker; no bSelective context tooling. |
+| `bSelective` | Direct bSelective-enabled worker. |
+| `architect` | Ordinary architect → ordinary worker, using one compact handoff. |
+| `bSelective architect` | bSelective architect → bSelective worker, using one compact handoff. |
+| `cascade` | bSelective architect-led stepwise workflow: decompose, dispatch one worker task, evaluate, re-plan, continue. |
+| `cascade critic` | Default substantial-work cascade: bSelective architect/worker, critics on plan and completed work, plan revision/readiness, and re-planning after each task. Prefer different critic models. |
 | `cascade critic audit` | `cascade critic` plus external design/code audits using the ordered instance-local audit model list. |
 
 Normalization rules:
 
 - `ordinary` is the default direct mode and may be omitted internally.
-- `architect` implies an architect followed by a coder.
-- `cascade` implies a bSelective architect-led stepwise execution; it is not a direct-coder mode.
+- `architect` implies an architect followed by a worker.
+- `cascade` implies a bSelective architect-led stepwise execution; it is not a direct-worker mode.
 - `bSelective` applies to all relevant stages by default.
-- `bSelective architect` means bSelective architect and bSelective coder.
-- `cascade` means bSelective architect, bSelective coders, and architect evaluation/replanning between tasks.
-- `cascade critic` means `cascade` with maximum depth 3, one completed task at a time, and architect/programmer critics.
+- `bSelective architect` means bSelective architect and bSelective worker.
+- `cascade` means bSelective architect, bSelective workers, and architect evaluation/replanning between tasks.
+- `cascade critic` means `cascade` with maximum depth 3, one completed task at a time, an architect critic before implementation, a worker critic after each task, and architect revision/re-planning before proceeding. Prefer a critic model different from the authoring model; if unavailable, record the same-model fallback and do not misrepresent it as independent review.
 - `cascade critic audit` means `cascade critic` plus external design and code audits.
 - `bSelective cascade` remains a synonym for `cascade`.
 - bSelective is on for every cascade phrase. Opt out only when the operator explicitly requests ordinary (non-bSelective) context tools.
-- Do not expose mixed bSelective architect → ordinary coder combinations as normal user-facing modes; keep them only for controlled experiments.
+- `worker` is the canonical generic role; `coder`, `programmer_critic`, and `coder_fix` are programming aliases defined by the run-spec.
+- Do not expose mixed bSelective architect → ordinary worker combinations as normal user-facing modes; keep them only for controlled experiments.
 
 Internal normalization:
 
@@ -55,23 +73,23 @@ bSelective:
 architect:
   context_mode: ordinary
   workflow: architect_handoff
-  coder_context_mode: ordinary
+  worker_context_mode: ordinary
 bSelective architect:
   context_mode: bselective
   workflow: architect_handoff
-  coder_context_mode: bselective
+  worker_context_mode: bselective
 cascade:
   context_mode: bselective
   workflow: architect_taskflow
-  coder_context_mode: bselective
+  worker_context_mode: bselective
 cascade critic:
   context_mode: bselective
   workflow: critcascade
-  coder_context_mode: bselective
+  worker_context_mode: bselective
 cascade critic audit:
   context_mode: bselective
   workflow: critcascade_audit
-  coder_context_mode: bselective
+  worker_context_mode: bselective
 ```
 
 Then show the normalized run summary:
@@ -87,11 +105,12 @@ bswarm_run:
   ab_testing: off | report | self_improving
   bselective: all_off | all_on | mixed_ab
   statistics: on
-  max_depth: 1 | 2
+  max_depth: 1 | 2 | 3
   max_total_child_agents: 3
   max_iterations: 5
   max_worker_attempts_per_supervisor: 5
   safety: read_only | propose_patches | approved_writes
+  # Programming-specific A/B/C file paths and stages; use generic roles elsewhere.
   branches:
     ordinary:
       pattern: direct_worker
@@ -124,9 +143,9 @@ bswarm_run:
     critcascade:
       pattern: critcascade
       architect_context_mode: bselective
-      coder_context_mode: bselective
+      worker_context_mode: bselective
       max_depth: 3
-      stages: [architect, architect_critic, coder, programmer_critic, architect_revision, coder_fix]
+      stages: [architect, architect_critic, architect_revision, worker, worker_critic, architect_replan]
 ```
 
 Offer: start, edit keyword, edit A/B/C branches, edit statistics, edit budgets, edit safety, cancel.
@@ -137,10 +156,10 @@ Before launching any run, do a short preflight QC and show blocking warnings
 instead of starting a run that is likely to fail. For `architect`,
 `bSelective architect`, `cascade`, `cascade critic`, and especially
 `cascade critic audit`, this is
-mandatory if the run expects the architect subagent itself to dispatch coder
+mandatory if the run expects the architect subagent itself to dispatch worker
 subagents. Earlier staged handoff runs can work with lower spawn depth because
 the parent/supervisor runs architect first, then manually hands the plan to a
-coder; that is `supervisor_mediated_architect_handoff`, not nested architect
+worker; that is `supervisor_mediated_architect_handoff`, not nested architect
 dispatch.
 
 Record the detected CLI/runtime adapter. bSwarm is portable, but nested
@@ -183,9 +202,9 @@ architect-dispatch.
 
 ## 3. Cascade audit rules
 
-These rules apply only to `cascade critic audit`. Internal critics remain
-same-model; external auditors use other models from the ordered instance-local
-list.
+These rules apply only to `cascade critic audit`. The cascade's internal critics
+should preferably use a model different from the stage author; external auditors
+use other models from the ordered instance-local list.
 
 ### Instance audit model list
 
@@ -257,7 +276,7 @@ Use these unless Erling changes them:
 
 - simple spec/review work: `mode: unsupervised`, `max_depth: 1`, `max_total_child_agents: 3`;
 - high-assurance work: `mode: supervised`, `max_depth: 2`, `max_total_child_agents: 4`;
-- `max_iterations: 5`;
+- `max_iterations: 5` for bounded A/B/self-improving runs; this does not cap the critic loop;
 - `max_worker_attempts_per_supervisor: 5`;
 - `statistics: on`;
 - `safety: read_only`.
@@ -321,7 +340,7 @@ Supervisor verification must not trust child self-reports until directly checked
 
 Purpose: context discovery and implementation design, not direct coding.
 
-Architect handoff is a context-budget artifact for the coder, not a design essay. This compact handoff is a default bSwarm role behavior; future run prompts do not need to restate it unless they deliberately override the budget.
+Architect handoff is a context-budget artifact for the worker, not a design essay. This compact handoff is a default bSwarm role behavior; future run prompts do not need to restate it unless they deliberately override the budget.
 
 Default architect handoff budget for prototype/evaluation runs:
 
@@ -340,8 +359,8 @@ Rules:
 
 - must not edit implementation files;
 - reads only enough context to produce a concrete implementation plan;
-- writes a concise `architect-plan.md` for coder handoff;
-- treats the handoff as a context-budget artifact for the coder;
+- writes a concise `architect-plan.md` for worker handoff;
+- treats the handoff as a context-budget artifact for the worker;
 - uses one-line reasons for relevant regions;
 - keeps `must_implement`, `defer`, and `do_not_implement` sharply separated;
 - for bSelective architect branches, use bSelective first where possible:
@@ -350,7 +369,7 @@ Rules:
   - targeted `get FILE function NAME`;
   - avoid whole-file fallback unless necessary and record it if used;
 - for ordinary architect branches, use ordinary file/search tools only; no bSelective and no code-knowledge file unless the run explicitly permits it;
-- keep output small enough to pass to coder without broad tool-output context.
+- keep output small enough to pass to the worker without broad tool-output context.
 
 Architect plan contract:
 
@@ -379,9 +398,16 @@ architect_plan:
     - <top risks>
   verification_checks:
     - <branch file exists/no conflict markers/etc.>
+  test_plan:
+    target_case_count: <small, justified count>
+    scenarios:
+      - behavior_or_reported_issue: <name>
+        likelihood: plausible | remote
+        impact: low | meaningful | high
+        reason_to_test: <brief>
 ```
 
-### Coder mode
+### Coder mode (programming-specific worker alias)
 
 Purpose: implement the architect plan in the allowed duplicate file.
 
@@ -391,10 +417,11 @@ Rules:
 - receives the design brief and architect plan;
 - should not re-run broad discovery unless the architect plan is insufficient;
 - if it needs more context, it may do targeted reads/searches and must report them;
+- creates only tests justified by the approved risk-based test plan; report any added case outside the plan;
 - must not inspect previous generated-run archives unless explicitly permitted;
 - reports concise summary, changed file, diff stats, tool/read behavior, caveats.
 
-Coder verification checklist:
+Programming-only code verification checklist:
 
 - branch file exists;
 - no conflict markers;
@@ -405,6 +432,38 @@ Coder verification checklist:
 - runtime/test status recorded if available.
 
 ## 6. A/B/C testing
+
+### Proportional test selection
+
+Treat tests as evidence for distinct behaviors and risks, not as a count or
+coverage percentage target. For small, focused components only, aim for no more than
+10 distinct test scenarios by default (parameterized examples count separately).
+The architect should include a compact test plan; the critic should remove
+duplicates, speculative cases, and cross-product combinations that do not
+protect distinct behavior.
+
+Include tests for:
+
+- each reported issue/regression, regardless of how likely it seems to recur;
+- supported, plausible behavior with meaningful user impact;
+- unlikely scenarios when failure could cause meaningful or high harm;
+- essential acceptance criteria and a representative boundary for the public
+  contract.
+
+Do not test a scenario that is both implausible under the supported contract and
+harmless, unless it reproduces a reported issue or is explicitly required by a
+security, safety, or compatibility contract. Avoid tests for unreachable
+internal states, hypothetical malformed inputs outside the contract, duplicate
+assertions, and combinatorial permutations that do not exercise distinct
+behavior. Prefer a compact table-driven test when several cases share one
+meaningful contract; count every row as a scenario, even if one test function
+contains it.
+
+Larger scopes have no numeric scenario cap; selection remains risk-based and justified. If a small component needs more than 10 scenarios, the architect must explain
+the distinct behavior or risk behind each additional case and the architect
+critic must approve the expanded set before implementation. Reported-issue
+regressions are always retained. If scope is unclear, ask Erling rather than
+inventing a broad test matrix.
 
 A/B model:
 
@@ -423,7 +482,7 @@ Common templates:
 - bSelective comparison: ordinary context vs bSelective-guided context;
 - workflow comparison: workflow A vs workflow B;
 - prompt/rubric comparison: prompt A vs prompt B;
-- staged-context comparison: direct ordinary worker vs bSelective architect/coder vs ordinary architect/coder.
+- staged-context comparison: direct ordinary worker vs bSelective architect/worker vs ordinary architect/worker.
 
 For DD1D-style A/B/C runs, use the keyword normalization unless deliberately
 testing an internal override. The normal compact branch names are:
@@ -464,7 +523,7 @@ Mixed combinations such as bSelective architect → ordinary coder may be used a
 internal experimental overrides, but should not be offered as normal user-facing
 keywords.
 
-Cascade safeguards:
+Programming-specific cascade safeguards:
 
 ```yaml
 cascade_defaults:
@@ -477,18 +536,35 @@ cascade_defaults:
 
 ## 7. critcascade
 
-`critcascade` is the high-assurance bSelective cascade. It uses one task at a time:
-complete and verify one task before proceeding. Before each next task, the architect must review and update the remaining plan.
+`critcascade` is the default high-assurance bSelective cascade for substantial
+bSwarm work. It uses one task at a time: complete and verify one task before
+proceeding. Before implementation, the architect's plan must pass an architect
+critic and be revised to a strict ready-to-build state. After every completed
+task, the architect must review the result and update the remaining plan against
+current authoritative decisions before dispatching the next task—in other words,
+review and update the remaining plan after each task.
 
 ```text
-architect → architect_critic → programmer → programmer_critic
-          → architect_revision → programmer_fix
+architect → architect_critic → architect_revision/readiness →
+worker → worker_critic → architect_replan → loop control: next task
 ```
 
 The architect critic is above-average critical but fair, focusing on material
-issues in the specification. The programmer critic reviews goal coverage, bugs,
-speed, memory efficiency, security, robustness, integration, code reuse, and
-test coverage. Critics do not edit implementation files.
+issues in the plan/design. Before coding, require an explain-back from a reviewer
+without the architect's working context, a strict ready-to-build decision, and
+an explicit comparison with `decisions.md` when present plus other authoritative
+decision/state records relevant to the scope. Treat contradictions, missing
+decisions, ambiguous acceptance criteria, or unresolved blockers as not ready;
+return findings to the architect for revision and re-critique.
+
+After each bounded task, the worker critic reviews goal/acceptance coverage,
+correctness, security, robustness, integration, reuse, and verification (for
+code: tests and relevant performance/resource concerns). The architect then
+revises the remaining plan to incorporate the completed work and any decisions
+made since the last revision. Critics do not edit implementation files.
+Prefer a critic model distinct from the authoring architect/worker. If the
+runtime cannot select another model, record the fallback and reduced reviewer
+independence; never claim an independent-model review occurred.
 
 Critique contract:
 
@@ -504,8 +580,9 @@ critique:
 Rules:
 
 - maximum delegation depth is 3;
-- maximum `max_critique_rounds` is 3;
-- stop at 8 or higher;
+- stop only when `score >= 8 AND critical_issues == 0 AND required_changes == 0` (`target_score: 8`, `stop_requires_no_critical_issues: true`, `stop_requires_no_required_issues: true`);
+- begin with rounds 1–10; extensions are consecutive blocks of 10 (11–20, 21–30, etc.). At each block end, zero progress events means record plateau and pause to ask Erling; otherwise extend without a hard cap. Progress is a finding closed with evidence, a required check completed with evidence, or a same-rubric score increase with rationale. Safety blockers stop immediately; record block range, events, evidence, and stop reason;
+- do not continue repetitive/no-progress or unsafe revisions indefinitely: report the plateau or safety blocker and ask Erling how to proceed;
 - retries require diagnosed issues, not vague dissatisfaction;
 - extract only concise durable lessons/general knowledge into `bKnowledge`;
 - architects and programmers consult relevant `bKnowledge` before acting.
@@ -520,7 +597,7 @@ Modes:
 
 When active, record adapter, slices, whole-file fallbacks, and missing context.
 
-For bSelective-heavy architect/coder runs, the architect should own most context discovery. The coder should receive the exact target file, exact functions/line regions, required changes, forbidden changes, and concise relevant context. This reduces repeated broad reading and makes bSelective more useful.
+For bSelective-heavy architect/worker runs, the architect should own most context discovery. The worker should receive the exact target artifact, relevant sections/regions, required changes, forbidden changes, and concise relevant context. This reduces repeated broad reading and makes bSelective more useful.
 
 ## 8. Safety / contamination rules
 
@@ -538,10 +615,10 @@ For generated-code evaluation runs:
 
 Choose the smallest role chain that fits the task:
 
-- 1 agent: `coder` — simple direct implementation.
-- 2 agents: `architect -> coder` — large files or unclear context.
-- 2 agents: `coder -> supervisor` — simple work needing review.
-- 3 agents: `architect -> coder -> supervisor` — important or risky work.
+- 1 agent: `worker` — simple direct task.
+- 2 agents: `architect -> worker` — substantial task or unclear context.
+- 2 agents: `worker -> supervisor` — bounded work needing review.
+- 3 agents: `architect -> worker -> supervisor` — important or risky work.
 
 ## 10. Role output contract
 
@@ -549,9 +626,9 @@ All child outputs should be concise and structured:
 
 ```yaml
 role_output:
-  role: architect | coder | supervisor | worker
+  role: architect | architect_critic | architect_revision | worker | worker_critic | worker_revision | architect_replan | supervisor
   branch_id: <id>
-  stage: architect | coder | supervisor | direct_worker
+  stage: architect | architect_critic | architect_revision | worker | worker_critic | worker_revision | architect_replan | supervisor | direct_worker
   parent_branch_id: <id or none>
   outcome: reached | not_reached | partial | inconclusive | blocked | unsafe
   confidence: low | medium | high
@@ -582,6 +659,7 @@ role_output:
     target_related_tool_output_chars: unknown
     diff_added_lines: unknown
     diff_removed_lines: unknown
+    # Programming-only runtime statistic.
     matlab_runtime_verification: not_run | passed | failed | partial
 ```
 
@@ -621,16 +699,16 @@ Collect both per-stage and combined per-branch stats:
 - diff added/removed lines;
 - whether MATLAB/runtime verification ran.
 
-Architect/coder runs should make it possible to answer:
+- Architect/worker runs should make it possible to answer:
 
 - did bSelective reduce architect discovery context?
-- did the coder avoid repeating discovery?
-- did architect/coder split improve quality vs direct ordinary?
+- did the worker avoid repeating discovery?
+- did architect/worker split improve quality vs direct ordinary?
 - did the split reduce or increase total tokens/tool calls?
 
 ## 12. Final report
 
-Keep it quick-glance:
+Keep it quick-glance. For general verification, record each criterion or claim using the fields `criterion_or_claim`, `evidence_or_check`, `expected_signal`, `actual_result`, and `reference`; code tests are one domain-specific method.
 
 - recommendation;
 - outcome;

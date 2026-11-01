@@ -3,22 +3,57 @@ bswarm_run:
   scope: "<path/reference or none>"
   # User-facing compact workflow keyword. Do not expose mixed stage combinations
   # unless this is a controlled experiment.
-  workflow_keyword: ordinary # cascade | cascade critic | cascade critic audit
-  workflow: direct
+  workflow_keyword: cascade critic # explicit lighter modes remain available
+  workflow: critcascade
   mode: unsupervised
   intent: review
   ab_testing: off
-  bselective: all_off
-  roles: [coder]
+  bselective: all_on
+  roles: [architect, architect_critic, worker, worker_critic]
   statistics: on
   context_stats: on
-  max_depth: 1
+  max_depth: 3
   max_total_child_agents: 3
-  max_iterations: 5
-  max_critique_rounds: 3
+  max_iterations: 5 # General workflow iteration setting; critique_loop rounds are not capped by this value.
+  critique_loop:
+    target_score: 8
+    stop_requires_no_critical_issues: true
+    stop_requires_no_required_issues: true
+    success_condition: "score >= 8 AND critical_issues == 0 AND required_changes == 0"
+    initial_round_range: [1, 10]
+    extension_block_size: 10
+    no_hard_round_cap: true
+    progress_events: [issue_closed_with_evidence, required_check_completed_with_evidence, same_rubric_score_increase_with_rationale]
+    zero_progress_at_block_end: record_plateau_and_pause_ask
+    safety_blocker: stop_immediately
+    record: [block_range, progress_events, evidence, stop_reason]
   max_worker_attempts_per_supervisor: 5
   planned_timeout_seconds: 1200
   safety: read_only
+  workflow_selection:
+    critic_cascade_if:
+      - multiple_or_dependent_tasks
+      - unresolved_design_uncertainty
+      - meaningful_risk
+    smallest_mode_if: one_bounded_low_risk_deliverable
+    ask_operator_if_unclear: true
+  # Substantial-work default only; select lighter modes for bounded low-risk work.
+  verification_policy:
+    fields: [criterion_or_claim, evidence_or_check, expected_signal, actual_result, reference]
+    require_each_criterion_or_claim: true
+  testing_policy:
+    selection: risk_based_and_requirement_linked
+    small_component_default_scenarios: 10
+    scenario_count_includes_parameterized_rows: true
+    reported_issue_regressions: always_include
+    include_if:
+      - plausible_supported_behavior_with_meaningful_impact
+      - remote_behavior_with_meaningful_or_high_harm
+      - essential_acceptance_criterion_or_public_boundary
+    exclude_if: implausible_and_harmless_unless_reported_or_contract_required
+    small_component_above_default_requires_architect_rationale_and_critic_approval: true
+    larger_scope_numeric_cap: none
+    larger_scope_selection: risk_based_justified
   job:
     enabled: false
     package_root: "<project>/jobs"
@@ -62,36 +97,44 @@ bswarm_run:
     architect:
       context_mode: ordinary
       workflow: architect_handoff
-      coder_context_mode: ordinary
+      worker_context_mode: ordinary
     bSelective architect:
       context_mode: bselective
       workflow: architect_handoff
-      coder_context_mode: bselective
+      worker_context_mode: bselective
     cascade:
       context_mode: bselective
       workflow: architect_taskflow
-      coder_context_mode: bselective
+      worker_context_mode: bselective
     bSelective cascade:
       context_mode: bselective
       workflow: architect_taskflow
-      coder_context_mode: bselective
+      worker_context_mode: bselective
     cascade critic:
       context_mode: bselective
       workflow: critcascade
-      coder_context_mode: bselective
+      worker_context_mode: bselective
     cascade critic audit:
       context_mode: bselective
       workflow: critcascade_audit
-      coder_context_mode: bselective
+      worker_context_mode: bselective
 
+  # Programming-only execution limits; omit for non-code workflows.
   cascade_defaults:
     max_tasks: 4
     max_coder_attempts_per_task: 1
     max_patch_calls_per_coder: 3
     stop_after_acceptance: true
     re_evaluate_after_each_task: true
+    critic_model_policy: prefer_different_model
+    same_model_fallback: record_reduced_independence
+    architect_plan_checks:
+      - reviewer_explain_back_without_architect_working_context
+      - strict_ready_to_build_decision
+      - compare_with_decisions_md_and_authoritative_decision_records
+    architect_replan_after_each_task: true
 
-  # Branch/stage shape for A/B/C runs. Remove branches not in scope.
+  # Programming-specific A/B/C branch example; remove branches not in scope.
   branches:
     ordinary:
       pattern: direct_worker
@@ -150,31 +193,29 @@ bswarm_run:
     critcascade:
       pattern: critcascade
       architect_context_mode: bselective
-      coder_context_mode: bselective
+      worker_context_mode: bselective
       max_depth: 3
-      max_critique_rounds: 3
       stages:
         - architect
         - architect_critic
-        - coder
-        - programmer_critic
         - architect_revision
-        - coder_fix
+        - worker
+        - worker_critic
+        - architect_replan
     critcascade_audit:
       pattern: critcascade_audit
       architect_context_mode: bselective
-      coder_context_mode: bselective
+      worker_context_mode: bselective
       max_depth: 3
-      max_critique_rounds: 3
       external_model_required: true
       stages:
         - architect
         - design_audit
         - architect_critic
-        - coder
-        - programmer_critic
         - architect_revision
-        - coder_fix
+        - worker
+        - worker_critic
+        - architect_replan
         - code_audit
 
   contamination_rules:
@@ -183,9 +224,17 @@ bswarm_run:
     excluded_worker_paths:
       - "previous-generated-runs/"
 
+  programming_aliases:
+    coder: worker
+    programmer_critic: worker_critic
+    coder_fix: worker_revision
+
   role_defaults:
+    worker: {stage: implementation}
+    worker_critic: {stage: implementation_critique, model_policy: prefer_different_model_from_worker, must_not_edit_implementation_files: true}
+    worker_revision: {stage: implementation_revision}
     architect:
-      # Default architect handoff budget: compact by default so coder receives a plan, not transcripts.
+      # Default architect handoff budget: compact by default so the worker receives a plan, not transcripts.
       handoff_kind: context-budget artifact
       target_words: 350-500
       hard_max_words: 700
@@ -202,3 +251,16 @@ bswarm_run:
         - do_not_implement
         - risks
         - verification_checks
+        - verification_plan
+    architect_critic:
+      stage: plan_critique
+      model_policy: prefer_different_model_from_architect
+      required_checks:
+        - reviewer_explain_back
+        - ready_to_build_bar
+        - decisions_md_and_authoritative_decision_records
+      must_not_edit_implementation_files: true
+    architect_revision: {stage: plan_revision_and_readiness_decision}
+    architect_replan: {stage: update_remaining_plan_after_completed_task}
+
+# Generic aliases: coder->worker; programmer_critic->worker_critic; coder_fix->worker_revision
