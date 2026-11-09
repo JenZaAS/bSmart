@@ -114,8 +114,9 @@ branches:
 6. Keep prior generated-run archive paths out of worker prompts unless explicitly comparing against old generated code.
 7. Run the selected bSwarm through chat/delegation.
 8. Save architect plans as `*/architect-plan.md` where applicable.
-9. For a bounded cascade, create a project `jobs/` package from `templates/jobs/`; update its `report.md` and `plan.md` in place.
-10. Save a run record using `templates/run-record.md`, including preflight QC, per-stage statistics, and branch-total statistics.
+9. For `cascade critic`, critics write full reviews to `bswarm-runs/<run>/critiques/` from `templates/critique.template.md` and return a one-line-per-issue summary; unfixed optional issues go to `deferred-issues.md` at the project or workstream level (`bswarm_deferred_issues` in `project.md`, default project) from `templates/deferred-issues.template.md`. Critique files are kept.
+10. For a bounded cascade, create a project `jobs/` package from `templates/jobs/`; update its `report.md` and `plan.md` in place.
+11. Save a run record using `templates/run-record.md`, including preflight QC, per-stage statistics, and branch-total statistics.
 
 Adapter note: bSwarm is intended to be CLI-agnostic, but nested cascade checks
 are runtime-specific. If running under OpenCode, Codex, Claude, or an unknown

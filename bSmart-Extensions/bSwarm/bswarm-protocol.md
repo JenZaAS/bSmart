@@ -201,7 +201,8 @@ re-sorts. Unsure means `decision`. Sections 3 and 7 use these classes.
 `optional` findings never block progress and never cause another round or
 auditor. They may be fixed along the way when the same code is already being
 changed for an `automatic` or `decision` finding and the fix is clearly
-relevant. Record them as a count only.
+relevant. Reports count them; each one left unfixed goes to the project
+backlog (section 7, "Deferred-issues backlog").
 
 Critics and auditors check against the existing spec, tests, and ADRs. They
 must not invent product rules; a gap goes to the operator as `decision`.
@@ -382,7 +383,7 @@ Rules:
   - `run-record.md`;
   - `tool-read-stats.md`;
   - `comparison.md`;
-  - cross-run stats index updates such as `/projects/DigSoftware/workstreams/dd1d/ab-testing/stats-index.md`.
+  - cross-run stats index updates such as `<project>/workstreams/<workstream>/ab-testing/stats-index.md`.
 
 Supervisor verification must not trust child self-reports until directly checked:
 
@@ -501,7 +502,7 @@ Common templates:
 - prompt/rubric comparison: prompt A vs prompt B;
 - staged-context comparison: direct ordinary worker vs bSelective architect/coder vs ordinary architect/coder.
 
-For DD1D-style A/B/C runs, use the keyword normalization unless deliberately
+For A/B/C comparison runs, use the keyword normalization unless deliberately
 testing an internal override. The normal compact branch names are:
 
 ```yaml
@@ -566,19 +567,84 @@ issues in the specification. The programmer critic reviews goal coverage, bugs,
 speed, memory efficiency, security, robustness, integration, code reuse, and
 test coverage. Critics do not edit implementation files.
 
-Critique contract:
+Critique contract: every critic writes its full review to a **critique file**
+and returns only a short **summary** to the parent agent.
 
-```yaml
-critique:
-  score: 1-10
-  critical_issues: []
-  important_issues: []
-  required_changes: []
-  verification_needed: []
+### Critique file
+
+- Path: `bswarm-runs/<run>/critiques/<role>-r<n>.md`, relative to the
+  project or workstream folder. `<role>` is the role reviewed (`architect`,
+  `coder`); `<n>` is the round (1-3). In a multi-task cascade add the task:
+  `coder-t<task>-r<n>.md`.
+- Start from `templates/critique.template.md`. The header block records role
+  reviewed, round, score, critic model, date, and the previous round's file.
+- Each issue gets its own heading, in this fixed order, then details below it:
+
+  ```text
+  ### C<id> [<severity>] [<class>] [<status>] <short label>
+  ```
+
+- Tag vocabulary (no other values):
+
+  | Tag | Values |
+  |---|---|
+  | severity | `critical`, `important`, `minor` |
+  | class | `automatic`, `decision`, `optional` (section 3) |
+  | status | `open`, `fixed`, `deferred`, `rejected` |
+
+- IDs are stable. `C1`, `C2`, ... are numbered per role (and task) across its
+  rounds: an issue keeps its ID in r2 and r3, and new issues take the next
+  unused number. Never reuse or renumber an ID. Each round file repeats every
+  issue still open from the previous round with its current status.
+- Critique files are part of the development log: keep them, never delete or
+  rewrite them. Later changes go into the next round file or the backlog.
+
+### Returned summary
+
+The summary is the only part that enters the parent's context:
+
+```text
+critique: <role> r<n> score <1-10>/10 file <path>
+- C1 [critical] [automatic] [open] <short label>: <one-line description>
+- C2 [minor] [optional] [open] <short label>: <one-line description>
 ```
+
+List **every** issue on one line each, with no details. The parent usually
+just routes (architect -> parent -> critic -> parent -> architect): it forwards
+the summary and path, and the fixing role reads only the IDs it needs from the
+file, for example by searching for the heading `### C2 `. The parent or the
+architect may **promote** a `minor`/`optional` issue when their context makes
+it matter; record the promotion (who, why, new tags) under that issue in the
+next round file, or in the backlog entry.
+
+### Deferred-issues backlog
+
+When a task or run ends, the parent agent adds each issue that is still
+`optional` and unfixed to the owning `deferred-issues.md` (start from
+`templates/deferred-issues.template.md`). Each entry has a backlog status
+(`open`, `done`, `rejected`, `later`) and links back to the critique file and
+ID. Mark the issue `[deferred]` in the last round file. The operator reviews
+the backlog when convenient; a recurring review routine is optional and not
+part of the protocol.
+
+**Where the backlog lives.** Keep one backlog at the level that owns the
+module. The project sets this in `project.md` with
+`bswarm_deferred_issues: project | workstream` (default `project`):
+
+- `project`: one `<project>/deferred-issues.md`. Use it when the project is
+  the module and its workstreams are features of it.
+- `workstream`: one `<project>/workstreams/<workstream>/deferred-issues.md`
+  per workstream. Use it when workstreams are separate modules.
+
+If the field is missing, use `project`. A run-spec may override it for one run
+with `deferred_issues_scope`.
+
+Edge cases (adapters whose critics cannot write files, auditor files, merging
+duplicate issues) are in `critique-files-notes.md`.
 
 Rules:
 
+- `score: 1-10`, 10 best, given in the header block and the summary;
 - maximum delegation depth is 3;
 - maximum `max_critique_rounds` is 3;
 - stop at 8 or higher; the score and the round limit count only `automatic`
@@ -708,12 +774,17 @@ Architect/coder runs should make it possible to answer:
 
 ## 12. Final report
 
-Keep it quick-glance:
+The final report to the operator follows the core plain-language rule in
+`bSmart.md` (`response_style.plain_language`): lead with the answer or
+decision, short plain sentences, only the issues that matter, jargon
+explained, next steps last. This applies to the report, not to critique
+files. Keep it quick-glance:
 
 - recommendation;
 - outcome;
 - key evidence;
 - unresolved disagreements;
+- open `decision` issues by ID, and the count of new backlog entries;
 - stage and branch statistics summary;
 - budget/limit status;
 - one next action.

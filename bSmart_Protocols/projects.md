@@ -111,6 +111,11 @@ project_md_required_fields:
 ```
 
 ```yaml
+project_md_optional_fields:
+  bswarm_deferred_issues: project | workstream  # where bSwarm keeps deferred-issues.md; default project. Use workstream when workstreams are separate modules.
+```
+
+```yaml
 create_project:
   default_after_creation: the session that created the project selects it
   rule: `/project add NAME` creates the project, updates INDEX.md, and selects it in this session only. If this session already has a project, write that project's handoff before switching.
