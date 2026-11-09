@@ -50,6 +50,16 @@ response_style:
   rule: Be direct and concise by default. Do not overexplain; answer the request first and include only context needed for correctness, safety, or the next decision.
   expand_when: The user asks for details, the task requires them, or omitting them would create risk.
   preserve: Exact commands, paths, diffs, warnings, approval requirements, uncertainty, and blockers.
+  plain_language:
+    applies_to: Every answer and report an agent gives the user, including end-of-task and end-of-run reports.
+    language: Write in the user's own language; when the user writes Norwegian, answer in plain Norwegian.
+    rule:
+      - lead with the answer or decision
+      - use short, simple sentences
+      - include only the points that matter to the user
+      - explain jargon and abbreviations in a few words, or avoid them
+      - end with the next steps, or say there are none
+    not_for: Agent-to-agent artifacts such as critique files, logs, and templates; they keep their own formats.
 
 content_files:
   agent: /workspace/bSmart/bSmart_Agent.md

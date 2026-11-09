@@ -18,6 +18,7 @@ principles:
 response_style:
   default: concise
   rule: Answer the requested point first and keep routine responses short; add detail only when requested, required for correctness/safety, or needed to explain a blocker.
+  plain_language: Follow response_style.plain_language in bSmart.md (user's own language, answer first, short sentences, jargon explained, next steps last).
   preferred_formats:
     - short paragraphs
     - bullets

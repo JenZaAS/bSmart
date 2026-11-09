@@ -182,10 +182,16 @@ class BSwarmProtocolTests(unittest.TestCase):
     def test_critcascade_has_concise_critic_contract_and_knowledge_rules(self):
         text = self.read('bswarm-protocol.md')
         for term in [
-            'critical_issues',
-            'important_issues',
-            'required_changes',
-            'verification_needed',
+            'bswarm-runs/<run>/critiques/<role>-r<n>.md',
+            '### C<id> [<severity>] [<class>] [<status>] <short label>',
+            '`critical`, `important`, `minor`',
+            '`open`, `fixed`, `deferred`, `rejected`',
+            'IDs are stable',
+            'never delete',
+            'only part that enters the parent',
+            'deferred-issues.md',
+            'bswarm_deferred_issues: project | workstream',
+            'response_style.plain_language',
             'general knowledge',
             'concise durable lessons',
             'must not edit implementation files',
@@ -301,6 +307,20 @@ class BSwarmProtocolTests(unittest.TestCase):
             'could not be launched',
         ]:
             self.assertIn(term, combined)
+
+    def test_critique_and_backlog_templates_exist(self):
+        critique = self.read('templates/critique.template.md')
+        for term in ['Role reviewed', 'Round', 'Score', 'Critic model', 'Date', '### C1 [']:
+            self.assertIn(term, critique)
+        backlog = self.read('templates/deferred-issues.template.md')
+        for term in ['open | done | rejected | later', 'critique file + ID']:
+            self.assertIn(term, backlog)
+        self.assertTrue((ROOT / 'critique-files-notes.md').exists())
+
+    def test_core_manifest_has_plain_language_rule(self):
+        core = (ROOT.parents[1] / 'bSmart.md').read_text(encoding='utf-8')
+        for term in ['plain_language:', "user's own language", 'lead with the answer', 'explain jargon', 'next steps']:
+            self.assertIn(term, core)
 
     def test_jobs_templates_capture_audit_findings_and_write_timing(self):
         combined = '\n'.join([

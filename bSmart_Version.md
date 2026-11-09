@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.49-draft
-updated: 2026-10-16 10:50 UTC
+current_version: 0.1.50-draft
+updated: 2026-11-09 23:45 UTC
 status: draft
 ```
 
@@ -26,6 +26,34 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.50-draft
+
+```yaml
+release_type: bswarm_critique_files_plain_language
+news: |
+  Critics in a cascade critic run now write their full review to a file in
+  the run folder and send back only a short list of issues, so long reviews
+  no longer fill the chat. Small issues that were not fixed are collected in
+  a deferred-issues.md for you to review when it suits you, per project by
+  default or per workstream when workstreams are separate modules.
+  Agents now answer you in plain, short language in your own language: the
+  answer first, jargon explained, next steps last.
+scope:
+  - critique contract in bswarm-protocol.md section 7 replaced by critique files (bswarm-runs/<run>/critiques/<role>-r<n>.md) with tagged issue headings, a fixed tag vocabulary (severity, class, status), stable IDs across rounds, and a header block
+  - critics return only a summary (score, file path, every issue as ID, tags, label, one line); the parent routes summary and path; fixing roles read the IDs they need from the file; parent or architect may promote a minor issue and record it
+  - critique files are kept as part of the development log, never deleted
+  - unfixed optional issues go to a deferred-issues.md backlog (open/done/rejected/later) at the module-owning level, set by optional project.md field bswarm_deferred_issues: project | workstream (default project; run-spec deferred_issues_scope overrides per run), linking back to file and ID; a review routine is optional and not set up
+  - add templates/critique.template.md, templates/deferred-issues.template.md, and critique-files-notes.md for edge cases
+  - add a general plain-language rule to response_style in bSmart.md (user's own language, answer first, short sentences, jargon explained, next steps last), referenced from bSmart_Protocols/operations.md and from the bSwarm final-report section
+  - run-spec, run-record, README, and jobs SPEC point at critique files and the backlog; score 1-10, stop at 8, max 3 rounds, and the three finding classes are unchanged
+  - run-record critcascade table: the Critical issues and Required changes columns are replaced by per-round Critical, Important and Minor issue counts, matching the new severities
+  - bswarm-protocol.md: two remaining project-specific examples (a stats-index path and an A/B/C run label) replaced by generic ones
+verification:
+  - protocol, templates, and docs only; no runtime code changed
+  - bSwarm protocol test updated for the new critique contract
+  - python and node tests pass, including the public-tree privacy guard
+```
 
 ## 0.1.49-draft
 

@@ -235,10 +235,14 @@ Architect plans should include one-line region reasons only and should not paste
 Only include for `critcascade` runs. Complete and verify one task before the next;
 the architect reviews and updates the remaining plan before each next task.
 
-| Round | Critic | Score (1-10) | Critical issues | Required changes | Status | Decision |
-|---:|---|---:|---|---|---|---|
-| 1 | architect_critic | ... | ... | ... | complete | pass |
-| 1 | programmer_critic | ... | ... | ... | complete | revise |
+| Round | Critic | Score (1-10) | Critical | Important | Minor | Status | Decision | Critique file |
+|---:|---|---:|---:|---:|---:|---|---|---|
+| 1 | architect_critic | ... | 0 | 0 | 0 | complete | pass | critiques/architect-r1.md |
+| 1 | programmer_critic | ... | 0 | 0 | 0 | complete | revise | critiques/coder-t1-r1.md |
+
+The Critical, Important and Minor columns count that round's issues by severity. The issues themselves stay in the critique file.
+
+- New deferred-issues backlog entries: `<count>` in `deferred-issues.md`
 
 - Knowledge consulted: `<bKnowledge references>`
 - Concise durable lessons extracted: `<none or entries>`

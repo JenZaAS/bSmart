@@ -153,6 +153,11 @@ bswarm_run:
       coder_context_mode: bselective
       max_depth: 3
       max_critique_rounds: 3
+      # Full reviews go to critique files; only the summary returns to the parent.
+      critique_files: "bswarm-runs/<run>/critiques/<role>-r<n>.md"
+      deferred_issues: "deferred-issues.md"
+      # project | workstream. Empty = use project.md bswarm_deferred_issues (default project).
+      deferred_issues_scope: ""
       stages:
         - architect
         - architect_critic

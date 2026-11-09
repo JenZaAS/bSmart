@@ -21,7 +21,7 @@ Use Markdown. Keep the slug short and stable. `report.md` is the first file an o
 - Write/update the job package after the design audit, after each architect task, and after the final code audit.
 - Keep reports short; the one-page shape is a guide, not a hard limit.
 - `report.md` contains **External-audit bullets only** (class + status), never an internal-critic dump.
-- **optional findings: count only** unless the operator asks for detail.
+- **optional findings: count only** unless the operator asks for detail; the unfixed ones are listed in the owning `deferred-issues.md` (project or workstream).
 - **Do not vendor source trees or diffs** (or chat transcripts) in the job folder; link to commits, ADRs, or workstreams instead.
 - The parent agent re-sorts auditor proposals into `automatic`, `decision`, or `optional`. Unsure means `decision`.
 
