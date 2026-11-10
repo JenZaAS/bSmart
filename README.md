@@ -15,9 +15,21 @@ bSmart is a lightweight **AI harness**: an operating layer around an AI assistan
 - [Safety](#safety) — apply read-first work habits, visible action notes, and approval gates.
 - [Security Watch](#security-watch) — optional low-noise read-only drift checks for admin/security instances.
 - [Setup](#setup) — bootstrap and maintain the system/content/extension folder structure.
-- [Extensions](#extensions) — add optional packs such as Fabric, bSearch, or Graphify.
+- [Extensions](#extensions) — add optional packs such as bSearch, bSelective, Graphify, or Fabric.
 - [Features](#features) — show the feature list and drill into details from chat.
 - [bProtective](#bprotective) — optionally block catastrophic commands and escalate risky ones. Off until the operator confirms it.
+- [Optional skills](#optional-skills) — bPrivate, bAccountant, bADR, bQAbuild, bSwarm, bMap, bAsk, bCoder, bArchitect, and bCritic.
+
+The full, current list is in [`bSmart_Features.md`](bSmart_Features.md). In chat, `python ./scripts/bFeature <name>` shows one feature card.
+
+## Core habits
+
+Each rule lives in one place; this is only what it is for.
+
+- **Plain answers.** Agents answer in plain, short language in the user's own language. Rule: `response_style` in `bSmart.md`.
+- **Knowledge upkeep.** Any code change also updates or removes the project knowledge it made stale, and the report says what changed. Rule: `knowledge_upkeep` in `bSmart.md`; the `Code:` line format is in `bSmart_Protocols/knowledge.md`.
+- **Lock-free Git checks.** Startup (`bStart.py`) and the daily update check read Git without taking `.git/index.lock`, so a slow or stopped check cannot block the next pull. Details: `bSmart_Version.md`, 0.1.51-draft.
+- **Quick lookups.** `scripts/bFind` (paths and protocols) and `scripts/bFeature` (feature cards) return one short entry instead of searching the workspace. `bFind` was called `scripts/bMap` before 0.1.52; `bMap` now means only the planning feature.
 
 ```yaml
 name: bSmart-System
@@ -96,7 +108,7 @@ legacy_migration: move /workspace/secrets to the service-level secret directory,
 /workspace/
 ├── bSmart-System/       # this git repo; safe to update
 ├── bSmart/              # local content/state; not overwritten by system updates
-├── bSmart-Extensions/   # installed optional extension packs, e.g. Fabric or bSearch
+├── bSmart-Extensions/   # installed optional extension packs, e.g. bSearch or bSwarm
 ├── HERMES.md            # tiny Hermes hook outside bSmart
 └── AGENTS.md            # OpenCode/local-agent startup contract
 ```
@@ -519,6 +531,23 @@ bprotective recover
 The operator runs both `bprotective on` and `bprotective yes <ID>` in their own terminal. Agent hooks block those commands. `bprotective recover`, then `bprotective yes <ID>`, is the operator command when the state file is missing and the armed record remains. A missing core blocks terminal commands. bProtective protects against accidental catastrophic commands, not against a deliberately adversarial agent.
 
 Optional protected paths belong in `State/bprotective.yaml` under the per-instance content root from `scripts/bsmart_instance.py`, in the instance next to the checkout. That file cannot turn the guard on. Run the pre-flight check only while protection is on.
+
+### Optional skills
+
+Each is off until you turn it on. The rules live in the skill's folder under `bSmart-Extensions/`; this list only says what each is for.
+
+- **bPrivate** (`bPrivate/`): encode sensitive content before an online model sees it and decode the result locally.
+- **bAccountant** (`bAccountant/`): a cautious, read-only accountant assistant.
+- **bADR** (`bADR/`): standard Architecture Decision Records in projects.
+- **bQAbuild** (`bQAbuild/`): clarify the work before building it.
+- **bSwarm** (`bSwarm/`): run a planned change with an architect, coders, and critics.
+- **bMap** (`bMap/`): plan big work over several sessions as a map of decisions; nothing is built while the map is open, and a finished map goes to bSwarm.
+- **bAsk** (`bAsk/`): sharpen an idea with short questions, one at a time.
+- **bCoder** (`bCoder/`): a short coding checklist that keeps knowledge in step.
+- **bArchitect** (`bArchitect/`): plan a code change for a coder and close it with a knowledge check.
+- **bCritic** (`bCritic/`): review a plan, code, or any document with a score and a kept review file.
+
+bCoder, bArchitect, and bCritic work on their own; bSwarm uses them for its roles.
 
 ## Update rule
 
