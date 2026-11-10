@@ -113,6 +113,7 @@ project_md_required_fields:
 ```yaml
 project_md_optional_fields:
   bswarm_deferred_issues: project | workstream  # where bSwarm keeps deferred-issues.md; default project. Use workstream when workstreams are separate modules.
+  bmap_maps: project | workstream  # where bMap keeps maps/ and its REGISTRY.md; default follows bswarm_deferred_issues, else project.
 ```
 
 ```yaml

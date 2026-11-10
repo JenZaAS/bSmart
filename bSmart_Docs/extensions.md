@@ -115,6 +115,40 @@ setup_default: yes
 
 bSwarm v1 is a chat protocol, not a command handler. It uses concise run specs, grouped editing, Hermes delegation where useful, and Markdown run records.
 
+## bMap
+
+```yaml
+name: bMap
+path: /workspace/bSmart-Extensions/bMap
+source_path: /workspace/bSmart-System/bSmart-Extensions/bMap
+license: MIT (bSmart); method from mattpocock/skills (MIT), format and lint ideas from rengwu/wayfinder-maps (MIT)
+status: optional_bundled_extension
+purpose:
+  - multi-session planning as one small map of decision tickets
+  - plan, do not build; only the human can lift that in a session
+  - map registry per project or workstream; ask instead of guessing
+  - hands a finished map to bSwarm (architect, critic, build)
+install_model: copy_or_sync_from_bundled_source
+setup_default: no
+```
+
+bMap maps are project content. They live in `<project>/maps/` or a workstream's `maps/`, never in the extension folder.
+
+## bAsk
+
+```yaml
+name: bAsk
+path: /workspace/bSmart-Extensions/bAsk
+source_path: /workspace/bSmart-System/bSmart-Extensions/bAsk
+license: MIT (bSmart); based on grill-me and grilling from mattpocock/skills (MIT)
+status: optional_bundled_extension
+purpose:
+  - short interview that sharpens any idea, one question at a time
+  - used by bMap for explore tickets
+install_model: copy_or_sync_from_bundled_source
+setup_default: no
+```
+
 ## bQAbuild
 
 ```yaml

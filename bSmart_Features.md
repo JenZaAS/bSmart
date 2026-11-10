@@ -105,6 +105,14 @@ features:
     status: active
     summary: Check visible VPS/container security drift.
     detail_lookup: python ./scripts/bFeature 'Security Watch'
+  - name: bMap
+    status: draft
+    summary: Optionally plan big work as a map of decisions, one per session.
+    detail_lookup: python ./scripts/bFeature bMap
+  - name: bAsk
+    status: draft
+    summary: Optionally sharpen an idea with short questions, one at a time.
+    detail_lookup: python ./scripts/bFeature bAsk
 ```
 
 
@@ -160,6 +168,8 @@ commands:
 15. bProtective — Optionally block catastrophic commands and escalate risky ones.
 16. bAccountant — Optionally turn an agent into a cautious accountant assistant.
 17. bADR — Add and maintain standardized Architecture Decision Records in projects.
+18. bMap — Optionally plan big work as a map of decisions, one per session.
+19. bAsk — Optionally sharpen an idea with short questions, one at a time.
 
 ## Feature index
 
@@ -180,6 +190,8 @@ commands:
 15. bProtective
 16. bAccountant
 17. bADR
+18. bMap
+19. bAsk
 
 ## Features by group
 
@@ -187,6 +199,8 @@ commands:
 - Projects — Manage project context and project folders.
 - Tasks — Track next actions and handoffs.
 - Workdocs — Keep detailed notes for larger work.
+- bMap — Optionally plan big work as a map of decisions, one per session.
+- bAsk — Optionally sharpen an idea with short questions, one at a time.
 
 ### Knowledge
 - Library — Store and reuse durable knowledge.
@@ -230,6 +244,66 @@ included_capabilities:
 notes:
   - Generated ADRs belong to the consuming project, not bSmart-System.
   - Do not put secrets in ADRs.
+```
+
+### bMap
+
+```yaml
+name: bMap
+group: Work
+status: draft
+visibility: user-facing
+optional: true
+short_description: Optionally plan big work as a map of decisions, one per session.
+files:
+  - /workspace/bSmart-System/bSmart-Extensions/bMap/
+  - /workspace/bSmart-System/bSmart-Extensions/bMap/bmap-protocol.md
+  - /workspace/bSmart-System/bSmart-Extensions/bMap/trackers.md
+  - /workspace/bSmart-System/bSmart-Extensions/bMap/bmap.py
+  - /workspace/bSmart-System/bSmart-Extensions/bMap/templates/
+description: Plans work that needs more than one session as one map of decision tickets (explore, prototype, research, task) with blocking links, a fog list, and an out-of-scope list. One ticket per session, except research. It plans and does not build. A finished map hands off to bSwarm (architect, critic check, build). Our own variant of Matt Pocock's wayfinder, with file format and lint ideas from John Goh's wayfinder-maps.
+commands:
+  - bMap chart <idea> (natural-language request)
+  - bMap next [map] (work one ticket)
+  - python3 ./bSmart-System/bSmart-Extensions/bMap/bmap.py lint <map folder | maps root>
+  - python3 ./bSmart-System/bSmart-Extensions/bMap/bmap.py status <map folder>
+  - python3 ./bSmart-System/bSmart-Extensions/bMap/bmap.py find <maps root> [words...]
+included_capabilities:
+  - Hard no-build rule that only the human can lift, per session
+  - The human decides explore and prototype tickets
+  - Maps of at most 12 tickets
+  - Map registry per project or workstream, with a fixed finding order that asks instead of guessing
+  - Local markdown or GitHub issues as tracker
+  - Cross-platform lint with derived ticket status
+notes:
+  - Off until the operator turns it on.
+  - Maps live in <project>/maps/ or <project>/workstreams/<workstream>/maps/ (project.md bmap_maps, default follows bswarm_deferred_issues, else project).
+  - GitHub issues are created only as the instance's AI GitHub identity.
+```
+
+### bAsk
+
+```yaml
+name: bAsk
+group: Work
+status: draft
+visibility: user-facing
+optional: true
+short_description: Optionally sharpen an idea with short questions, one at a time.
+files:
+  - /workspace/bSmart-System/bSmart-Extensions/bAsk/
+  - /workspace/bSmart-System/bSmart-Extensions/bAsk/interview.md
+description: A short interview for any idea, with or without a map. The agent asks one plain question at a time with a recommended answer, looks facts up itself, never answers for the human, and ends with a short list of decisions for the human to confirm. bMap uses it for explore tickets. Based on Matt Pocock's grill-me and grilling skills, in our own words.
+commands:
+  - bAsk me about <idea> (natural-language request)
+included_capabilities:
+  - One short question at a time
+  - Recommended answer that "yes" accepts
+  - Facts looked up by a helper, decisions left to the human
+  - Short decision summary with confirmation
+notes:
+  - For a formal build brief, use bQAbuild. For multi-session work, use bMap.
+  - Asking questions never gives permission to edit, build, commit, or publish.
 ```
 
 ### Projects
@@ -619,6 +693,7 @@ included_capabilities:
   - Bundled workflow memory (`bWorkflow`)
   - Bundled selective source-context retrieval (`bSelective`)
   - Bundled multi-agent orchestration protocol (`bSwarm`)
+  - Bundled multi-session planning maps (`bMap`) and short interviews (`bAsk`)
 notes:
   - Extensions are discovered from /workspace/bSmart-Extensions subfolders.
 ```

@@ -6,7 +6,7 @@ map:
   scope: bSmart logical storage and file ownership
   status: active
   path_model: relative_to_bsmart_workspace_root
-  detail_lookup: python ./scripts/bMap <scope> <item>
+  detail_lookup: python ./scripts/bFind <scope> <item>
   scopes:
     system: Generic bSmart-System map.
     instance: Instance map at ./bSmart/bSmart_InstanceMap.md when present.
@@ -149,6 +149,7 @@ It should describe only that project’s:
 | `./projects/<project>/workdocs/` | Larger project work | relevant task only |
 | `./projects/<project>/data/` | Supporting project material | relevant task only |
 | `./projects/<project>/sandbox/` | Project-local derived material when required | task-dependent |
+| `./projects/<project>/maps/` | bMap planning maps and their `REGISTRY.md`; a workstream's `maps/` when `bmap_maps: workstream` | bMap work only |
 
 ## Instance entries
 
@@ -188,7 +189,7 @@ never_automatic      never load during normal startup
 The compact startup result should tell the agent which lookups are available:
 
 ```text
-python ./scripts/bMap <scope> <item>
+python ./scripts/bFind <scope> <item>
 python ./scripts/bFeature <feature-name>
 python ./scripts/bKnowledge <query>
 ```
