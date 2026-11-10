@@ -34,8 +34,9 @@ Top-level modes:
 Explicit subagent stage modes:
 
 - `supervisor` — creates/validates run folders, duplicates allowed files, dispatches stages, verifies child self-reports, and records statistics. It does not directly edit target implementation files unless explicitly asked.
-- `architect` — discovers context and writes a concise implementation plan. It must not edit implementation files. Its handoff is a default context-budget artifact: target 350-500 words, hard max 700 words, max 6 relevant regions, max 6 `must_implement` bullets, no tool transcripts, no long source quotes, and no full bSelective output.
-- `coder` — implements in the allowed branch duplicate file and verifies the result.
+- `architect` — follows bArchitect (`../bArchitect/`): plans the change and does the final knowledge check.
+- `coder` — follows bCoder (`../bCoder/`) in the allowed branch duplicate file.
+- critics — follow bCritic (`../bCritic/`).
 
 `gauntlet` is retained only as the source/metaphor for pressure-testing.
 
@@ -114,8 +115,8 @@ branches:
 6. Keep prior generated-run archive paths out of worker prompts unless explicitly comparing against old generated code.
 7. Run the selected bSwarm through chat/delegation.
 8. Save architect plans as `*/architect-plan.md` where applicable.
-9. For `cascade critic`, critics write full reviews to `bswarm-runs/<run>/critiques/` from `templates/critique.template.md` and return a one-line-per-issue summary; unfixed optional issues go to `deferred-issues.md` at the project or workstream level (`bswarm_deferred_issues` in `project.md`, default project) from `templates/deferred-issues.template.md`. Critique files are kept.
-10. For a bounded cascade, create a project `jobs/` package from `templates/jobs/`; update its `report.md` and `plan.md` in place.
+9. For `cascade critic`, critics follow bCritic; run files go where protocol section 13 says.
+10. For a bounded cascade, create a `jobs/` package from `templates/jobs/` in the owner folder (protocol section 13); update its `report.md` and `plan.md` in place.
 11. Save a run record using `templates/run-record.md`, including preflight QC, per-stage statistics, and branch-total statistics.
 
 Adapter note: bSwarm is intended to be CLI-agnostic, but nested cascade checks
@@ -127,7 +128,7 @@ record that it is not true nested architect dispatch.
 
 ## Input from bMap
 
-A finished bMap map (`../bMap/bmap-protocol.md` section 10) is a valid input. The architect turns its decisions into the plan, the architect critic checks the plan against the map (every decision honoured, nothing out of scope, nothing undecided assumed), and the build follows as usual.
+A finished bMap map (`../bMap/bmap-protocol.md` section 10) is a valid input. The handoff steps, including the critic's check of the plan against the map, are in that section; the build then follows as usual.
 
 ## Source ideas and influences
 

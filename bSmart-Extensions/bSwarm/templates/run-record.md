@@ -20,10 +20,10 @@
 
 Use for a bounded cascade that should be reopenable from project content.
 
-- Package: `<project>/jobs/<YYYY-MM-DD>-<slug>/`
+- Package: `<owner>/jobs/<YYYY-MM-DD>-<slug>/`
 - Report: `report.md` — first-open quick-glance report, updated in place
 - Plan: `plan.md`
-- Index: `<project>/jobs/README.md`
+- Index: `<owner>/jobs/README.md`
 - Report contract: external-audit bullets only; optional findings are count only.
 - Trust / not verified: `<short note>`
 - Audit model list: `./bSmart/State/bswarm-audit-models.yaml` — `<configured / empty / unavailable>`
@@ -117,9 +117,7 @@ external auditors use other models from the ordered instance-local list.
 | `<actual model id or not launched>` | design | `<finding>` | automatic / decision / optional | `<status>` | `<reason>` |
 | `<actual model id or not launched>` | code | `<finding>` | automatic / decision / optional | `<status>` | `<reason>` |
 
-- Auditor proposals are re-sorted by the parent agent; unsure means `decision`.
-- Continue to the next auditor only for `automatic` or `decision`.
-- Optional-only findings stop the auditor list.
+- Classes are bCritic's, as sorted by the parent; the auditor-list rules are in protocol section 3.
 - If an adapter cannot name/select a configured model, record `not launched` and why.
 
 ## Statistics
@@ -198,30 +196,9 @@ Record combined architect+coder totals for architect/coder branches, and direct 
 - Coder brief: <architect-plan.md path, allowed duplicate file, verification checks>
 - Supervisor acceptance criteria: <compact pass/fail criteria>
 
-## Architect handoff defaults
+## Architect handoff budget
 
-Default architect handoff budget: the architect plan is a context-budget artifact, not a design essay or transcript dump.
-
-```yaml
-architect_handoff_defaults:
-  target_words: 350-500
-  hard_max_words: 700
-  max_relevant_regions: 6
-  max_must_implement_bullets: 6
-  no_tool_transcripts: true
-  no_long_source_quotes: true
-  no_full_bselective_output: true
-  required_sections:
-    - target_file_path
-    - relevant_regions
-    - must_implement
-    - defer
-    - do_not_implement
-    - risks
-    - verification_checks
-```
-
-Architect plans should include one-line region reasons only and should not paste full bSelective output.
+- Budget: bArchitect defaults | override: `<changed values>`
 
 ## Branch results
 
@@ -232,8 +209,7 @@ Architect plans should include one-line region reasons only and should not paste
 
 ## Critcascade review
 
-Only include for `critcascade` runs. Complete and verify one task before the next;
-the architect reviews and updates the remaining plan before each next task.
+Only include for `critcascade` runs.
 
 | Round | Critic | Score (1-10) | Critical | Important | Minor | Status | Decision | Critique file |
 |---:|---|---:|---:|---:|---:|---|---|---|
@@ -245,6 +221,8 @@ The Critical, Important and Minor columns count that round's issues by severity.
 - New deferred-issues backlog entries: `<count>` in `deferred-issues.md`
 
 - Knowledge consulted: `<bKnowledge references>`
+- Knowledge changes: `<path: one-line change, or no knowledge changes needed>`
+- Final knowledge check: `<done by parent/architect: result>`
 - Concise durable lessons extracted: `<none or entries>`
 
 ## Evidence

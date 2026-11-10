@@ -51,8 +51,8 @@ bmap_maps: project | workstream
 - `project`: `<project>/maps/`. Use it when the project is the module.
 - `workstream`: `<project>/workstreams/<workstream>/maps/`. Use it when
   workstreams are separate modules.
-- If `bmap_maps` is missing, use the value of `bswarm_deferred_issues`; if
-  that is missing too, use `project`.
+- If `bmap_maps` is missing, use the value of `deferred_issues`, then the old
+  name `bswarm_deferred_issues`; if both are missing, use `project`.
 
 Call that folder the **maps root**. It holds:
 

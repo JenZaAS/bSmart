@@ -61,6 +61,15 @@ response_style:
       - end with the next steps, or say there are none
     not_for: Agent-to-agent artifacts such as critique files, logs, and templates; they keep their own formats.
 
+knowledge_upkeep:
+  applies_to: Every change that modifies, fixes, or refactors code.
+  rule:
+    - search the knowledge files (project knowledge/ and the instance Library) for the files, functions, and features you touched
+    - update or remove any entries that no longer match the code
+    - your report states what knowledge changed, or "no knowledge changes needed"
+  code_reference: Knowledge entries that describe code name it in a `Code:` line (file and function) so they can be found. Format in bSmart_Protocols/knowledge.md.
+  why: Knowledge that drifts from the code gives agents conflicting sources of truth.
+
 content_files:
   agent: /workspace/bSmart/bSmart_Agent.md
   agent_local: ./bSmart/bSmart_Agent.md
@@ -283,6 +292,24 @@ extensions:
       packaging: bundled_optional
       source_path: /workspace/bSmart-System/bSmart-Extensions/bSelective
       purpose: Deterministic selective source-context acquisition, initially focused on MATLAB .m files.
+    bCoder:
+      path: /workspace/bSmart-Extensions/bCoder
+      optional: true
+      packaging: bundled_optional
+      source_path: /workspace/bSmart-System/bSmart-Extensions/bCoder
+      purpose: Standalone coder role skill; bSwarm's coder follows it.
+    bArchitect:
+      path: /workspace/bSmart-Extensions/bArchitect
+      optional: true
+      packaging: bundled_optional
+      source_path: /workspace/bSmart-System/bSmart-Extensions/bArchitect
+      purpose: Standalone architect role skill; bSwarm's architect follows it.
+    bCritic:
+      path: /workspace/bSmart-Extensions/bCritic
+      optional: true
+      packaging: bundled_optional
+      source_path: /workspace/bSmart-System/bSmart-Extensions/bCritic
+      purpose: Standalone critic role skill for plans, code, or any document; bSwarm's critics follow it.
     bSwarm:
       path: /workspace/bSmart-Extensions/bSwarm
       optional: true

@@ -189,23 +189,9 @@ list.
 
 ### Finding classes
 
-Critics and auditors propose a class for each finding; the parent agent
-re-sorts. Unsure means `decision`. Sections 3 and 7 use these classes.
-
-| Class | Meaning | Who acts |
-|---|---|---|
-| `automatic` | Wrong or incomplete against the spec, ADRs, tests, or an obvious local pattern | Agent fixes |
-| `decision` | Needs a product or design choice | Operator decides, then the run continues |
-| `optional` | Nit, hygiene, taste, or speculative extra | Nobody by default |
-
-`optional` findings never block progress and never cause another round or
-auditor. They may be fixed along the way when the same code is already being
-changed for an `automatic` or `decision` finding and the fix is clearly
-relevant. Reports count them; each one left unfixed goes to the project
-backlog (section 7, "Deferred-issues backlog").
-
-Critics and auditors check against the existing spec, tests, and ADRs. They
-must not invent product rules; a gap goes to the operator as `decision`.
+Auditors review like a bCritic critic (`../bCritic/critic.md`): the same
+checks, issue classes (`automatic`, `decision`, `optional`), and file format,
+with the auditor file name from `../bCritic/critique-notes.md`.
 
 ### Instance audit model list
 
@@ -252,15 +238,14 @@ system repository.
   earlier code audit for that slice.
 - The next auditor runs only when the current auditor produced an `automatic`
   or `decision` item. An `optional`-only result stops the auditor list.
-- Auditors propose classes; the parent agent re-sorts them. Unsure means
-  `decision`. A finding that the behavior is a feature is locked and commented
-  (or recorded in an ADR), not silently changed.
+- A finding that the behavior is a feature is locked and commented (or
+  recorded in an ADR), not silently changed.
 - For a design audit, `automatic` makes the architect revise the plan;
   `decision` pauses for the operator and then updates the plan.
 
-The per-project job package is the durable record. Use `templates/jobs/` to
-create `jobs/README.md`, one dated job folder, and its `report.md` and
-`plan.md`. The report records each external auditor as design or code with its
+The job package is the durable record (section 13 says where it lives). Use
+`templates/jobs/` to create `jobs/README.md`, one dated job folder, and its
+`report.md` and `plan.md`. The report records each external auditor as design or code with its
 class, status, and stop reason; it records optional findings as a count only.
 
 ```yaml
@@ -362,7 +347,9 @@ Supervisor retry rules:
 
 ## 5. Explicit subagent modes
 
-These are stage semantics for bSwarm-style Hermes test runs. Name them explicitly in prompts and run records.
+These are stage semantics for bSwarm runs. Name them explicitly in prompts and
+run records. The architect follows bArchitect, the coder follows bCoder, and
+the critics follow bCritic; this section adds only what is bSwarm-specific.
 
 ### Supervisor mode
 
@@ -383,7 +370,7 @@ Rules:
   - `run-record.md`;
   - `tool-read-stats.md`;
   - `comparison.md`;
-  - cross-run stats index updates such as `<project>/workstreams/<workstream>/ab-testing/stats-index.md`.
+  - cross-run stats index updates in `ab-testing/stats-index.md` (section 13).
 
 Supervisor verification must not trust child self-reports until directly checked:
 
@@ -396,90 +383,35 @@ Supervisor verification must not trust child self-reports until directly checked
 
 ### Architect mode
 
-Purpose: context discovery and implementation design, not direct coding.
+The architect follows bArchitect (`../bArchitect/architect.md`). Its compact
+handoff is the default; run prompts need not restate it unless they override
+the budget. In bSwarm:
 
-Architect handoff is a context-budget artifact for the coder, not a design essay. This compact handoff is a default bSwarm role behavior; future run prompts do not need to restate it unless they deliberately override the budget.
-
-Default architect handoff budget for prototype/evaluation runs:
-
-```yaml
-architect_handoff_defaults:
-  target_words: 350-500
-  hard_max_words: 700
-  max_relevant_regions: 6
-  max_must_implement_bullets: 6
-  no_tool_transcripts: true
-  no_long_source_quotes: true
-  no_full_bselective_output: true
-```
-
-Rules:
-
-- must not edit implementation files;
-- reads only enough context to produce a concrete implementation plan;
-- writes a concise `architect-plan.md` for coder handoff;
-- treats the handoff as a context-budget artifact for the coder;
-- uses one-line reasons for relevant regions;
-- keeps `must_implement`, `defer`, and `do_not_implement` sharply separated;
+- `target_file_path` in the plan is the allowed duplicate file;
 - for bSelective architect branches, use bSelective first where possible:
   - `list FILE all --compact`;
   - `list FILE functions --format text`;
   - targeted `get FILE function NAME`;
   - avoid whole-file fallback unless necessary and record it if used;
 - for ordinary architect branches, use ordinary file/search tools only; no bSelective and no code-knowledge file unless the run explicitly permits it;
-- keep output small enough to pass to coder without broad tool-output context.
-
-Architect plan contract:
-
-```yaml
-architect_plan:
-  target_file_path: <allowed duplicate file>
-  budget:
-    target_words: 350-500
-    hard_max_words: 700
-    max_relevant_regions: 6
-    max_must_implement_bullets: 6
-    no_tool_transcripts: true
-    no_long_source_quotes: true
-    no_full_bselective_output: true
-  relevant_regions:
-    - function_or_section: <name>
-      lines: <start-end or start-?>
-      why: <one-line reason only>
-  must_implement:
-    - <required change, max 6 bullets>
-  defer:
-    - <explicitly postponed item or none>
-  do_not_implement:
-    - <forbidden change or none>
-  risks:
-    - <top risks>
-  verification_checks:
-    - <branch file exists/no conflict markers/etc.>
-```
+- in a cascade, the architect is the parent that does bArchitect's final knowledge check (section 12).
 
 ### Coder mode
 
-Purpose: implement the architect plan in the allowed duplicate file.
-
-Rules:
+The coder follows bCoder (`../bCoder/coder.md`). In bSwarm it:
 
 - edits only the branch duplicate file;
 - receives the design brief and architect plan;
-- should not re-run broad discovery unless the architect plan is insufficient;
-- if it needs more context, it may do targeted reads/searches and must report them;
 - must not inspect previous generated-run archives unless explicitly permitted;
-- reports concise summary, changed file, diff stats, tool/read behavior, caveats.
+- on duplicate branch files, lists the needed knowledge changes instead of editing knowledge;
+- returns the role output contract (section 10).
 
-Coder verification checklist:
+bSwarm adds these checks to bCoder's:
 
 - branch file exists;
-- no conflict markers;
-- exactly one `classdef`;
+- exactly one `classdef` for MATLAB class duplicates;
 - expected UI scaffolding strings present;
-- diff stat against original source;
-- original source unchanged;
-- runtime/test status recorded if available.
+- original source unchanged.
 
 ## 6. A/B/C testing
 
@@ -555,104 +487,24 @@ cascade_defaults:
 ## 7. critcascade
 
 `critcascade` is the high-assurance bSelective cascade. It uses one task at a time:
-complete and verify one task before proceeding. Before each next task, the architect must review and update the remaining plan.
+the architect works task by task as bArchitect says ("Between tasks").
 
 ```text
 architect → architect_critic → programmer → programmer_critic
           → architect_revision → programmer_fix
 ```
 
-The architect critic is above-average critical but fair, focusing on material
-issues in the specification. The programmer critic reviews goal coverage, bugs,
-speed, memory efficiency, security, robustness, integration, code reuse, and
-test coverage. Critics do not edit implementation files.
+Both critics follow bCritic (`../bCritic/critic.md`): what to check, score
+and rounds, issue tags, the review file, the summary, and the backlog. The
+architect critic reviews the plan; the programmer critic reviews the code.
+bSwarm adds:
 
-Critique contract: every critic writes its full review to a **critique file**
-and returns only a short **summary** to the parent agent.
-
-### Critique file
-
-- Path: `bswarm-runs/<run>/critiques/<role>-r<n>.md`, relative to the
-  project or workstream folder. `<role>` is the role reviewed (`architect`,
-  `coder`); `<n>` is the round (1-3). In a multi-task cascade add the task:
-  `coder-t<task>-r<n>.md`.
-- Start from `templates/critique.template.md`. The header block records role
-  reviewed, round, score, critic model, date, and the previous round's file.
-- Each issue gets its own heading, in this fixed order, then details below it:
-
-  ```text
-  ### C<id> [<severity>] [<class>] [<status>] <short label>
-  ```
-
-- Tag vocabulary (no other values):
-
-  | Tag | Values |
-  |---|---|
-  | severity | `critical`, `important`, `minor` |
-  | class | `automatic`, `decision`, `optional` (section 3) |
-  | status | `open`, `fixed`, `deferred`, `rejected` |
-
-- IDs are stable. `C1`, `C2`, ... are numbered per role (and task) across its
-  rounds: an issue keeps its ID in r2 and r3, and new issues take the next
-  unused number. Never reuse or renumber an ID. Each round file repeats every
-  issue still open from the previous round with its current status.
-- Critique files are part of the development log: keep them, never delete or
-  rewrite them. Later changes go into the next round file or the backlog.
-
-### Returned summary
-
-The summary is the only part that enters the parent's context:
-
-```text
-critique: <role> r<n> score <1-10>/10 file <path>
-- C1 [critical] [automatic] [open] <short label>: <one-line description>
-- C2 [minor] [optional] [open] <short label>: <one-line description>
-```
-
-List **every** issue on one line each, with no details. The parent usually
-just routes (architect -> parent -> critic -> parent -> architect): it forwards
-the summary and path, and the fixing role reads only the IDs it needs from the
-file, for example by searching for the heading `### C2 `. The parent or the
-architect may **promote** a `minor`/`optional` issue when their context makes
-it matter; record the promotion (who, why, new tags) under that issue in the
-next round file, or in the backlog entry.
-
-### Deferred-issues backlog
-
-When a task or run ends, the parent agent adds each issue that is still
-`optional` and unfixed to the owning `deferred-issues.md` (start from
-`templates/deferred-issues.template.md`). Each entry has a backlog status
-(`open`, `done`, `rejected`, `later`) and links back to the critique file and
-ID. Mark the issue `[deferred]` in the last round file. The operator reviews
-the backlog when convenient; a recurring review routine is optional and not
-part of the protocol.
-
-**Where the backlog lives.** Keep one backlog at the level that owns the
-module. The project sets this in `project.md` with
-`bswarm_deferred_issues: project | workstream` (default `project`):
-
-- `project`: one `<project>/deferred-issues.md`. Use it when the project is
-  the module and its workstreams are features of it.
-- `workstream`: one `<project>/workstreams/<workstream>/deferred-issues.md`
-  per workstream. Use it when workstreams are separate modules.
-
-If the field is missing, use `project`. A run-spec may override it for one run
-with `deferred_issues_scope`.
-
-Edge cases (adapters whose critics cannot write files, auditor files, merging
-duplicate issues) are in `critique-files-notes.md`.
-
-Rules:
-
-- `score: 1-10`, 10 best, given in the header block and the summary;
-- maximum delegation depth is 3;
-- maximum `max_critique_rounds` is 3;
-- stop at 8 or higher; the score and the round limit count only `automatic`
-  and `decision` issues, so `optional` items alone never keep a loop going;
-- critics must not invent product rules (section 3, finding classes);
-- retries require diagnosed issues, not vague dissatisfaction;
-- extract only concise durable lessons/general knowledge into `bKnowledge`;
-- architects and programmers consult relevant `bKnowledge` before acting.
+- Review files go to the run's `critiques/` folder (section 13).
+- The parent usually just routes (architect -> parent -> critic -> parent ->
+  architect): it forwards the summary and the file path.
+- When a task or run ends, the parent adds the backlog entries; a run-spec may
+  set `deferred_issues_scope` for one run.
+- Maximum delegation depth is 3.
 
 ## 8. bSelective
 
@@ -675,8 +527,7 @@ For generated-code evaluation runs:
 - do not include previous generated-run paths in worker prompts;
 - do not allow workers to inspect `previous-generated-runs/` unless the test explicitly compares against old generated code;
 - do not compare to prior generated code until after all workers finish;
-- direct workers and coders edit only their allowed duplicate file;
-- architects do not edit implementation files.
+- direct workers and coders edit only their allowed duplicate file.
 
 ## 9. Recommended run shapes
 
@@ -701,6 +552,7 @@ role_output:
   confidence: low | medium | high
   summary: <1-3 bullets or short paragraph>
   changed_files: [<paths or none>]
+  knowledge_changes: [<path: one-line change> or "no knowledge changes needed"]
   artifacts: [<architect-plan.md/branch-output.md/etc.>]
   evidence: [top 3-5]
   verification: [compact list]
@@ -778,15 +630,38 @@ The final report to the operator follows the core plain-language rule in
 `bSmart.md` (`response_style.plain_language`): lead with the answer or
 decision, short plain sentences, only the issues that matter, jargon
 explained, next steps last. This applies to the report, not to critique
-files. Keep it quick-glance:
+files.
+
+Before reporting, the parent (the architect, in a cascade) does bArchitect's
+final knowledge check across the whole change.
+
+Keep the report quick-glance:
 
 - recommendation;
 - outcome;
 - key evidence;
 - unresolved disagreements;
 - open `decision` issues by ID, and the count of new backlog entries;
+- knowledge changes, or "no knowledge changes needed";
 - stage and branch statistics summary;
 - budget/limit status;
 - one next action.
 
 Save a run record with `templates/run-record.md` when useful or requested.
+
+## 13. Project tracking
+
+A run belongs to the session's active project or workstream
+(`bSmart_Protocols/projects.md`). In Free mode, ask which project it belongs
+to before writing run files.
+
+- The owner folder is the project folder, or the workstream folder when
+  `deferred_issues: workstream` is set in `project.md` (bCritic).
+- Run files live in the owner folder: `bswarm-runs/<run>/` (critiques
+  included), `jobs/`, `ab-testing/stats-index.md`, and `deferred-issues.md`.
+- Knowledge is the project's `knowledge/`; the roles use it as bCoder,
+  bArchitect, and bCritic say.
+- Operator decisions from the run go to the project's `decisions.md`, or to an
+  ADR when the project uses bADR.
+- At the end, the parent updates the owner's `handoff.md` with the outcome and
+  the one next action.

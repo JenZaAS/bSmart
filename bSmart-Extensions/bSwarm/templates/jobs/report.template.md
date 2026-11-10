@@ -51,6 +51,10 @@
 
 Optional findings: count only — `<number>`.
 
+## Knowledge changes
+
+- `<path: one-line change, or no knowledge changes needed>`
+
 ## Evidence
 
 - `<commit, ADR, workstream, test, or other link>` — `<short note>`

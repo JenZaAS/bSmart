@@ -18,4 +18,6 @@ Use `workdocs/` for active working notes, investigations, and handoffs. Use the 
 
 This folder is named `knowledge/` rather than `library/` to avoid confusion with software libraries in coding projects.
 
+An entry that describes code names it in a `Code:` line, for example ``- Code: `src/app.py` — `main` ``. After a code change, update or remove the entries that no longer match (see `knowledge_upkeep` in `bSmart.md`).
+
 Do not store secrets here.

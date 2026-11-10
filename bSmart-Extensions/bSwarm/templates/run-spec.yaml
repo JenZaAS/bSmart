@@ -21,9 +21,9 @@ bswarm_run:
   safety: read_only
   job:
     enabled: false
-    package_root: "<project>/jobs"
-    report: "<project>/jobs/<YYYY-MM-DD>-<slug>/report.md"
-    plan: "<project>/jobs/<YYYY-MM-DD>-<slug>/plan.md"
+    package_root: "<owner>/jobs"  # owner = project or workstream folder (protocol section 13)
+    report: "<owner>/jobs/<YYYY-MM-DD>-<slug>/report.md"
+    plan: "<owner>/jobs/<YYYY-MM-DD>-<slug>/plan.md"
   audit:
     enabled: false
     models_file: "./bSmart/State/bswarm-audit-models.yaml"
@@ -153,10 +153,10 @@ bswarm_run:
       coder_context_mode: bselective
       max_depth: 3
       max_critique_rounds: 3
-      # Full reviews go to critique files; only the summary returns to the parent.
-      critique_files: "bswarm-runs/<run>/critiques/<role>-r<n>.md"
-      deferred_issues: "deferred-issues.md"
-      # project | workstream. Empty = use project.md bswarm_deferred_issues (default project).
+      # Critics follow bCritic; review files live in the run folder.
+      critique_files: "bswarm-runs/<run>/critiques/"
+      deferred_issues_file: "deferred-issues.md"
+      # project | workstream. Empty = use project.md deferred_issues (old name bswarm_deferred_issues; default project).
       deferred_issues_scope: ""
       stages:
         - architect
@@ -197,23 +197,9 @@ bswarm_run:
   role_defaults:
     architect:
       model: session
-      # Default architect handoff budget: compact by default so coder receives a plan, not transcripts.
-      handoff_kind: context-budget artifact
-      target_words: 350-500
-      hard_max_words: 700
-      max_relevant_regions: 6
-      max_must_implement_bullets: 6
-      no_tool_transcripts: true
-      no_long_source_quotes: true
-      no_full_bselective_output: true
-      required_sections:
-        - target_file_path
-        - relevant_regions
-        - must_implement
-        - defer
-        - do_not_implement
-        - risks
-        - verification_checks
+      # Handoff budget: bArchitect defaults (../bArchitect/architect.md).
+      # To override for this run, add only the changed keys, e.g. hard_max_words.
+      handoff_budget: bArchitect
     coder:
       model: session
     critic:
