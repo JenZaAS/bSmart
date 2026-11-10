@@ -50,6 +50,11 @@ bswarm_run:
         observed: unknown
     recommended_for_cascade:
       delegation.child_timeout_seconds: 1200
+    required_reading:
+      # From the project's knowledge/task-context-routing.md or project.md (protocol section 2,
+      # Required reading check). Empty bundle = not declared; the check is skipped.
+      bundle: []
+      missing: []  # any path here blocks the run
     adapter_note: "If not running under Hermes, verify adapter-specific nested workers or downgrade to supervisor_mediated_architect_handoff/supervisor_mediated_cascade."
 
   keyword_normalization:

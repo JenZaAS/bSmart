@@ -55,6 +55,15 @@ Optional findings: count only — `<number>`.
 
 - `<path: one-line change, or no knowledge changes needed>`
 
+## Required reading
+
+Only when the project declares a bundle; otherwise `not declared`.
+
+- Bundle: `<paths or not declared>`
+- Acknowledgement: `<architect-plan.md link or missing>`
+- Coder checks: `<passed / failed, one line>`
+- Critic compliance: `<met / HOLD, one line>`
+
 ## Evidence
 
 - `<commit, ADR, workstream, test, or other link>` — `<short note>`

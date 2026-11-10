@@ -96,6 +96,7 @@ project_structure:
 templates:
   project: /workspace/bSmart-System/bSmart_Templates/project.template.md
   project_task_context_routing: /workspace/bSmart-System/bSmart_Templates/project-task-context-routing.template.md
+  required_reading_default: /workspace/bSmart-System/bSmart_Templates/required-reading-default.md
   project_knowledge_readme: /workspace/bSmart-System/bSmart_Templates/project-knowledge.README.template.md
   project_decisions: /workspace/bSmart-System/bSmart_Templates/project-decisions.template.md
   project_workdocs_readme: /workspace/bSmart-System/bSmart_Templates/project-workdocs.README.template.md
@@ -113,7 +114,29 @@ project_md_required_fields:
 ```yaml
 project_md_optional_fields:
   deferred_issues: project | workstream  # level of deferred-issues.md and critiques/; rule in bSmart-Extensions/bCritic/critic.md. Old name bswarm_deferred_issues is still accepted.
+  required_reading_bundle: [<path relative to the project>, ...]  # optional; files that must be read before architecture or code work; rule in required_reading_bundle below. Empty or missing = none.
   bmap_maps: project | workstream  # where bMap keeps maps/ and its REGISTRY.md; default follows deferred_issues, then the old name bswarm_deferred_issues, else project.
+```
+
+```yaml
+required_reading_bundle:
+  declared_in:
+    - the "Required reading bundle" section of the project's knowledge/task-context-routing.md
+    - the required_reading_bundle field in the project's project.md
+  declared_when: either place lists at least one file; the bundle is every file listed in both
+  detection: Check only these two places. Do not search elsewhere for guidance the project has not declared.
+  not_declared:
+    fallback: /workspace/bSmart-System/bSmart_Templates/required-reading-default.md (how to declare a list)
+    note: 'Give this one line once per task, in the task report, not at every step: "No required reading defined: bSmart-System/bSmart_Templates/required-reading-default.md"'
+    then: Not a block. Continue the task; the rest of this rule does not apply.
+  declared: Mandatory for architect, coder, and critic. Read it, acknowledge it, apply it. It is not optional and not a matter of score.
+  before_architecture_work_or_dispatch:
+    - load project.md and knowledge/task-context-routing.md
+    - if a bundle is declared, check that every listed file exists; if one is missing, do not start architecture work or dispatch, and report the missing path
+    - name the bundle files in every child task (architect, coder, critic, other subagent) so each can read them
+  roles: Reading, the acknowledgement, the coder's checks, and the critic's HOLD follow bArchitect, bCoder, and bCritic (bArchitect holds the acknowledgement shape; bCritic defines HOLD).
+  existing_projects: Not migrated. Each project fills in its own bundle.
+  enforcement: Agents follow this rule; startup scripts do not check it yet.
 ```
 
 ```yaml

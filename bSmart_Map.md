@@ -67,6 +67,7 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | `./bSmart-System/bSmart_Templates/` | Templates for instance and project files | low | generation only |
 | `./bSmart-System/bSmart_Templates/role.template.md` | Historical role-file shape. Roles are deprecated | low | reading old instance data |
 | `./bSmart-System/bSmart_Templates/current-role.template.md` | Historical current-role selector. Not a session project | low | reading old instance data |
+| `./bSmart-System/bSmart_Templates/required-reading-default.md` | Default when a project declares no required reading: how to declare a list | low | no list declared; adding one |
 | `./bSmart-System/bSmart_Docs/roles-deprecated.md` | Library-style note: what replaced roles and how to read old role files | low | old role files |
 | `./bSmart-System/bSmart_Templates/CLAUDE.md` | Claude launcher hook; identical redirect content to AGENTS.md | low | launcher only |
 | `./bSmart-System/bSmart-Extensions/` | Optional and bundled feature implementations | low | feature use only |
@@ -193,7 +194,6 @@ The compact startup result should tell the agent which lookups are available:
 ```text
 python ./scripts/bFind <scope> <item>
 python ./scripts/bFeature <feature-name>
-python ./scripts/bKnowledge <query>
 ```
 
 The exact interfaces are defined by their respective features. Lookup tools should return only the requested entry or a compact relevant result.

@@ -28,6 +28,7 @@ Each rule lives in one place; this is only what it is for.
 
 - **Plain answers.** Agents answer in plain, short language in the user's own language. Rule: `response_style` in `bSmart.md`.
 - **Knowledge upkeep.** Any code change also updates or removes the project knowledge it made stale, and the report says what changed. Rule: `knowledge_upkeep` in `bSmart.md`; the `Code:` line format is in `bSmart_Protocols/knowledge.md`.
+- **Required reading.** A project can list files (in its task-context routing file or `project.md`) that must be read before architecture or code work. Then it is mandatory: the plan records what was read and what applies, the coder follows it, and the critic puts the work on HOLD when the reading was skipped. No list: the agent says so in one line and carries on (how to add one: `bSmart_Templates/required-reading-default.md`). Rule: `required_reading_bundle` in `bSmart_Protocols/projects.md`; role steps in bArchitect, bCoder, and bCritic.
 - **Lock-free Git checks.** Startup (`bStart.py`) and the daily update check read Git without taking `.git/index.lock`, so a slow or stopped check cannot block the next pull. Details: `bSmart_Version.md`, 0.1.51-draft.
 - **Quick lookups.** `scripts/bFind` (paths and protocols) and `scripts/bFeature` (feature cards) return one short entry instead of searching the workspace. `bFind` was called `scripts/bMap` before 0.1.52; `bMap` now means only the planning feature.
 

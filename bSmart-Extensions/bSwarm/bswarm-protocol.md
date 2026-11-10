@@ -181,6 +181,26 @@ explicitly switch the run spec to `supervisor_mediated_architect_handoff` or
 `supervisor_mediated_cascade` and record that it is not true nested
 architect-dispatch.
 
+### Required reading check
+
+Mandatory when the run's project declares a required reading bundle
+(`required_reading_bundle` in `bSmart_Protocols/projects.md`). Otherwise
+follow `not_declared` in that rule: the parent gives its note once, in the
+final report; nothing else in the run changes.
+
+- Apply that rule at preflight: a missing bundle file blocks the run, and the
+  warning names the path. Record the bundle in `preflight_qc.required_reading`
+  in the run spec and name it in every child prompt.
+- Before the coder stage, the parent checks that the architect plan has the
+  `required_reading` block (bArchitect). If it does not, send the plan back to
+  the architect instead of dispatching the coder.
+- A critic HOLD (bCritic) blocks acceptance: the run ends `blocked`, not
+  accepted, until the cause is fixed.
+- The run's outputs carry the results: `required_reading` and `coder_checks`
+  in the role output (section 10), and the critic's compliance check in its
+  review file (bCritic) and in the job report.
+- This check does not change permissions, models, or round limits.
+
 ## 3. Cascade audit rules
 
 These rules apply only to `cascade critic audit`. Internal critics remain
@@ -553,6 +573,8 @@ role_output:
   summary: <1-3 bullets or short paragraph>
   changed_files: [<paths or none>]
   knowledge_changes: [<path: one-line change> or "no knowledge changes needed"]
+  required_reading: not_declared | acknowledged <plan path> | missing  # section 2, Required reading check
+  coder_checks: [<check: passed | failed> or none]  # coder only, when a bundle is declared
   artifacts: [<architect-plan.md/branch-output.md/etc.>]
   evidence: [top 3-5]
   verification: [compact list]

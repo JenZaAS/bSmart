@@ -16,6 +16,29 @@ what you review.
   the code. For a plan, check its `relevant_knowledge` pointers. For code,
   review the code and its knowledge changes together, and flag knowledge that
   is stale or missing as an issue.
+- Required reading: when the project declares a required reading bundle
+  (`bSmart_Protocols/projects.md`, `required_reading_bundle`), check that the
+  plan (or a planless coder's report) has the `required_reading` block from
+  bArchitect ("Required reading acknowledgement"), that it covers every
+  bundle file, and that its `applicable_requirements`, `coder_checks`, and
+  `critic_compliance` were applied. A missing or incomplete block, required
+  reading that was not applied, or a serious `unresolved_conflicts` entry is a
+  HOLD (below). If no bundle is declared, there is no HOLD; follow `not_declared` in that rule.
+
+## HOLD
+
+HOLD is the one exception to the rule that a review never blocks the work.
+Only the required-reading cases above cause it.
+
+- A HOLD is a blocking fail. The work cannot pass at any score, and the
+  requester cannot accept it as it is.
+- Record it as a `critical` issue: `automatic` when the reading was skipped or
+  not applied, `decision` for a serious unresolved conflict. Add `HOLD` to the
+  review file header and the summary line.
+- It lifts only when the cause is fixed: the reading is done and applied, or
+  the operator settles the conflict. The next round checks that.
+- If it is still there after the last round, stop and report the work as
+  blocked, not accepted.
 
 ## Score and rounds
 
@@ -25,6 +48,7 @@ what you review.
   so `optional` issues alone never keep a loop going.
 - At most 3 rounds (`max_critique_rounds`). Below 8 after round 3: stop and
   report. The bar never blocks the work by itself; the requester decides.
+  The only exception is a HOLD (above).
 - Another round needs diagnosed issues, not vague dissatisfaction.
 
 ## Issue tags
@@ -61,7 +85,8 @@ Write the full review to a review file and return only the summary.
   rule as the backlog). Outside a project: a `critiques/` folder next to the
   document.
 - Start from `templates/critique.template.md`. The header records role
-  reviewed, round, score, critic model, date, and the previous round's file.
+  reviewed, round, score, HOLD, critic model, date, and the previous round's
+  file.
 - One heading per issue, tags in this fixed order, details below it:
 
   ```text
@@ -80,7 +105,7 @@ Write the full review to a review file and return only the summary.
 The summary is the only part that enters the requester's context:
 
 ```text
-critique: <role> r<n> score <1-10>/10 file <path>
+critique: <role> r<n> score <1-10>/10 [HOLD] file <path>
 - C1 [critical] [automatic] [open] <short label>: <one-line description>
 - C2 [minor] [optional] [open] <short label>: <one-line description>
 ```

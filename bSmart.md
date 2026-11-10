@@ -70,6 +70,10 @@ knowledge_upkeep:
   code_reference: Knowledge entries that describe code name it in a `Code:` line (file and function) so they can be found. Format in bSmart_Protocols/knowledge.md.
   why: Knowledge that drifts from the code gives agents conflicting sources of truth.
 
+required_reading:
+  applies_to: Architecture or code work in a project whose knowledge/task-context-routing.md or project.md declares a required reading bundle. Then it is mandatory; without one the task continues with a one-line note.
+  rule: required_reading_bundle in bSmart_Protocols/projects.md; the role steps are in bArchitect, bCoder, and bCritic.
+
 content_files:
   agent: /workspace/bSmart/bSmart_Agent.md
   agent_local: ./bSmart/bSmart_Agent.md
@@ -142,7 +146,6 @@ update_workflow:
 deterministic_lookups:
   map: python ./scripts/bFind <scope> <item>
   feature: python ./scripts/bFeature <feature-name>
-  knowledge: python ./scripts/bKnowledge <query>
   rule: Return only the requested compact entry; do not recursively search the workspace.
 
 instance_git:

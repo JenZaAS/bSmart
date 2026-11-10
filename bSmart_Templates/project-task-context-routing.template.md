@@ -12,6 +12,16 @@ Always load:
 
 Then select one or more task bundles below. Load only the task-specific knowledge bundle(s) required for the current task; do not load unrelated bundles by default.
 
+## Required reading bundle
+
+Optional. Leave this section empty when the project has none; agents then
+continue with a one-line note. When it lists files, every architect, coder, and critic must read
+them before architecture or code work (the rule is in
+`bSmart_Protocols/projects.md`, `required_reading_bundle`). List one per line,
+with paths relative to the project folder.
+
+<!-- Example: - `knowledge/<guidance-file>.md` -->
+
 ## Task bundles
 
 Add project-specific task bundles here. Each bundle should list only the knowledge, workstream, source-navigation, or decision files needed for that kind of task. Examples include coding/debugging/testing, UI/UX, architecture/design, documentation, and domain-specific workflows.
