@@ -3,10 +3,14 @@ import re
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+EXT = ROOT.parent
 
 class BSwarmProtocolTests(unittest.TestCase):
     def read(self, rel):
         return (ROOT / rel).read_text(encoding='utf-8')
+
+    def skill(self, rel):
+        return (EXT / rel).read_text(encoding='utf-8')
 
     def test_required_files_exist(self):
         for rel in [
@@ -123,7 +127,8 @@ class BSwarmProtocolTests(unittest.TestCase):
             'architect mode',
             'coder mode',
             'does not directly edit target implementation files',
-            'must not edit implementation files',
+            'the architect follows barchitect',
+            'the coder follows bcoder',
             'edits only the branch duplicate file',
             'do not include previous generated-run paths',
             'previous-generated-runs',
@@ -170,42 +175,51 @@ class BSwarmProtocolTests(unittest.TestCase):
             'max_depth: 3',
             'architect_critic',
             'programmer_critic',
-            'score: 1-10',
-            'bKnowledge',
             'one task at a time',
-            'review and update the remaining plan',
-            'stop at 8 or higher',
             'max_critique_rounds: 3',
+            'Both critics follow bCritic',
         ]:
             self.assertIn(term, combined)
+        critic = self.skill('bCritic/critic.md')
+        for term in ['score: 1-10', 'stop at 8 or higher', 'At most 3 rounds']:
+            self.assertIn(term, critic)
+        self.assertIn('review and update\nthe remaining plan', self.skill('bArchitect/architect.md'))
 
     def test_critcascade_has_concise_critic_contract_and_knowledge_rules(self):
         text = self.read('bswarm-protocol.md')
         for term in [
-            'bswarm-runs/<run>/critiques/<role>-r<n>.md',
+            '../bCritic/critic.md',
+            '../bArchitect/architect.md',
+            '../bCoder/coder.md',
+            'bswarm-runs/<run>/',
+            'deferred-issues.md',
+            'deferred_issues: workstream',
+            'response_style.plain_language',
+            "bArchitect's final knowledge check",
+        ]:
+            self.assertIn(term, text)
+        critic = self.skill('bCritic/critic.md')
+        for term in [
+            'critiques/<role>-r<n>.md',
             '### C<id> [<severity>] [<class>] [<status>] <short label>',
             '`critical`, `important`, `minor`',
             '`open`, `fixed`, `deferred`, `rejected`',
             'IDs are stable',
             'never delete',
-            'only part that enters the parent',
-            'deferred-issues.md',
-            'bswarm_deferred_issues: project | workstream',
-            'response_style.plain_language',
-            'general knowledge',
-            'concise durable lessons',
-            'must not edit implementation files',
+            'only part that enters the requester',
+            'deferred_issues: project | workstream',
+            'Do not edit',
         ]:
-            self.assertIn(term, text)
+            self.assertIn(term, critic)
+        architect = self.skill('bArchitect/architect.md')
+        for term in ['concise durable lessons', 'Do not edit implementation files']:
+            self.assertIn(term, architect)
 
     def test_architect_handoff_defaults_are_compact_and_token_aware(self):
-        protocol = self.read('bswarm-protocol.md').lower()
-        run_spec = self.read('templates/run-spec.yaml').lower()
-        run_record = self.read('templates/run-record.md').lower()
-        readme = self.read('README.md').lower()
-        combined = '\n'.join([protocol, run_spec, run_record, readme])
+        combined = self.skill('bArchitect/architect.md').lower()
+        self.assertIn('handoff_budget: barchitect', self.read('templates/run-spec.yaml').lower())
         for term in [
-            'default architect handoff budget',
+            'architect_handoff_defaults',
             'target_words: 350-500',
             'hard_max_words: 700',
             'max_relevant_regions: 6',
@@ -216,7 +230,7 @@ class BSwarmProtocolTests(unittest.TestCase):
             'must_implement',
             'defer',
             'do_not_implement',
-            'context-budget artifact',
+            'context budget for the coder',
         ]:
             self.assertIn(term, combined)
 
@@ -309,13 +323,15 @@ class BSwarmProtocolTests(unittest.TestCase):
             self.assertIn(term, combined)
 
     def test_critique_and_backlog_templates_exist(self):
-        critique = self.read('templates/critique.template.md')
+        critique = self.skill('bCritic/templates/critique.template.md')
         for term in ['Role reviewed', 'Round', 'Score', 'Critic model', 'Date', '### C1 [']:
             self.assertIn(term, critique)
-        backlog = self.read('templates/deferred-issues.template.md')
-        for term in ['open | done | rejected | later', 'critique file + ID']:
-            self.assertIn(term, backlog)
-        self.assertTrue((ROOT / 'critique-files-notes.md').exists())
+        backlog = self.skill('bCritic/templates/deferred-issues.template.md')
+        self.assertIn('critique file + ID', backlog)
+        self.assertIn('(`open`, `done`, `rejected`, `later`)', self.skill('bCritic/critic.md'))
+        self.assertTrue((EXT / 'bCritic' / 'critique-notes.md').exists())
+        for old in ['templates/critique.template.md', 'templates/deferred-issues.template.md', 'critique-files-notes.md']:
+            self.assertFalse((ROOT / old).exists(), old)
 
     def test_core_manifest_has_plain_language_rule(self):
         core = (ROOT.parents[1] / 'bSmart.md').read_text(encoding='utf-8')

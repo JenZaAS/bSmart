@@ -11,6 +11,7 @@ bsmart-protocol-summary:
     - project knowledge
     - code knowledge
     - source navigation
+    - after modifying, fixing, or refactoring code
 ```
 
 ## Storage and separation
@@ -116,6 +117,7 @@ Use this concise structure:
 # <Component or file name>
 
 - Source: `<exact source path>`
+- Code: `<path>` — `<function>`, `<function>`
 - Knowledge type: code navigation
 - Confidence: verified implementation facts; hypotheses/open questions are labelled below
 
@@ -153,6 +155,18 @@ Include, when present:
 - recommended bSelective retrieval targets for future agents.
 
 Keep it orchestration-oriented and concise. Summarize relationships and targets; do not reproduce the source file or write a broad architecture essay. Distinguish verified facts from hypotheses and open questions.
+
+## Code references and upkeep
+
+Any entry that describes code, in `code/` or `general/`, names that code in one line:
+
+```md
+- Code: `src/sensor/calibrate.py` — `calibrate_sensor`, `load_offsets`
+```
+
+Use one `Code:` line per file. Searching for a path or function name then finds every entry that depends on it.
+
+After a code change, follow `knowledge_upkeep` in `bSmart.md`: search the knowledge for the touched paths, function names, and feature names, then update or remove what no longer matches. Add a `Code:` line to an entry you touch if it lacks one.
 
 ## Verification and refresh
 

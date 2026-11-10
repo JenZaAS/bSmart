@@ -96,6 +96,23 @@ setup_default: yes
 
 bSelective is off by default in a session; agents enable it by reading the adapter prompt/protocol when relevant.
 
+## bCoder, bArchitect, bCritic
+
+```yaml
+names: [bCoder, bArchitect, bCritic]
+paths:
+  - /workspace/bSmart-Extensions/bCoder
+  - /workspace/bSmart-Extensions/bArchitect
+  - /workspace/bSmart-Extensions/bCritic
+source_root: /workspace/bSmart-System/bSmart-Extensions
+status: optional_bundled_extension
+purpose:
+  - standalone role skills for coding work; each works without bSwarm
+  - bSwarm's coder, architect, and critics follow them
+install_model: copy_or_sync_from_bundled_source, together with bSwarm
+setup_default: yes
+```
+
 ## bSwarm
 
 ```yaml

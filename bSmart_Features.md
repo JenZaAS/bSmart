@@ -113,6 +113,18 @@ features:
     status: draft
     summary: Optionally sharpen an idea with short questions, one at a time.
     detail_lookup: python ./scripts/bFeature bAsk
+  - name: bCoder
+    status: draft
+    summary: Optionally code by a short checklist that keeps knowledge in step.
+    detail_lookup: python ./scripts/bFeature bCoder
+  - name: bArchitect
+    status: draft
+    summary: Optionally plan a code change for a coder and close it with a knowledge check.
+    detail_lookup: python ./scripts/bFeature bArchitect
+  - name: bCritic
+    status: draft
+    summary: Optionally review a plan, code, or any document with a score and a kept review file.
+    detail_lookup: python ./scripts/bFeature bCritic
 ```
 
 
@@ -170,6 +182,9 @@ commands:
 17. bADR — Add and maintain standardized Architecture Decision Records in projects.
 18. bMap — Optionally plan big work as a map of decisions, one per session.
 19. bAsk — Optionally sharpen an idea with short questions, one at a time.
+20. bCoder — Optionally code by a short checklist that keeps knowledge in step.
+21. bArchitect — Optionally plan a code change for a coder and close it with a knowledge check.
+22. bCritic — Optionally review a plan, code, or any document with a score and a kept review file.
 
 ## Feature index
 
@@ -192,6 +207,9 @@ commands:
 17. bADR
 18. bMap
 19. bAsk
+20. bCoder
+21. bArchitect
+22. bCritic
 
 ## Features by group
 
@@ -201,6 +219,9 @@ commands:
 - Workdocs — Keep detailed notes for larger work.
 - bMap — Optionally plan big work as a map of decisions, one per session.
 - bAsk — Optionally sharpen an idea with short questions, one at a time.
+- bCoder — Optionally code by a short checklist that keeps knowledge in step.
+- bArchitect — Optionally plan a code change for a coder and close it with a knowledge check.
+- bCritic — Optionally review a plan, code, or any document with a score and a kept review file.
 
 ### Knowledge
 - Library — Store and reuse durable knowledge.
@@ -277,7 +298,7 @@ included_capabilities:
   - Cross-platform lint with derived ticket status
 notes:
   - Off until the operator turns it on.
-  - Maps live in <project>/maps/ or <project>/workstreams/<workstream>/maps/ (project.md bmap_maps, default follows bswarm_deferred_issues, else project).
+  - Maps live in <project>/maps/ or <project>/workstreams/<workstream>/maps/ (project.md bmap_maps, default follows deferred_issues, then the old name bswarm_deferred_issues, else project).
   - GitHub issues are created only as the instance's AI GitHub identity.
 ```
 
@@ -671,6 +692,56 @@ notes:
   - Hermes runtime setup and update stay in hermes-runtime-onboarding.md. The everywhere rules apply on any host. Compose, image build, and redeploy apply only to orchestrated Docker. Database corruption is an incident-only section, not a setup step.
 ```
 
+### bCoder
+
+```yaml
+name: bCoder
+group: Work
+status: draft
+visibility: user-facing
+optional: true
+short_description: Optionally code by a short checklist that keeps knowledge in step.
+files:
+  - /workspace/bSmart-System/bSmart-Extensions/bCoder/coder.md
+description: The coder role as a standalone skill. Knowledge first, then code, then update or remove stale knowledge and report the knowledge changes. bSwarm's coder follows it.
+commands:
+  - use bCoder for <task> (natural-language request)
+```
+
+### bArchitect
+
+```yaml
+name: bArchitect
+group: Work
+status: draft
+visibility: user-facing
+optional: true
+short_description: Optionally plan a code change for a coder and close it with a knowledge check.
+files:
+  - /workspace/bSmart-System/bSmart-Extensions/bArchitect/architect.md
+description: The architect role as a standalone skill. A compact plan with knowledge pointers, task-by-task re-planning, and the final knowledge check across the whole change. bSwarm's architect follows it.
+commands:
+  - use bArchitect to plan <change> (natural-language request)
+```
+
+### bCritic
+
+```yaml
+name: bCritic
+group: Work
+status: draft
+visibility: user-facing
+optional: true
+short_description: Optionally review a plan, code, or any document with a score and a kept review file.
+files:
+  - /workspace/bSmart-System/bSmart-Extensions/bCritic/critic.md
+  - /workspace/bSmart-System/bSmart-Extensions/bCritic/critique-notes.md
+  - /workspace/bSmart-System/bSmart-Extensions/bCritic/templates/
+description: The critic role as a standalone skill. Scores 1-10, tags each issue, keeps review files as a development log, and keeps a deferred-issues backlog. It also checks that knowledge was read and kept in step with the code. bSwarm's critics follow it.
+commands:
+  - bCritic <file or plan> (natural-language request)
+```
+
 ### Extensions
 
 ```yaml
@@ -691,6 +762,7 @@ included_capabilities:
   - External workflow libraries
   - Bundled knowledge discovery (`bSearch`)
   - Bundled workflow memory (`bWorkflow`)
+  - Bundled role skills (`bCoder`, `bArchitect`, `bCritic`)
   - Bundled selective source-context retrieval (`bSelective`)
   - Bundled multi-agent orchestration protocol (`bSwarm`)
   - Bundled multi-session planning maps (`bMap`) and short interviews (`bAsk`)

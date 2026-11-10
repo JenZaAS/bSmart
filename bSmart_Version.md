@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.52-draft
-updated: 2026-11-10 15:30 UTC
+current_version: 0.1.53-draft
+updated: 2026-11-10 15:45 UTC
 status: draft
 ```
 
@@ -26,6 +26,35 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.53-draft
+
+```yaml
+release_type: knowledge_upkeep_role_skills
+news: |
+  When an agent changes code, it now checks the knowledge notes for what it
+  touched and fixes or removes the ones that no longer match. Its report
+  says what knowledge changed, or "no knowledge changes needed". Three new
+  small skills hold the role rules and work on their own: bCoder (code by a
+  short checklist), bArchitect (plan a change and do the final knowledge
+  check), and bCritic (review a plan, code, or any document with a score and
+  a kept review file). bSwarm now uses them for its coder, architect, and
+  critics. The project.md setting bswarm_deferred_issues is now called
+  deferred_issues; the old name still works.
+scope:
+  - bSmart.md knowledge_upkeep core rule for every code change
+  - bSmart_Protocols/knowledge.md Code: line (file and function) and upkeep section; the blank knowledge README template mentions both; bots add a Code: line when they touch an entry anyway
+  - add bSmart-Extensions/bCoder, bArchitect, bCritic (README plus one rules file each); register them in bSmart.md, bSmart_Features.md (compact index, numbered list 20-22, groups, detail cards), bSmart_Docs/extensions.md, bSmart-Extensions/README.md
+  - move critique.template.md, deferred-issues.template.md, and critique-files-notes.md (now critique-notes.md) from bSwarm to bCritic
+  - bSwarm protocol: roles follow the skills; role text removed so each rule has one home; on duplicate branch files the coder lists knowledge changes; new section 13 Project tracking (owner folder, run files, decisions.md, handoff.md); jobs package follows the owner folder
+  - standalone bCritic review files go to critiques/ in the owning project or workstream folder, else next to the document; the critic picks the class of stale-knowledge issues
+  - rename project.md bswarm_deferred_issues to deferred_issues (old name accepted; deferred_issues wins when both are set); bMap's bmap_maps falls back to deferred_issues, then the old name, then project
+  - bSwarm run-spec key deferred_issues (the backlog file name) is now deferred_issues_file, so it does not clash with the project.md setting
+  - bSmart_Map.md adds project critiques/ and deferred-issues.md
+verification:
+  - new tests/test_knowledge_upkeep.py (skills exist, are registered and listed, carry the knowledge steps, bSwarm uses them, key rules have one home, old setting name documented as accepted); bSwarm tests updated
+  - python and node tests pass, including the public-tree privacy guard; duplicate search clean
+```
 
 ## 0.1.52-draft
 

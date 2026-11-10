@@ -150,6 +150,8 @@ It should describe only that project’s:
 | `./projects/<project>/data/` | Supporting project material | relevant task only |
 | `./projects/<project>/sandbox/` | Project-local derived material when required | task-dependent |
 | `./projects/<project>/maps/` | bMap planning maps and their `REGISTRY.md`; a workstream's `maps/` when `bmap_maps: workstream` | bMap work only |
+| `./projects/<project>/critiques/` | bCritic review files outside a bSwarm run; a workstream's `critiques/` when `deferred_issues: workstream` | review work only |
+| `./projects/<project>/deferred-issues.md` | bCritic deferred-issues backlog; a workstream's when `deferred_issues: workstream` | review or backlog work only |
 
 ## Instance entries
 
