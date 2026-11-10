@@ -37,14 +37,14 @@ def load_script(name: str):
 
 
 class BSmartLookupTests(unittest.TestCase):
-    def test_bmap_retrieves_system_heading(self):
-        module = load_script("bMap")
+    def test_bfind_retrieves_system_heading(self):
+        module = load_script("bFind")
         result = module.extract_entry((ROOT / "bSmart_Map.md").read_text(encoding="utf-8"), "Instance map")
         self.assertIsNotNone(result)
         self.assertIn("bSmart_InstanceMap.md", result)
 
-    def test_bmap_resolves_project_map_from_environment(self):
-        module = load_script("bMap")
+    def test_bfind_resolves_project_map_from_environment(self):
+        module = load_script("bFind")
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             project = root / "alpha"
@@ -142,8 +142,8 @@ class BSmartLookupTests(unittest.TestCase):
             self.assertEqual(private_digest_hits(text), [], label)
         features = (ROOT / "bSmart_Features.md").read_text(encoding="utf-8")
         self.assertIn("hermes-runtime-onboarding.md", features)
-        bmap = load_script("bMap")
-        entry = bmap.extract_entry(map_text, "hermes-runtime-onboarding")
+        bfind = load_script("bFind")
+        entry = bfind.extract_entry(map_text, "hermes-runtime-onboarding")
         self.assertIsNotNone(entry)
         self.assertIn("pull policy", entry)
         self.assertNotIn("state.db", entry)
@@ -156,9 +156,9 @@ class BSmartLookupTests(unittest.TestCase):
         self.assertIn("## 0.1.45.3-draft", version)
 
     def test_missing_entries_are_not_fabricated(self):
-        bmap = load_script("bMap")
+        bfind = load_script("bFind")
         bfeature = load_script("bFeature")
-        self.assertIsNone(bmap.extract_entry("# Map\n\n## Known\ntext", "unknown"))
+        self.assertIsNone(bfind.extract_entry("# Map\n\n## Known\ntext", "unknown"))
         self.assertIsNone(bfeature.extract_feature("# Features\n\n### Known\ntext", "unknown"))
 
 

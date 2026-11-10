@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.51-draft
-updated: 2026-11-10 07:30 UTC
+current_version: 0.1.52-draft
+updated: 2026-11-10 15:30 UTC
 status: draft
 ```
 
@@ -26,6 +26,37 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.52-draft
+
+```yaml
+release_type: bmap_bask_planning
+news: |
+  Two new optional features. bMap plans big work that needs several
+  sessions as a small map of questions: you and the agent settle one per
+  session, the agent never decides for you and never builds while the map
+  is open, and a finished map goes to bSwarm to be built. bAsk sharpens any
+  idea with short questions, one at a time; it works on its own and bMap
+  uses it. Both are off until you turn them on. The old lookup script
+  scripts/bMap is now scripts/bFind: run python ./scripts/bFind <scope>
+  <item> instead; scripts/bMap no longer exists.
+scope:
+  - add bSmart-Extensions/bMap: bmap-protocol.md (hard rules, location, map finding, tickets, sessions, bSwarm handoff, estimates), trackers.md (local markdown format, lint checks, GitHub issues), bmap.py, and blank map, ticket, and registry templates
+  - bMap is our own variant of Matt Pocock's wayfinder (MIT); the local format, derived status, and lint ideas follow John Goh's wayfinder-maps (MIT); bmap.py is a separate stdlib-only implementation
+  - hard no-build rule during planning that no map content can lift; only the human can, in the session; lint reports override keys or Notes as errors
+  - ticket types are research, prototype, explore, and task; the old names discussion and grilling are lint errors that suggest explore
+  - explore and prototype tickets need decided_by (the human); maps hold at most 12 tickets (warning at 10)
+  - map registry per maps root (slug, destination, active/paused/done, last worked, aliases) and a five-step finding order that asks instead of guessing; bmap.py find runs steps 1-4
+  - map location follows the deferred-issues rule: optional project.md field bmap_maps: project | workstream, default follows bswarm_deferred_issues, else project
+  - GitHub issues tracker: created only as the instance's AI GitHub identity; decision issues never carry build labels, keeping a later label-gated, branch-per-issue build flow possible
+  - add bSmart-Extensions/bAsk: a standalone one-question-at-a-time interview, based on Matt Pocock's grill-me and grilling (MIT)
+  - rename the deterministic map lookup scripts/bMap to scripts/bFind (no wrapper or alias kept); bSmart.md deterministic_lookups, bSmart_Map.md, and tests/test_bsmart_lookup.py updated; bMap now means only the planning feature
+  - register both in bSmart_Features.md, bSmart.md, bSmart_Docs/extensions.md, bSmart-Extensions/README.md, bSmart_Map.md, and bSmart_Protocols/projects.md; bSwarm README notes the bMap input
+verification:
+  - git grep -i bmap: every hit is the planning feature or a changelog line that says the lookup was renamed
+  - new tests/test_bmap.py: old type names, derived status, fences, graph and cycle checks, claims and the 72h stale rule, index checks, decided_by, the no-build override, the size limit, fog, registry lint, the finding order, CLI exit codes, and blank-template-only shared files
+  - python and node tests pass, including the public-tree privacy guard
+```
 
 ## 0.1.51-draft
 
@@ -249,7 +280,7 @@ safety:
   - the protocol is generic and contains no site agent names, credentials, or host-specific helper paths
   - no deployment, image build, or orchestrator change is performed by this version
 verification:
-  - lookup tests confirm the protocol is indexed and retrievable through bMap and the Setup feature card
+  - lookup tests confirm the protocol is indexed and retrievable through bMap (renamed bFind in 0.1.52-draft) and the Setup feature card
   - python and node tests pass on Linux, Windows, and macOS for Python 3.11 and 3.12
 ```
 

@@ -63,11 +63,11 @@ def main() -> int:
     except ValueError as exc:
         parser.error(str(exc))
     if not path.is_file():
-        print(f"bMap: map not found for scope '{scope}': {path}")
+        print(f"bFind: map not found for scope '{scope}': {path}")
         return 2
     entry = extract_entry(path.read_text(encoding="utf-8", errors="replace"), item)
     if entry is None:
-        print(f"bMap: entry not found: {args.scope} {args.item}")
+        print(f"bFind: entry not found: {args.scope} {args.item}")
         return 1
     print(f"scope: {scope}")
     print(f"map: {path}")

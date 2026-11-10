@@ -125,6 +125,10 @@ adapter's nested-worker mechanism or explicitly downgrade the run to
 `supervisor_mediated_architect_handoff` / `supervisor_mediated_cascade` and
 record that it is not true nested architect dispatch.
 
+## Input from bMap
+
+A finished bMap map (`../bMap/bmap-protocol.md` section 10) is a valid input. The architect turns its decisions into the plan, the architect critic checks the plan against the map (every decision honoured, nothing out of scope, nothing undecided assumed), and the build follows as usual.
+
 ## Source ideas and influences
 
 - Operator idea/source: the bSmart coding-feature sequence: `bWorkflow`, `bSelective`, then `bSwarm`.

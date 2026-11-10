@@ -131,7 +131,7 @@ update_workflow:
   profile_migration: Apply known exact bSmart_Agent.md compatibility migrations automatically with a backup and clear report; ask only for ambiguous or broader changes.
 
 deterministic_lookups:
-  map: python ./scripts/bMap <scope> <item>
+  map: python ./scripts/bFind <scope> <item>
   feature: python ./scripts/bFeature <feature-name>
   knowledge: python ./scripts/bKnowledge <query>
   rule: Return only the requested compact entry; do not recursively search the workspace.
@@ -289,6 +289,18 @@ extensions:
       packaging: bundled_optional
       source_path: /workspace/bSmart-System/bSmart-Extensions/bSwarm
       purpose: Chat-driven multi-agent orchestration protocol with unsupervised/supervised modes, A/B comparison, statistics, and bSelective integration.
+    bMap:
+      path: /workspace/bSmart-Extensions/bMap
+      optional: true
+      packaging: bundled_optional
+      source_path: /workspace/bSmart-System/bSmart-Extensions/bMap
+      purpose: Multi-session planning as a small map of decision tickets that hands off to bSwarm. Plans, never builds. Off until the operator turns it on.
+    bAsk:
+      path: /workspace/bSmart-Extensions/bAsk
+      optional: true
+      packaging: bundled_optional
+      source_path: /workspace/bSmart-System/bSmart-Extensions/bAsk
+      purpose: Short one-question-at-a-time interview that sharpens any idea; bMap uses it for explore tickets.
     bQAbuild:
       path: /workspace/bSmart-Extensions/bQAbuild
       optional: false
