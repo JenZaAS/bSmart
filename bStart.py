@@ -74,11 +74,20 @@ def now_utc() -> str:
     return dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def run(command: list[str], cwd: Path, timeout: int = 60) -> subprocess.CompletedProcess[str]:
+GIT_TIMEOUT_RETURNCODE = 124
+# Covers the update helper's own Git timeouts (status 120 s, fetch 60 s,
+# pull 300 s) so a slow-disk pull is not stopped half way. It runs once a day.
+UPDATE_CHECK_TIMEOUT_SECONDS = 600
+
+
+def run(command: list[str], cwd: Path, timeout: int = 60,
+        env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     try:
         return subprocess.run(command, cwd=cwd, text=True, stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE, timeout=timeout)
-    except (OSError, subprocess.TimeoutExpired) as exc:
+                              stderr=subprocess.PIPE, timeout=timeout, env=env)
+    except subprocess.TimeoutExpired as exc:
+        return subprocess.CompletedProcess(command, GIT_TIMEOUT_RETURNCODE, "", f"timed out after {exc.timeout} seconds")
+    except OSError as exc:
         return subprocess.CompletedProcess(command, 1, "", str(exc))
 
 
@@ -87,8 +96,21 @@ def git_safe_directory(repo: Path) -> str:
     return os.path.normpath(str(repo)).replace("\\", "/")
 
 
+def git_lockfree_env() -> dict[str, str]:
+    """Environment for read-only Git queries: no optional index lock."""
+    return dict(os.environ, GIT_OPTIONAL_LOCKS="0")
+
+
 def git_run(repo: Path, args: list[str], timeout: int = 20) -> subprocess.CompletedProcess[str]:
-    return run(["git", "-c", f"safe.directory={git_safe_directory(repo)}", *args], repo, timeout)
+    """Read-only Git query.
+
+    `git status` normally refreshes the index and takes `.git/index.lock` to do
+    it. If the call is stopped by the timeout on a slow disk, that lock stays
+    behind and blocks the next pull. `--no-optional-locks` skips that optional
+    write; GIT_OPTIONAL_LOCKS=0 also covers any Git process it starts.
+    """
+    command = ["git", "--no-optional-locks", "-c", f"safe.directory={git_safe_directory(repo)}", *args]
+    return run(command, repo, timeout, env=git_lockfree_env())
 
 
 def first_value(text: str, keys: tuple[str, ...]) -> str | None:
@@ -139,6 +161,8 @@ def git_status(repo: Path, label: str) -> str:
         return f"{label}: no Git repository"
     status = git_run(repo, ["status", "--porcelain"])
     branch = git_run(repo, ["branch", "--show-current"])
+    if GIT_TIMEOUT_RETURNCODE in (status.returncode, branch.returncode):
+        return f"{label}: Git status skipped (timed out; slow disk?)"
     if status.returncode != 0 or branch.returncode != 0:
         return f"{label}: Git status unavailable"
     dirty = bool(status.stdout.strip())
@@ -175,7 +199,7 @@ def safe_system_update(system: Path, content: Path, skip: bool) -> tuple[bool, s
     proc = run(
         [sys.executable, str(helper), "--auto-pull", "--repo", str(system), "--state", str(state)],
         system,
-        90,
+        UPDATE_CHECK_TIMEOUT_SECONDS,
     )
     output = " ".join((proc.stdout + " " + proc.stderr).split())
     updated = "updated" in output.lower() and "skipped" not in output.lower()

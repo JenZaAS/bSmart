@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -59,12 +60,38 @@ def write_state(state: Path, status: str, detail: str) -> bool:
         return False
 
 
-def run(cmd: list[str], cwd: Path, timeout: int = 30) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(cmd, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
+TIMEOUT_RETURNCODE = 124
+# A fast-forward pull on a slow network disk can take minutes. Stopping it
+# half way would leave a real index lock, so give it room.
+PULL_TIMEOUT_SECONDS = 300
+# git status on a network mount took about a minute in practice. This check
+# runs once a day, so allow that rather than report the repo unavailable.
+STATUS_TIMEOUT_SECONDS = 120
+
+
+def run(cmd: list[str], cwd: Path, timeout: int = 30,
+        env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    """Run a command; a timeout or a missing binary becomes a failed result, not a crash."""
+    try:
+        return subprocess.run(cmd, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              timeout=timeout, env=env)
+    except subprocess.TimeoutExpired as exc:
+        name = " ".join(cmd[-2:]) if len(cmd) >= 2 else " ".join(cmd)
+        return subprocess.CompletedProcess(cmd, TIMEOUT_RETURNCODE, "", f"{name} timed out after {exc.timeout} seconds (slow disk?)")
+    except OSError as exc:
+        return subprocess.CompletedProcess(cmd, 1, "", str(exc))
 
 
 def git(args: list[str], repo: Path, timeout: int = 30) -> subprocess.CompletedProcess[str]:
-    return run(["git", "-c", f"safe.directory={git_safe_directory(repo)}", *args], repo, timeout=timeout)
+    """Git without optional locks.
+
+    Read-only queries such as `git status` then never write `.git/index.lock`,
+    so a timeout cannot leave a stale lock. Fetch and pull still take the
+    locks they need.
+    """
+    env = dict(os.environ, GIT_OPTIONAL_LOCKS="0")
+    command = ["git", "--no-optional-locks", "-c", f"safe.directory={git_safe_directory(repo)}", *args]
+    return run(command, repo, timeout=timeout, env=env)
 
 
 def fail(state: Path, status: str, detail: str) -> int:
@@ -98,7 +125,7 @@ def main() -> int:
     if args.expected_branch and branch_name != args.expected_branch:
         return fail(state, "blocked", f"unexpected branch {branch_name!r}; expected {args.expected_branch!r}")
 
-    status = git(["status", "--porcelain"], repo)
+    status = git(["status", "--porcelain"], repo, timeout=STATUS_TIMEOUT_SECONDS)
     if status.returncode != 0:
         return fail(state, "unavailable", status.stderr.strip() or "git status failed")
     dirty = bool(status.stdout.strip())
@@ -114,7 +141,10 @@ def main() -> int:
     counts = git(["rev-list", "--left-right", "--count", "HEAD...@{u}"], repo)
     if counts.returncode != 0:
         return fail(state, "unavailable", counts.stderr.strip() or "ahead/behind check failed")
-    left, right = [int(x) for x in counts.stdout.split()[:2]]
+    try:
+        left, right = [int(x) for x in counts.stdout.split()[:2]]
+    except ValueError:
+        return fail(state, "unavailable", f"unexpected ahead/behind output: {counts.stdout.strip()!r}")
 
     if dirty:
         detail = f"uncommitted changes; ahead={left} behind={right}"
@@ -129,7 +159,7 @@ def main() -> int:
 
     if left == 0 and right > 0:
         if args.auto_pull:
-            pull = git(["pull", "--ff-only"], repo, timeout=60)
+            pull = git(["pull", "--ff-only"], repo, timeout=PULL_TIMEOUT_SECONDS)
             if pull.returncode != 0:
                 return fail(state, "blocked", pull.stderr.strip() or "fast-forward pull failed")
             write_state(state, "updated", f"fast-forwarded by {right} commit(s)")

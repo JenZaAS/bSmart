@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.50-draft
-updated: 2026-11-09 23:45 UTC
+current_version: 0.1.51-draft
+updated: 2026-11-10 07:30 UTC
 status: draft
 ```
 
@@ -26,6 +26,20 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.51-draft
+
+```yaml
+release_type: git_checks_without_index_lock
+scope:
+  - bStart.py and scripts/bsmart-system-update-check run Git with --no-optional-locks and GIT_OPTIONAL_LOCKS=0, so read-only checks such as git status never write .git/index.lock; a check stopped by a timeout on a slow network disk can no longer leave a stale lock that blocks the next pull
+  - bsmart-system-update-check turns a Git timeout or a missing git binary into a normal "unavailable" result instead of a traceback; unexpected ahead/behind output is reported the same way
+  - slow-disk timeouts: the update check allows 120 s for git status and 300 s for a fast-forward pull, and bStart waits up to 600 s for that once-a-day check so a pull is not stopped half way
+  - bStart reports "Git status skipped (timed out; slow disk?)" when its own short status check times out
+verification:
+  - new tests/test_git_optional_locks.py: a real repo with a touched file keeps its index unchanged and gets no index.lock from either check; both helpers pass --no-optional-locks and GIT_OPTIONAL_LOCKS=0; a Git timeout gives a clean result in both helpers
+  - python and node tests pass, including the public-tree privacy guard
+```
 
 ## 0.1.50-draft
 
