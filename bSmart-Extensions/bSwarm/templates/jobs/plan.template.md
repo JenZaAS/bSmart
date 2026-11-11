@@ -9,6 +9,10 @@
 - Keyword: `cascade` | `cascade critic` | `cascade critic audit`
 - bSelective: on by default; explicit ordinary opt-out: `<yes/no>`
 
+## Required reading
+
+- Bundle: `none` | `<paths from knowledge/task-context-routing.md or project.md>`
+
 ## Tasks
 
 1. `<bounded task>`

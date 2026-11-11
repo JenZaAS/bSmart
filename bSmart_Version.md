@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.54-draft
-updated: 2026-11-10 15:55 UTC
+current_version: 0.1.55-draft
+updated: 2026-11-11 07:10 UTC
 status: draft
 ```
 
@@ -26,6 +26,36 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.55-draft
+
+```yaml
+release_type: required_reading_bundle
+news: |
+  New: required reading. A project can list files that agents must read
+  before any architecture or code work, in the "Required reading bundle"
+  section of knowledge/task-context-routing.md or the required_reading_bundle
+  field in project.md. When the list is filled, reading it is mandatory: the
+  plan records what was read and what applies, the coder follows it, and the
+  critic stops the work (HOLD) if the reading was skipped. When there is no
+  list, the agent says "No required reading defined" in one line and carries
+  on. That line points to bSmart_Templates/required-reading-default.md, which
+  shows how to add a list. Use this instead of building your own.
+scope:
+  - bSmart_Protocols/projects.md required_reading_bundle: declared in the routing file section or the project.md field (new optional field), nowhere else; agents must not search elsewhere for undeclared guidance; declared = mandatory for architect, coder, and critic; check its files exist before architecture work or dispatch (block and name a missing path); name the bundle in child tasks; existing projects are not migrated; no script enforcement yet
+  - not declared: fall back to the new bSmart_Templates/required-reading-default.md (how to declare a list) and give one line once per task, in the report, "No required reading defined: <path>"; not a block; defined once in projects.md (not_declared), the roles and bSwarm point to it
+  - new-project templates: project-task-context-routing gains an empty Required reading bundle section; project.template.md gains an empty required_reading_bundle field; bSmart_Map.md lists the default file
+  - bSmart.md required_reading pointer; README Core habits line
+  - bArchitect/architect.md must read the bundle first (hard rule) and holds the one acknowledgement shape (required_context with revision or sha256, applicable_requirements, not_applicable_with_reason, unresolved_conflicts, coder_checks, critic_compliance); passes only what applies; re-reads on change
+  - bCoder/coder.md must follow the plan's block and run its coder_checks; stops and reports when the block is missing; reads the bundle itself when there is no plan
+  - bCritic/critic.md checks the block and that it was applied; new HOLD section, the one exception to non-blocking reviews: a blocking fail that no score passes and the requester cannot accept as is, lifted only by fixing the cause; the critique template header gains a HOLD line
+  - bSwarm protocol section 2 Required reading check (a HOLD ends the run blocked; with no list the parent gives the note once in the final report); role output required_reading and coder_checks; run-spec preflight_qc.required_reading; jobs plan, report, and SPEC gain a required reading part; permissions, models, and round limits unchanged
+  - later, separate: machine enforcement in bStart.py and project load
+  - remove the lookup line for scripts/bKnowledge from bSmart.md deterministic_lookups and bSmart_Map.md; that script never existed (the create bKnowledge command and knowledge protocol are unchanged)
+verification:
+  - new tests/test_required_reading.py (both declaration places, no searching elsewhere, hard rule in each role, HOLD defined once and not a score cap, default file and one-line note defined once with no silent skip left, empty sections in both new-project templates, one home for the acknowledgement shape, bSwarm fields)
+  - python and node tests pass, including the public-tree privacy guard; duplicate check clean
+```
 
 ## 0.1.54-draft
 

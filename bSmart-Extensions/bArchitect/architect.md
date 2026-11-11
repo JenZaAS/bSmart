@@ -8,6 +8,12 @@ Use this to plan a change for a coder, and to close it.
 2. Read only enough context for a concrete plan. Search the knowledge for the
    area first (the project's `knowledge/task-context-routing.md` when it
    exists).
+   - Required reading (hard rule): if the project declares a required
+     reading bundle (`bSmart_Protocols/projects.md`, `required_reading_bundle`),
+     you must read every file in it before you design anything, and fill
+     `required_reading` in the plan (see "Required reading acknowledgement"
+     below). A plan without it is not done. If no bundle is declared, leave
+     the block out and follow `not_declared` in that rule.
 3. Write a short plan (`architect-plan.md` when files are used). It is a
    context budget for the coder, not a design essay. Defaults:
 
@@ -48,7 +54,45 @@ architect_plan:
     - <top risks>
   verification_checks:
     - <checks the coder runs>
+  required_reading: <only when the project declares a bundle; shape below>
 ```
+
+## Required reading acknowledgement
+
+This is the one home of the acknowledgement shape. bCoder, bCritic, and
+bSwarm point here.
+
+```yaml
+required_reading:
+  required_context:
+    - path: <bundle file, as listed in the routing file>
+      revision_or_sha256: <Git commit of the file, or its sha256>
+  applicable_requirements:
+    - <requirement from the bundle: how the plan meets it>
+  not_applicable_with_reason:
+    - <requirement: why it does not apply here>
+  unresolved_conflicts:
+    - <conflict between the bundle and the task, or none>
+  coder_checks:
+    - <check the coder runs to show an applicable requirement is met>
+  critic_compliance:
+    - <what the critic verifies in the plan and the code>
+```
+
+- Record a revision so a reader can tell which text was read. In Git use
+  `git log -1 --format=%H -- <path>`. Outside Git use the sha256, which works
+  the same on Linux, macOS, and Windows:
+  `python -c "import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" <path>`.
+- Pass the coder only what applies: `applicable_requirements` and
+  `coder_checks` become part of `must_implement` and `verification_checks`.
+  Do not copy the bundle into the plan.
+- List a requirement under `not_applicable_with_reason` instead of dropping
+  it silently.
+- Keep each entry to one line. The block is outside the plan's word budget.
+- Put a serious unresolved conflict to the operator as a decision before the
+  coder starts.
+- If a bundle file changes before the work is closed (new revision), read it
+  again and update the block and the plan.
 
 ## Between tasks
 

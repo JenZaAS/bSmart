@@ -8,6 +8,9 @@ project:
   owner: <owner>
   objective: <one-sentence-objective>
   agent_focus: <what-the-agent-should-focus-on>
+  # Optional: files that must be read before architecture or code work.
+  # Format and rule: bSmart_Templates/required-reading-default.md.
+  required_reading_bundle: []
 ```
 
 ## Project structure
