@@ -176,13 +176,19 @@ class BSwarmProtocolTests(unittest.TestCase):
             'architect_critic',
             'programmer_critic',
             'one task at a time',
-            'max_critique_rounds: 3',
+            'max_critique_rounds: 5',
             'Both critics follow bCritic',
         ]:
             self.assertIn(term, combined)
         critic = self.skill('bCritic/critic.md')
-        for term in ['score: 1-10', 'stop at 8 or higher', 'At most 3 rounds']:
+        for term in ['score: 1-10', 'stop at 8 or higher', 'At most 5 rounds', 'after round 5', 'the round (1-5)', 'r2 through r5']:
             self.assertIn(term, critic)
+        self.assertNotIn('At most 3 rounds', critic)
+        self.assertNotIn('after round 3', critic)
+        self.assertNotIn('max_critique_rounds: 3', combined)
+        template = self.skill('bCritic/templates/critique.template.md')
+        self.assertIn('Round: `<1-5>`', template)
+        self.assertNotIn('`<1-3>`', template)
         self.assertIn('review and update\nthe remaining plan', self.skill('bArchitect/architect.md'))
 
     def test_critcascade_has_concise_critic_contract_and_knowledge_rules(self):

@@ -5,7 +5,7 @@
 
 - Role reviewed: `architect` | `coder` | `<document slug>`
 - Task: `<task id or none>`
-- Round: `<1-3>`
+- Round: `<1-5>`
 - Score: `<1-10>`/10
 - HOLD: `no` | `yes (C<id>)`
 - Critic model: `<model id actually used>`

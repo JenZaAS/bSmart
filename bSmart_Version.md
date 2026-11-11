@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.55-draft
-updated: 2026-11-11 07:10 UTC
+current_version: 0.1.56-draft
+updated: 2026-11-11 17:45 UTC
 status: draft
 ```
 
@@ -26,6 +26,23 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.56-draft
+
+```yaml
+release_type: critic_round_limit
+news: |
+  Critic reviews now continue for up to 5 rounds instead of stopping after
+  3. If the score is still below 8 after round 5, the critic stops and
+  reports, and you decide whether to accept the work.
+scope:
+  - raise max_critique_rounds from 3 to 5; the number lives in bCritic (round rule, file-name round range, stable-ID example, and the review-file template) and is repeated in the bSwarm run-spec defaults, critcascade, critcascade_audit, and the run-record budget
+  - below 8 after round 5: stop and report; the requester still decides; HOLD is unchanged
+  - bSwarm max_iterations stays 5; cascade max_depth stays 3; bswarm-protocol.md still points at bCritic for the round rule and does not restate the number
+verification:
+  - bSwarm protocol test expects max_critique_rounds 5, "At most 5 rounds", and "after round 5", and rejects a leftover 3
+  - python and node tests pass, including the public-tree privacy guard
+```
 
 ## 0.1.55-draft
 

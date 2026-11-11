@@ -15,7 +15,7 @@ bswarm_run:
   max_depth: 1
   max_total_child_agents: 3
   max_iterations: 5
-  max_critique_rounds: 3
+  max_critique_rounds: 5
   max_worker_attempts_per_supervisor: 5
   planned_timeout_seconds: 1200
   safety: read_only
@@ -157,7 +157,7 @@ bswarm_run:
       architect_context_mode: bselective
       coder_context_mode: bselective
       max_depth: 3
-      max_critique_rounds: 3
+      max_critique_rounds: 5
       # Critics follow bCritic; review files live in the run folder.
       critique_files: "bswarm-runs/<run>/critiques/"
       deferred_issues_file: "deferred-issues.md"
@@ -175,7 +175,7 @@ bswarm_run:
       architect_context_mode: bselective
       coder_context_mode: bselective
       max_depth: 3
-      max_critique_rounds: 3
+      max_critique_rounds: 5
       external_model_required: true
       stages:
         - architect

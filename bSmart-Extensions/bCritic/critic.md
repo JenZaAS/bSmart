@@ -46,7 +46,7 @@ Only the required-reading cases above cause it.
 - The bar is 8/10: stop at 8 or higher.
 - The score and the round limit count only `automatic` and `decision` issues,
   so `optional` issues alone never keep a loop going.
-- At most 3 rounds (`max_critique_rounds`). Below 8 after round 3: stop and
+- At most 5 rounds (`max_critique_rounds`). Below 8 after round 5: stop and
   report. The bar never blocks the work by itself; the requester decides.
   The only exception is a HOLD (above).
 - Another round needs diagnosed issues, not vague dissatisfaction.
@@ -78,7 +78,7 @@ fix is clearly relevant.
 Write the full review to a review file and return only the summary.
 
 - Name: `critiques/<role>-r<n>.md`. `<role>` is what was reviewed
-  (`architect`, `coder`, or a short document slug); `<n>` is the round (1-3).
+  (`architect`, `coder`, or a short document slug); `<n>` is the round (1-5).
   For work in several tasks add the task: `coder-t<task>-r<n>.md`.
 - Where: in bSwarm, where its protocol says. Standalone in a project:
   `critiques/` in the project or workstream folder that owns the work (same
@@ -94,7 +94,7 @@ Write the full review to a review file and return only the summary.
   ```
 
 - IDs are stable. `C1`, `C2`, ... are numbered per role (and task) across its
-  rounds: an issue keeps its ID in r2 and r3, and new issues take the next
+  rounds: an issue keeps its ID in r2 through r5, and new issues take the next
   unused number. Never reuse or renumber an ID. Each round file repeats every
   issue still open from the previous round with its current status.
 - Review files are part of the development log: keep them, never delete or
