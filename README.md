@@ -28,6 +28,7 @@ Each rule lives in one place; this is only what it is for.
 
 - **Plain answers.** Agents answer in plain, short language in the user's own language. Rule: `response_style` in `bSmart.md`.
 - **Knowledge upkeep.** Any code change also updates or removes the project knowledge it made stale, and the report says what changed. Rule: `knowledge_upkeep` in `bSmart.md`; the `Code:` line format is in `bSmart_Protocols/knowledge.md`.
+- **Knowledge handling.** Agents look in the knowledge indexes, notes, and memory before guessing an unfamiliar name, save useful findings with source and date on their own, and file them in topic folders (defaults `code/`, `tools/`, and `general/` as a last resort) with a two-level `index.md`. A user's correction becomes a glossary note. `scripts/bKnowledgeCheck` checks the layout at startup and before a handoff; agents fix the findings themselves and log changes in `CHANGELOG.md`. Rule: `knowledge_handling` in `bSmart.md`; details in `bSmart_Protocols/knowledge.md`.
 - **Required reading.** A project can list files (in its task-context routing file or `project.md`) that must be read before architecture or code work. Then it is mandatory: the plan records what was read and what applies, the coder follows it, and the critic puts the work on HOLD when the reading was skipped. No list: the agent says so in one line and carries on (how to add one: `bSmart_Templates/required-reading-default.md`). Rule: `required_reading_bundle` in `bSmart_Protocols/projects.md`; role steps in bArchitect, bCoder, and bCritic.
 - **Lock-free Git checks.** Startup (`bStart.py`) and the daily update check read Git without taking `.git/index.lock`, so a slow or stopped check cannot block the next pull. Details: `bSmart_Version.md`, 0.1.51-draft.
 - **Quick lookups.** `scripts/bFind` (paths and protocols) and `scripts/bFeature` (feature cards) return one short entry instead of searching the workspace. `bFind` was called `scripts/bMap` before 0.1.52; `bMap` now means only the planning feature.
@@ -479,7 +480,7 @@ Tasks keep short, actionable next steps and handoff notes visible across session
 Workdocs are structured working documents for larger tasks, troubleshooting, verification, design work, and multi-session efforts. They can later be archived into the Library when useful.
 
 ### Library
-The Library is for durable, reusable knowledge: notes, references, templates, examples, and completed outputs that should be easy to find and reuse.
+The Library is for durable, reusable knowledge: notes, references, templates, examples, and completed outputs that should be easy to find and reuse. It uses the same layout as a project's `knowledge/`: topic folders (defaults `code/`, `tools/`, `general/`), an `index.md` that lists topics, and an `index.md` in each topic that lists its notes. See `bSmart_Protocols/knowledge.md`.
 
 ### Decision Log
 The Decision Log captures meaningful setup, update, approval, migration, and project milestones. It should not store secrets, routine tool output, or full transcripts.

@@ -8,6 +8,7 @@ Always load:
 
 - `project.md`
 - `knowledge/README.md`
+- `knowledge/index.md` (topics; each topic has its own `index.md`)
 - this file
 
 Then select one or more task bundles below. Load only the task-specific knowledge bundle(s) required for the current task; do not load unrelated bundles by default.
@@ -28,7 +29,7 @@ Add project-specific task bundles here. Each bundle should list only the knowled
 
 ### General project orientation
 
-- `knowledge/general/` only when the task needs broad project or domain orientation
+- the matching topic under `knowledge/code/`, `knowledge/tools/`, or another topic folder; `knowledge/general/` only when nothing better fits
 - the relevant code-knowledge file only when source navigation is required
 
 ## Routing rules

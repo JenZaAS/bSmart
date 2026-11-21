@@ -3,31 +3,126 @@
 ```yaml
 bsmart-protocol-summary:
   id: knowledge
-  title: Project knowledge and bKnowledge
-  purpose: Create, classify, retrieve, and maintain concise reusable knowledge without confusing source navigation with general knowledge or active work notes.
+  title: Knowledge handling, layout, and bKnowledge
+  purpose: Find knowledge before guessing, save useful findings without being asked, and keep the Library and project knowledge sorted into indexed topic folders.
   load_when:
+    - an unfamiliar name, term, tool, or reference
+    - saving a finding, reference, or decision
+    - the user corrects a term or reference
     - bKnowledge
     - create bKnowledge
     - project knowledge
     - code knowledge
     - source navigation
     - after modifying, fixing, or refactoring code
+    - bStart prints a Knowledge line
+    - bKnowledgeCheck
+    - before a handoff
 ```
 
-## Storage and separation
+## Habits
 
-Project-local knowledge is stored under the active project:
+These run on their own. Do not ask the user to approve them or to organise knowledge.
+
+1. **Look before guessing.** Before you ask about or guess an unfamiliar name, term, tool, or reference, search in this order: the active project's `knowledge/index.md`, the Library `index.md` (including `glossary/`), then the notes themselves (search both knowledge roots for the name), then your own memory. Use what you find. If nothing matches, say "not found in knowledge" and then ask or research.
+2. **Save on your own.** When you find something worth reusing (a reference, a tool or service, how something works, a decision and its reason, a fix that took effort), write it as a note without being asked. Each note has a `Source:` line (URL, file, or "user, in chat") and a `Date:` line. No secrets or personal data.
+3. **Pick the place.** Project-specific: the project's `knowledge/`. Useful beyond the project: the instance Library. When in doubt, the project; move it to the Library when a second project needs it.
+4. **Topic folders only.** Put each note in a topic folder (see "Layout"). Never put a note directly in a knowledge root, or directly in `tools/` or `general/`. Create a new topic when nothing fits.
+5. **Index in the same step.** A new note gets its line in its topic's `index.md`, and a new topic gets its line in the parent index, in the same step that creates it.
+6. **Corrections become knowledge.** When the user corrects a term, name, or reference, save the correction in the Library `glossary/` topic (create it the first time): one note per term with the right meaning, the wrong reading to avoid, the source ("user correction"), and the date. Then every agent finds it with habit 1.
+7. **Keep it tidy.** Run `bKnowledgeCheck` (below) when startup reports a Knowledge line and before a handoff. Fix the findings yourself and log what you change.
+
+## Layout
+
+There are two kinds of knowledge root:
+
+- the instance Library, `<content-root>/Library/` (one per instance; reusable across projects);
+- each project's `knowledge/` folder (`/projects/<project>/knowledge/`).
+
+Both use the same layout. Every folder below a root is a topic. Topics nest to any depth.
 
 ```text
-/projects/<active-project>/knowledge/
-├── task-context-routing.md  # task-to-knowledge bundles and routing rules
-├── general/                 # project/domain concepts, decisions, relationships, and reusable facts
-└── code/                    # source-specific or codebase-navigation knowledge
+<knowledge root>/
+├── index.md                 # topics only, one line each
+├── CHANGELOG.md             # change log for this root (bKnowledgeCheck and agents)
+├── README.md                # optional catalogue or guidance
+├── task-context-routing.md  # projects only: task-to-knowledge bundles
+├── code/                    # default: code knowledge
+│   ├── index.md
+│   ├── <note>.md            # language-agnostic notes may sit directly in code/
+│   └── matlab/              # one subfolder per language
+│       ├── index.md
+│       └── <note>.md
+├── tools/                   # default: apps, services, external references
+│   ├── index.md
+│   └── <some-app>/
+│       ├── index.md
+│       └── <note>.md
+├── general/                 # default: last resort only
+│   └── index.md
+└── <domain-topic>/          # any other topic an agent creates, e.g. a subject area
+    ├── index.md
+    └── <note>.md
 ```
 
-`workdocs/` remains for active working notes, investigations, handoffs, and detailed reasoning. Do not use a workdoc as the final home for a concise reusable knowledge item. Use the global bSmart Library only when the knowledge is reusable across projects or across the bSmart instance.
+- `code/`, `tools/`, and `general/` are the defaults. Do not add more defaults; create topics as you go.
+- `code/` holds source-specific or codebase-navigation knowledge. Language-agnostic notes may sit directly in `code/`; language notes go in `code/<language>/`.
+- `tools/` holds one subfolder per app, service, or external reference, such as `tools/<some-app>/`.
+- `general/` is the last resort. Use it only when no topic fits and none is worth creating yet. The check lists notes there so they can move when a better topic appears.
+- Domain topics (a subject area) can sit at the root next to the defaults.
+- Allowed directly in a root, as housekeeping rather than notes: `README.md`, `index.md`, `CHANGELOG.md`, `CATEGORIES.md`, and `task-context-routing.md`. Any other file there is a loose note.
+- A root has no `knowledge/` subfolder; the Library root is itself the knowledge root.
+- A folder holding only attachments (images, PDFs) is not a topic and needs no index.
 
-Knowledge does not have to be tied to a file. File-independent items belong in `knowledge/general/` and may describe a domain concept, cross-component relationship, decision, invariant, workflow, or open question. Code knowledge may also be cross-cutting; use `knowledge/code/` when its primary purpose is helping an agent navigate or extend a codebase, even if it references several files rather than one source file.
+`workdocs/` remains for active working notes, investigations, handoffs, and detailed reasoning. Do not use a workdoc as the final home for a concise reusable knowledge item.
+
+Knowledge does not have to be tied to a file. A domain concept, cross-component relationship, decision, invariant, workflow, or open question goes in the topic it is about. Code knowledge may also be cross-cutting; use `code/` when its main purpose is helping an agent navigate or extend a codebase, even if it references several files.
+
+## Indexes
+
+Two levels, so an agent reads two short files instead of many:
+
+- The root `index.md` lists topics only, one line each: `- [tools/](tools/index.md) - apps, services, and external references`.
+- Each topic's `index.md` lists its notes and subtopics, one line each: `- [some-note](some-note.md) - what this note answers`.
+
+An existing `README.md` in a topic, or a catalogue `README.md` at the root, also counts as that folder's index. Keep it; `bKnowledgeCheck` adds an `index.md` that points to it when entries are missing. Templates: `bSmart_Templates/knowledge-index.template.md` and `bSmart_Templates/knowledge-topic-index.template.md`.
+
+Project task bundles in `knowledge/task-context-routing.md` point into these topics. The indexes find a note; the routing file says which notes a task needs.
+
+## Check and fix: bKnowledgeCheck
+
+```text
+python <system>/scripts/bKnowledgeCheck            # report; exit 0 clean, 1 findings
+python <system>/scripts/bKnowledgeCheck --fix      # safe fixes, logged
+python <system>/scripts/bKnowledgeCheck --project <name>
+```
+
+It checks the Library and every project's `knowledge/` and reports: notes directly in a root (`root_file`) or directly in `tools/` or `general/` (`default_root_file`), a `knowledge/` folder inside a root (`nested_root`), topics without an index (`missing_index`), notes or subtopics missing from their index (`unindexed`), index links to missing files (`broken_link`), placeholder descriptions (`placeholder`), and, as advisory only, notes under `general/` (`general_note`).
+
+`--fix` does only the mechanical part: it creates a missing `index.md`, adds missing index lines with the placeholder `TODO: one-line description`, and removes broken links (an `index.md` list line is removed; in a `README.md` the link text stays). It never moves a note and never picks a topic.
+
+The rest is yours, without asking the user: move loose notes into topics (create the topic if needed), replace placeholders with a real line, and move notes out of `general/` when a better topic fits. Run the check again until it is clean.
+
+**Change log.** Every change goes to `<knowledge root>/CHANGELOG.md`: `bKnowledgeCheck --fix` and the migration write it themselves; you add a line for each move or rename you make, in the same form (`- <date> <who>: moved <old> to <new>`).
+
+**When it runs.** `bStart.py` runs `bKnowledgeCheck --summary` at startup. It prints one `Knowledge:` line only when there is something to do, stops walking after about one second, and never blocks startup. When you see that line, fix the findings during the session. Before writing a handoff, run the check for the project (and the Library if you touched it) and fix what it finds.
+
+## One-time migration (0.1.56)
+
+The first time an instance runs this version, its knowledge is brought into this layout once:
+
+1. `bsmart-update` (through `bsmart-instance-upgrade`) runs `bKnowledgeCheck --migrate`. It moves any `<root>/knowledge/*` content up into the root (never overwriting; a clash is listed), creates `code/`, `tools/`, and `general/` with an `index.md`, creates or extends indexes, removes broken links, logs every change in each root's `CHANGELOG.md`, and lists the loose notes.
+2. You sort each listed note into a topic folder, add its index line, log the move in `CHANGELOG.md`, then run `bKnowledgeCheck --migrate` again.
+3. When nothing is left to sort, it writes `status: done` to `<content-root>/State/knowledge-migration.yaml` and never runs again (`--force` reruns it).
+
+Until the marker says done, startup prints a `Knowledge: one-time layout migration pending` line. If the instance was updated without `bsmart-update`, run step 1 yourself when you see it. No user approval is needed; READMEs are never deleted.
+
+### Only if there's an issue
+
+- The startup line says the check stopped at the time limit: the disk is slow. Run `bKnowledgeCheck` without `--summary` when convenient. `BSMART_KNOWLEDGE_CHECK=0` turns the startup check off.
+- The migration lists a clash (`conflict, not moved`): the same path exists in the root and in `knowledge/`. Compare them, merge by hand, delete the copy you merged, log it, and run `--migrate` again.
+- A topic keeps its notes in `README.md` and the check still reports `unindexed`: the README does not name the file. Add the line to the topic's `index.md`, or run `--fix`.
+- `State/knowledge-migration.yaml` cannot be written: the content root is read-only. The check still works; the pending line stays until the marker can be written.
 
 ## Natural-language intent
 
@@ -66,8 +161,8 @@ When `<source>` is an HTTP(S) URL:
 
 1. Fetch and inspect it read-only, using the available web extraction/browser tools.
 2. Classify the source as documentation, article, specification, repository information, or source code.
-3. Store documentation, domain concepts, and cross-project facts in `knowledge/general/` unless their primary purpose is code navigation.
-4. Store source-code and codebase-navigation summaries in `knowledge/code/`.
+3. Store documentation and references about an app, service, or external project under `tools/<some-app>/`, domain concepts under their topic, and use `general/` only as the last resort.
+4. Store source-code and codebase-navigation summaries under `code/` (`code/<language>/` for language-specific ones).
 5. Preserve the exact source URL, page title when available, and repository/branch/commit information when the source provides it.
 6. Prefer stable raw-file, release, or commit-pinned URLs for source-code knowledge when available. Do not silently treat a mutable branch URL as immutable evidence.
 7. If the page is blocked, requires login, or cannot be retrieved reliably, report that and ask for an accessible URL, pasted content, or local path. Do not invent knowledge.
@@ -77,7 +172,7 @@ URL knowledge items should include source metadata such as:
 ```md
 - Source: `<exact URL>`
 - Source type: documentation | article | specification | source code
-- Retrieved: <date, when known>
+- Date: <retrieved, when known>
 - Confidence: verified from source; hypotheses/open questions are labelled below
 ```
 
@@ -98,10 +193,10 @@ The exact command syntax is defined by the bSelective command-handler specificat
 
 ## Knowledge item structure
 
-Create the file under:
+Create the file under the language topic, and add its line to that topic's `index.md` in the same step:
 
 ```text
-/projects/<active-project>/knowledge/code/<stable-slug>.md
+/projects/<active-project>/knowledge/code/<language>/<stable-slug>.md   # e.g. code/matlab/
 ```
 
 Use a lowercase hyphenated slug based on the source basename, retaining a meaningful MATLAB class/function identity. Examples:
@@ -158,7 +253,7 @@ Keep it orchestration-oriented and concise. Summarize relationships and targets;
 
 ## Code references and upkeep
 
-Any entry that describes code, in `code/` or `general/`, names that code in one line:
+Any entry that describes code, in any topic, names that code in one line:
 
 ```md
 - Code: `src/sensor/calibrate.py` — `calibrate_sensor`, `load_offsets`
@@ -173,7 +268,7 @@ After a code change, follow `knowledge_upkeep` in `bSmart.md`: search the knowle
 After writing:
 
 1. Read the generated knowledge file back.
-2. Verify that the exact source path appears.
+2. Verify that the exact source path appears and that the topic's `index.md` lists the file.
 3. Verify that recommended bSelective targets appear.
 4. Report the generated path and a short summary.
 5. Mention when MATLAB runtime validation was unavailable; static bSelective inspection is not runtime validation.

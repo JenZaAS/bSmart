@@ -78,18 +78,20 @@ project_structure:
     - sandbox/README.md
     - knowledge/README.md
     - knowledge/task-context-routing.md
-    - knowledge/general/
+    - knowledge/index.md
     - knowledge/code/
+    - knowledge/tools/
+    - knowledge/general/
     - decisions.md
     - workdocs/README.md
   meaning:
     data: Raw/supporting project material such as inputs, exports, screenshots, source artifacts, and temporary research notes.
-    knowledge: Curated reusable knowledge specific to this project. `knowledge/task-context-routing.md` maps task types to the smallest useful knowledge bundles and should be consulted before substantial work. Load only the relevant bundle rather than the complete knowledge tree. `knowledge/general/` holds file-independent project/domain knowledge; `knowledge/code/` holds source-specific or codebase-navigation knowledge. Use the global Library only when the material is broadly reusable across projects or the bSmart instance. `knowledge/` is preferred over `library/` inside projects to avoid confusion with software libraries.
+    knowledge: Curated reusable knowledge specific to this project. `knowledge/task-context-routing.md` maps task types to the smallest useful knowledge bundles and should be consulted before substantial work. Load only the relevant bundle rather than the complete knowledge tree. Notes live in topic folders with a two-level index; the defaults are `knowledge/code/` (code knowledge, one subfolder per language), `knowledge/tools/` (apps, services, external references), and `knowledge/general/` (last resort). Use the instance Library when the material is useful beyond this project. Layout, indexes, and the check are in `bSmart_Protocols/knowledge.md`. `knowledge/` is preferred over `library/` inside projects to avoid confusion with software libraries.
     decisions: A single project decision file for choices, approvals, rejected options, and migration/design decisions specific to this project.
     workdocs: Project-local working documents for larger or multi-session work within this project.
     sandbox: Disposable or derived execution/build/test workspace notes; not the source of truth.
   onboarding_rule: Create these defaults for new projects to reduce friction. If a folder stays empty, keep its README as guidance rather than asking the operator to decide up front.
-  existing_project_rule: Existing projects do not need a forced migration. If an existing project lacks `knowledge/`, `knowledge/general/`, `knowledge/code/`, `decisions.md`, or `workdocs/` and the operator asks to add one, create the missing standard file/folder from the corresponding template or the knowledge protocol.
+  existing_project_rule: Existing projects do not need a forced migration, except the one-time knowledge layout migration (0.1.56), which adds the knowledge defaults and indexes on its own (`bSmart_Protocols/knowledge.md`). If an existing project lacks `decisions.md` or `workdocs/` and the operator asks to add one, create it from the corresponding template.
 ```
 
 ```yaml
@@ -98,6 +100,8 @@ templates:
   project_task_context_routing: /workspace/bSmart-System/bSmart_Templates/project-task-context-routing.template.md
   required_reading_default: /workspace/bSmart-System/bSmart_Templates/required-reading-default.md
   project_knowledge_readme: /workspace/bSmart-System/bSmart_Templates/project-knowledge.README.template.md
+  knowledge_index: /workspace/bSmart-System/bSmart_Templates/knowledge-index.template.md
+  knowledge_topic_index: /workspace/bSmart-System/bSmart_Templates/knowledge-topic-index.template.md
   project_decisions: /workspace/bSmart-System/bSmart_Templates/project-decisions.template.md
   project_workdocs_readme: /workspace/bSmart-System/bSmart_Templates/project-workdocs.README.template.md
 ```
@@ -169,5 +173,5 @@ If the conversation drifts to a different project's topic, ask once whether to s
 
 Selecting a project loads its handoff. Selecting a workstream loads that workstream's handoff. Parallel sessions on the same project use different workstreams so their handoffs stay separate.
 
-On a project change, write a short wrap-up into the old handoff first. Do not replace existing handoff text; append the new note. Then print the new project's compact startup block. Shared writes to the index and to a handoff use `.bLock`.
+Before writing a handoff, run `scripts/bKnowledgeCheck --project <project>` (and the Library check if you touched it) and fix the findings yourself; see `bSmart_Protocols/knowledge.md`. On a project change, write a short wrap-up into the old handoff first. Do not replace existing handoff text; append the new note. Then print the new project's compact startup block. Shared writes to the index and to a handoff use `.bLock`.
 ```

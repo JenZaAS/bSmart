@@ -19,8 +19,11 @@ project:
 - `knowledge/` — curated reusable knowledge specific to this project.
   - `knowledge/README.md` — knowledge scope and storage guidance.
   - `knowledge/task-context-routing.md` — task-to-knowledge routing; load only the relevant bundle.
-  - `knowledge/general/` — file-independent project/domain knowledge.
-  - `knowledge/code/` — concise source-specific or codebase-navigation knowledge.
+  - `knowledge/index.md` — topics only, one line each; each topic folder has its own `index.md`.
+  - `knowledge/code/` — code knowledge; language-agnostic notes here, language notes in `code/<language>/`.
+  - `knowledge/tools/` — apps, services, and external references, one subfolder each.
+  - `knowledge/general/` — last resort when no better topic fits.
+  - Rules: `bSmart_Protocols/knowledge.md`.
 - `decisions.md` — project-specific decisions and approvals.
 - `workdocs/` — project-local working documents, investigations, and handoffs; not the final home for concise knowledge items.
 - `sandbox/` — disposable/derived execution or test area; not the source of truth.

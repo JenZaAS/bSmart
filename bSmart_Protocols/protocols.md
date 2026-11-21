@@ -17,7 +17,7 @@ protocol_index:
 - `project-commands.md` | Shared `/project` command behavior and Hermes, Cursor, Codex, and Claude adapters | Using or testing `/project` commands |
 | `project-storage.md` | Project and sandbox roots, mounts, setup prompts, and storage checks | Configuring or troubleshooting project storage |
 | `workdocs.md` | Structured workdocs and larger multi-session work | Creating or maintaining a workdoc |
-| `knowledge.md` | Reusable knowledge storage and retrieval boundaries | Creating or searching bKnowledge |
+| `knowledge.md` | Knowledge handling: look before guessing, save on your own, topic layout, two-level indexes, bKnowledgeCheck, one-time migration | An unfamiliar name; saving or searching knowledge; a Knowledge startup line; before a handoff |
 | `history.md` | Concise completed-work diary rules | Recording or reviewing completed work |
 | `dreaming.md` | Scheduled instance-content maintenance and Dreaming safety | Configuring, running, or reviewing Dreaming |
 | `instance-git-onboarding.md` | Optional Git for instance content and projects | Configuring instance/content Git |

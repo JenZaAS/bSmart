@@ -481,12 +481,24 @@ function perform(command, c, session, handoff) {
     const root = path.join(c.projectsRoot, project);
     fs.mkdirSync(root);
     const projectMd = `# ${project}\n\nproject_name: ${JSON.stringify(project)}\nstatus: active\nowner: unspecified\nobjective: unspecified\nagent_focus: unspecified\n\n## Context routing\n\nBefore coding, debugging, testing, designing, or documenting this project, consult \`knowledge/task-context-routing.md\`. Load only the task-specific knowledge bundle it identifies; do not load the complete knowledge tree by default.\n`;
-    const routingMd = `# ${project} task context routing\n\nPurpose: keep agent context small by mapping work to the smallest useful set of project knowledge files.\n\n## Default\n\nAlways load:\n\n- \`project.md\`\n- \`knowledge/README.md\`\n- this file\n\nThen select one or more task bundles below. Load only the task-specific knowledge bundle(s) required for the current task; do not load unrelated bundles by default.\n\n## Task bundles\n\nAdd project-specific task bundles here. Each bundle should list only the knowledge, workstream, source-navigation, or decision files needed for that kind of task.\n\n### General project orientation\n\n- \`knowledge/general/\` only when the task needs broad project or domain orientation\n- the relevant code-knowledge file only when source navigation is required\n\n## Routing rules\n\n- Add a bundle only when the task requires it or the first investigation shows that the initial bundle is insufficient.\n- Prefer current application callers and active implementation paths over inherited helpers or stale flows.\n- Register non-authoritative or legacy flows explicitly and consult their warning note before relying on them.\n- Promote stable, reusable routing conclusions into this file; keep temporary task details in the relevant workstream or workdoc.\n`;
+    const routingMd = `# ${project} task context routing\n\nPurpose: keep agent context small by mapping work to the smallest useful set of project knowledge files.\n\n## Default\n\nAlways load:\n\n- \`project.md\`\n- \`knowledge/README.md\`\n- \`knowledge/index.md\` (topics; each topic has its own index.md)\n- this file\n\nThen select one or more task bundles below. Load only the task-specific knowledge bundle(s) required for the current task; do not load unrelated bundles by default.\n\n## Task bundles\n\nAdd project-specific task bundles here. Each bundle should list only the knowledge, workstream, source-navigation, or decision files needed for that kind of task.\n\n### General project orientation\n\n- the matching topic under \`knowledge/code/\`, \`knowledge/tools/\`, or another topic folder; \`knowledge/general/\` only when nothing better fits\n- the relevant code-knowledge file only when source navigation is required\n\n## Routing rules\n\n- Add a bundle only when the task requires it or the first investigation shows that the initial bundle is insufficient.\n- Prefer current application callers and active implementation paths over inherited helpers or stale flows.\n- Register non-authoritative or legacy flows explicitly and consult their warning note before relying on them.\n- Promote stable, reusable routing conclusions into this file; keep temporary task details in the relevant workstream or workdoc.\n`;
     c.ops.writeFileSync(path.join(root, 'project.md'), projectMd);
-    for (const dir of ['', 'data', 'sandbox', 'knowledge', 'knowledge/general', 'knowledge/code', 'workdocs']) {
+    for (const dir of ['', 'data', 'sandbox', 'knowledge', 'workdocs']) {
       fs.mkdirSync(path.join(root, dir), { recursive: true });
       c.ops.writeFileSync(path.join(root, dir, 'README.md'), `# ${dir || project}\n`);
     }
+    // Default knowledge topics, each with its own index (bSmart_Protocols/knowledge.md).
+    const topics = [
+      ['code', 'language-agnostic code notes; one subfolder per language, such as code/<language>/'],
+      ['tools', 'apps, services, and external references; one subfolder each'],
+      ['general', 'last resort when no better topic fits; move notes out when a topic appears'],
+    ];
+    for (const [topic] of topics) {
+      fs.mkdirSync(path.join(root, 'knowledge', topic), { recursive: true });
+      c.ops.writeFileSync(path.join(root, 'knowledge', topic, 'index.md'), `# ${topic}\n\nOne line per note or subtopic.\n\n`);
+    }
+    const topicLines = topics.map(([topic, text]) => `- [${topic}/](${topic}/index.md) - ${text}`).join('\n');
+    c.ops.writeFileSync(path.join(root, 'knowledge', 'index.md'), `# Knowledge index\n\nTopics only, one line each. Each topic has its own index.md.\n\n${topicLines}\n`);
     c.ops.writeFileSync(path.join(root, 'knowledge', 'task-context-routing.md'), routingMd);
     c.ops.writeFileSync(path.join(root, 'decisions.md'), '# Decisions\n');
     const { rows } = ensureIndex(c);

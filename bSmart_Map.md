@@ -67,6 +67,8 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | `./bSmart-System/bSmart_Templates/` | Templates for instance and project files | low | generation only |
 | `./bSmart-System/bSmart_Templates/role.template.md` | Historical role-file shape. Roles are deprecated | low | reading old instance data |
 | `./bSmart-System/bSmart_Templates/current-role.template.md` | Historical current-role selector. Not a session project | low | reading old instance data |
+| `./bSmart-System/bSmart_Templates/knowledge-index.template.md` | Top index of a knowledge root: topics only | low | new knowledge root |
+| `./bSmart-System/bSmart_Templates/knowledge-topic-index.template.md` | Topic index: one line per note or subtopic | low | new topic |
 | `./bSmart-System/bSmart_Templates/required-reading-default.md` | Default when a project declares no required reading: how to declare a list | low | no list declared; adding one |
 | `./bSmart-System/bSmart_Docs/roles-deprecated.md` | Library-style note: what replaced roles and how to read old role files | low | old role files |
 | `./bSmart-System/bSmart_Templates/CLAUDE.md` | Claude launcher hook; identical redirect content to AGENTS.md | low | launcher only |
@@ -91,6 +93,8 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | `./bSmart-System/scripts/bsmart-instance-upgrade` | Explicit existing-instance startup repair with backups | low | system upgrade/setup |
 | `./bSmart-System/scripts/bsmart-update` | Finalize an already-pulled system update without pulling Git | low | explicit update |
 | `./bSmart-System/scripts/bsmart-release-notice` | Show flagged user-facing news once per instance | low | update and startup |
+| `./bSmart-System/scripts/bKnowledgeCheck` | Knowledge layout check, safe `--fix`, `--summary` for startup, one-time `--migrate` | low | startup, handoff, upgrade |
+| `./bSmart-System/scripts/bsmart_knowledge.py` | Shared knowledge check, fix, and migration code for bKnowledgeCheck | low | execution only |
 | `./bSmart-System/tests/` | System validation | low | explicit testing only |
 | `./bSmart-System/bSmart_Docs/` | Human-facing system documentation | low | explicit request only |
 
@@ -145,7 +149,7 @@ It should describe only that project’s:
 | `./projects/<project>/workstreams/<workstream>/handoff.md` | Workstream handoff, separate from the project handoff | selected workstream |
 | `./projects/<project>/bSmart_ProjectMap.md` | Detailed project map | map lookup or focused project-map task |
 | `./projects/<project>/AGENTS.md` | Project/client-specific instructions | selected project |
-| `./projects/<project>/knowledge/` | Project-specific reusable knowledge | relevant task only |
+| `./projects/<project>/knowledge/` | Project-specific reusable knowledge in topic folders; `index.md` lists topics | relevant task only |
 | `./projects/<project>/decisions.md` | Project decisions and approvals | relevant task only |
 | `./projects/<project>/workdocs/` | Larger project work | relevant task only |
 | `./projects/<project>/data/` | Supporting project material | relevant task only |
@@ -169,7 +173,9 @@ It should describe only that project’s:
 | `./bSmart/bSmart_Log.md` | Instance decision/action log | high | explicit request only |
 | `./bSmart/bHistory.md` | Concise completed-work history | medium | explicit request or handoff |
 | `./bSmart/Workdocs/` | Instance-level larger work | high | relevant task only |
-| `./bSmart/Library/` | Instance-wide reusable knowledge | medium | bKnowledge lookup |
+| `./bSmart/Library/` | Instance-wide reusable knowledge in topic folders; `index.md` lists topics | medium | index first, then the topic's `index.md` |
+| `./bSmart/Library/CHANGELOG.md` | Log of knowledge moves and fixes | high | explicit request only |
+| `./bSmart/State/knowledge-migration.yaml` | One-time knowledge layout migration marker | low | bKnowledgeCheck only |
 | `./bSmart/State/` | Instance configuration and machine/runtime state | high | bStart/tools as required |
 | `./bSmart/State/bprotective.json` | bProtective on/off state when the instance content root is used | high | execution only |
 | `./bSmart/State/bprotective.yaml` | Optional bProtective protected paths and extra patterns; cannot enable the guard | medium | execution only |
@@ -194,6 +200,7 @@ The compact startup result should tell the agent which lookups are available:
 ```text
 python ./scripts/bFind <scope> <item>
 python ./scripts/bFeature <feature-name>
+python ./scripts/bKnowledgeCheck [--fix]
 ```
 
 The exact interfaces are defined by their respective features. Lookup tools should return only the requested entry or a compact relevant result.
