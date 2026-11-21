@@ -55,5 +55,5 @@ Status:
 
 Archive decision:
 - Ask operator at completion: “Do you want to save this WORKDOC into the bSmart library?”
-- If yes, categorize it using `/workspace/bSmart/Library/CATEGORIES.md` before moving/copying it.
-- If no category fits, propose a new category name + description; let the operator accept, modify, decline, or choose an existing category.
+- Either way, save its durable lessons as knowledge notes yourself (`bSmart_Protocols/knowledge.md`).
+- If yes, place it in a Library topic folder yourself (create the topic if none fits; `CATEGORIES.md`, when present, is a guide) and add its index line in the same step.

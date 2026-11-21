@@ -70,6 +70,18 @@ knowledge_upkeep:
   code_reference: Knowledge entries that describe code name it in a `Code:` line (file and function) so they can be found. Format in bSmart_Protocols/knowledge.md.
   why: Knowledge that drifts from the code gives agents conflicting sources of truth.
 
+knowledge_handling:
+  applies_to: Every session. Automatic; never ask the user to approve or organise knowledge.
+  rule:
+    - look before guessing - search the project knowledge index, the Library index (including glossary/), the notes, and memory before asking about or guessing an unfamiliar name; if nothing matches, say "not found in knowledge"
+    - save useful findings, references, and decisions as notes on your own, with Source and Date lines
+    - project-specific notes go in the project's knowledge/, notes useful beyond it in the instance Library
+    - notes live in topic folders (defaults code/, tools/, general/ as last resort), never directly in a knowledge root; add the index line in the same step
+    - a user correction of a term or reference becomes a Library glossary/ note
+    - when bStart prints a Knowledge line, and before a handoff, run scripts/bKnowledgeCheck and fix the findings yourself; log changes in the root's CHANGELOG.md
+  details: bSmart_Protocols/knowledge.md
+  why: Agents that guess instead of looking repeat old mistakes; unsorted notes are not found.
+
 required_reading:
   applies_to: Architecture or code work in a project whose knowledge/task-context-routing.md or project.md declares a required reading bundle. Then it is mandatory; without one the task continues with a one-line note.
   rule: required_reading_bundle in bSmart_Protocols/projects.md; the role steps are in bArchitect, bCoder, and bCritic.
@@ -138,6 +150,7 @@ update_workflow:
     - back up and synchronize HERMES.md, AGENTS.md, and CLAUDE.md
     - create only missing standard content
     - verify, refresh, or install the managed /project integration
+    - run the one-time knowledge layout migration (scripts/bKnowledgeCheck --migrate; marker State/knowledge-migration.yaml)
     - print a preview of user-facing release news without marking it seen; interactive bStart records that news once; a cron session passes bStart --no-record or sets BSMART_NEWS_NO_RECORD=1 so the print is not marked seen
   first_reply_rule: Preserve the bStart startup and command-help lines in the first reply; instance-specific greetings may precede them but must not replace them. If startup prints a bSmart news block, relay that news briefly in the first reply, once, and do not repeat it later.
   preserve: Never overwrite instance identity, project handoffs, legacy migration files, projects, secrets, or unrelated content.
@@ -146,6 +159,7 @@ update_workflow:
 deterministic_lookups:
   map: python ./scripts/bFind <scope> <item>
   feature: python ./scripts/bFeature <feature-name>
+  knowledge_check: python ./scripts/bKnowledgeCheck [--fix]
   rule: Return only the requested compact entry; do not recursively search the workspace.
 
 instance_git:
@@ -232,6 +246,7 @@ startup_sequence:
   - when the operator asks to set up or update a Hermes runtime, load /workspace/bSmart-System/bSmart_Protocols/hermes-runtime-onboarding.md and use only the sections that match that host. The state.db section is incident-only
   - first visible assistant reply starts with the bStart greeting: "Hi, <operator-name>!"
   - then show the compact bStart startup summary
+  - if bStart printed a `Knowledge:` line, fix it yourself during the session as bSmart_Protocols/knowledge.md says; it never blocks startup and needs no user approval
   - if bStart, bsmart-startup-check, bsmart-update, or bsmart-instance-upgrade printed a bSmart news block, relay that news briefly in this reply, once, and do not repeat it on later turns
   - include one short help line: "Info keywords: help, features, setup, projects, tasks, safety."
   - ask whether to continue the current TODO item

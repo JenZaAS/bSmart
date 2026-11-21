@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.55-draft
-updated: 2026-11-11 07:10 UTC
+current_version: 0.1.56-draft
+updated: 2026-11-21 09:30 UTC
 status: draft
 ```
 
@@ -26,6 +26,39 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.56-draft
+
+```yaml
+release_type: knowledge_handling
+news: |
+  New: agents now handle knowledge on their own. Before guessing an
+  unfamiliar name they search the knowledge indexes, notes, and memory.
+  They save useful findings with source and date without being asked, and
+  when you correct a term they save the correction so no agent repeats the
+  mistake. Notes live in topic folders (code/, tools/, and general/ as a
+  last resort) with a short index in each, in the project's knowledge/ or
+  the Library. A quick check at startup lists problems and the agent fixes
+  them itself. Your existing knowledge is sorted into this layout once,
+  automatically; every change is logged in CHANGELOG.md. Nothing for you
+  to approve.
+scope:
+  - bSmart_Protocols/knowledge.md rewritten around seven habits (look before guessing; save on your own with Source and Date; project knowledge/ vs instance Library; topic folders only; index line in the same step; user corrections become Library glossary/ notes; run bKnowledgeCheck and fix findings yourself) plus Layout, Indexes, Check and fix, One-time migration, and an "Only if there's an issue" section; existing bKnowledge intent, URL, MATLAB, Code-line, and verification sections kept and pointed at the new layout (code/<language>/, tools/<some-app>/)
+  - layout: the Library root and each project knowledge/ are knowledge roots with the same layout; defaults code/ (language-agnostic notes allowed directly in it), tools/, general/ (last resort); other topics, including domain topics at the root, created as needed and nested to any depth; no knowledge/ subfolder inside the Library; root housekeeping allowlist README.md, index.md, CHANGELOG.md, CATEGORIES.md, task-context-routing.md
+  - two-level index: root index.md lists topics only; each topic index.md lists its notes and subtopics; an existing README.md counts as an index and is never deleted
+  - bSmart.md knowledge_handling core habit, knowledge_check lookup, startup and update_effects lines; protocols.md row
+  - new scripts/bKnowledgeCheck (CLI) and scripts/bsmart_knowledge.py (shared code), standard library only; reports root_file, default_root_file, nested_root, missing_index, unindexed, broken_link, placeholder, and advisory general_note; exit 0 clean, 1 findings, 2 usage; --fix creates missing index.md, adds placeholder lines, removes broken links, never moves notes; --summary for startup with a one-second walk limit; --json
+  - change log: every change by --fix, --migrate, or an agent is appended to <knowledge root>/CHANGELOG.md
+  - one-time migration: bsmart-instance-upgrade (so bsmart-update) runs bKnowledgeCheck --migrate; it lifts <root>/knowledge/* into the root without overwriting, creates the defaults with indexes, fixes indexes and links, logs, and lists loose notes for the agent; marker bSmart/State/knowledge-migration.yaml (status pending or done, version 1); bStart prints a pending line until the agent has sorted the notes and rerun --migrate
+  - bStart.py runs bKnowledgeCheck --summary (5 s hard timeout, BSMART_KNOWLEDGE_CHECK=0 skips) and prints one Knowledge line only when there is work; never blocks or changes the exit code
+  - projects.md: knowledge structure lists index.md, code/, tools/, general/; existing_project_rule names the one-time knowledge migration; handoff runs the check first; templates list the two index templates
+  - new templates knowledge-index.template.md and knowledge-topic-index.template.md; project-knowledge README, project.md, task-context-routing, workdocs README, and WORKDOC templates updated to the layout (the agent, not the operator, picks the Library topic)
+  - /project add creates knowledge/index.md and code/, tools/, general/ each with index.md
+  - bSmart_Map.md, bSmart_Features.md Library card, README core habit and Library section
+verification:
+  - new tests/test_knowledge_check.py (check findings and allowlist, README as index, nested topics, fix and change log, broken links, general advisory, summary and time limit, migration move-up, conflicts, marker once, docs and templates) and a bStart startup-line test
+  - python and node tests pass, including the public-tree privacy guard; duplicate and contradiction check of the knowledge text
+```
 
 ## 0.1.55-draft
 

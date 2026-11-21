@@ -1,0 +1,207 @@
+#!/usr/bin/env python3
+"""Check the knowledge layout of this instance and fix the safe parts.
+
+Checks the instance Library and every project's knowledge/ folder against
+bSmart_Protocols/knowledge.md and reports:
+
+  root_file          note directly in a knowledge root
+  default_root_file  note directly in tools/ or general/
+  nested_root        a knowledge/ folder inside a knowledge root
+  missing_index      topic folder without index.md (or README.md)
+  unindexed          note or subtopic missing from its folder's index
+  broken_link        index link to a missing file
+  general_note       note under general/ (move it if a better topic fits)
+  placeholder        index line still has the placeholder description
+
+--fix makes the safe mechanical fixes only: create a missing index.md, add
+missing index lines with a placeholder description, remove broken links.
+It never moves a note; sorting notes into topics is the agent's call.
+--migrate runs the one-time migration for this version (see knowledge.md).
+Every change is appended to <knowledge root>/CHANGELOG.md.
+
+Exit codes: 0 clean, 1 findings remain (or migration pending), 2 usage error.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).absolute().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+import bsmart_knowledge as bk
+from bsmart_instance import default_content_root, select_instance_project_root
+
+SYSTEM_ROOT = SCRIPT_DIR.parent
+OFF_VALUES = {"0", "off", "false", "no"}
+STARTUP_SECONDS = 1.0
+
+
+def configure_output_streams() -> None:
+    """UTF-8 output on Windows pipes; escape what the stream cannot encode."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="backslashreplace")
+        except (AttributeError, OSError, ValueError):
+            try:
+                reconfigure(errors="backslashreplace")
+            except (AttributeError, OSError, ValueError):
+                continue
+
+
+def script_command() -> str:
+    return f"python {Path(__file__).absolute()}"
+
+
+def resolve_roots(args) -> tuple[Path, list[tuple[str, Path]], bk.Budget | None]:
+    content = Path(args.content_root).expanduser()
+    budget = bk.Budget(seconds=args.max_seconds) if args.max_seconds else None
+    if args.root:
+        roots = [(f"root {Path(r).name}", Path(r).expanduser()) for r in args.root]
+        return content, roots, budget
+    if args.projects_root:
+        projects = Path(args.projects_root).expanduser()
+    else:
+        projects = select_instance_project_root(content.parent)
+    return content, bk.knowledge_roots(content, projects, args.project, budget), budget
+
+
+def print_reports(reports: list[bk.RootReport], as_json: bool) -> None:
+    if as_json:
+        payload = [{
+            "label": r.label,
+            "root": str(r.root),
+            "partial": r.partial,
+            "findings": [{"kind": f.kind, "path": f.rel, "fixable": f.fixable, "advisory": f.advisory}
+                         for f in r.findings],
+            "changes": r.changes,
+        } for r in reports]
+        print(json.dumps(payload, indent=2))
+        return
+    total = sum(len(r.problems) for r in reports)
+    fixable = sum(1 for r in reports for f in r.findings if f.fixable)
+    advisory = sum(1 for r in reports for f in r.findings if f.advisory)
+    print(f"bKnowledgeCheck: {len(reports)} knowledge root(s), {total} finding(s), "
+          f"{fixable} fixable with --fix, {advisory} advisory")
+    for report in reports:
+        print(f"[{report.label}] {report.root}")
+        for change in report.changes:
+            print(f"  changed: {change}")
+        if report.partial:
+            print("  partial: stopped at the time limit; run again without --max-seconds")
+        if not report.problems:
+            print("  ok")
+        for finding in report.findings:
+            prefix = "advisory " if finding.advisory else ""
+            print(f"  {prefix}{finding.kind}: {finding.rel} - {bk.KIND_HINTS[finding.kind]}")
+    if total:
+        print("next: fix the findings yourself (bSmart_Protocols/knowledge.md); log moves in the root's CHANGELOG.md")
+
+
+def summary_line(content: Path, roots: list[tuple[str, Path]], budget: bk.Budget | None) -> str:
+    """One line for startup. Empty when there is nothing to say."""
+    if roots and not bk.migration_done(content):
+        return (f"Knowledge: one-time layout migration pending. Run `{script_command()} --migrate`, "
+                "sort the files it lists into topics, then run it again. No user approval needed.")
+    total = fixable = 0
+    partial = False
+    for label, root in roots:
+        report = bk.check_root(root, label, budget)
+        total += len(report.problems)
+        fixable += sum(1 for f in report.findings if f.fixable)
+        partial = partial or report.partial
+        if partial:
+            break
+    if partial:
+        return f"Knowledge: check stopped at the startup time limit (slow disk?). Run `{script_command()}` when convenient."
+    if total:
+        return (f"Knowledge: {total} layout finding(s), {fixable} fixable. Run `{script_command()}` "
+                "and fix them yourself; log changes in CHANGELOG.md.")
+    return ""
+
+
+def run_migration(content: Path, roots: list[tuple[str, Path]], force: bool, as_json: bool) -> int:
+    if bk.migration_done(content) and not force:
+        print(f"knowledge migration: already done ({bk.state_path(content)})")
+        return 0
+    reports: list[bk.RootReport] = []
+    pending: list[str] = []
+    for label, root in roots:
+        changes, conflicts, report = bk.migrate_root(root, label, SYSTEM_ROOT)
+        report.changes = changes
+        reports.append(report)
+        for item in conflicts:
+            pending.append(f"{label}: conflict, not moved: {item}")
+        for finding in report.findings:
+            if finding.kind in {"root_file", "default_root_file", "nested_root"}:
+                pending.append(f"{label}: {finding.kind}: {finding.rel}")
+    status = "pending" if pending else "done"
+    try:
+        bk.write_state(content, status, pending)
+    except OSError as exc:
+        print(f"knowledge migration: could not write state: {exc}", file=sys.stderr)
+    print_reports(reports, as_json)
+    if pending:
+        print("knowledge migration: pending. Sort these into topic folders, update the indexes,")
+        print("log each move in the root's CHANGELOG.md, then run --migrate again:")
+        for item in pending:
+            print(f"  - {item}")
+        return 1
+    print(f"knowledge migration: done ({bk.state_path(content)})")
+    return 0
+
+
+def main() -> int:
+    configure_output_streams()
+    parser = argparse.ArgumentParser(description="Check and tidy the knowledge layout (Library and project knowledge/).")
+    parser.add_argument("--content-root", default=str(default_content_root(SYSTEM_ROOT)))
+    parser.add_argument("--projects-root", help="projects root; default: this instance's project root")
+    parser.add_argument("--project", help="check only this project's knowledge/ (skips the Library)")
+    parser.add_argument("--root", action="append", help="check this knowledge root only; repeatable")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--fix", action="store_true", help="make the safe fixes and log them")
+    mode.add_argument("--migrate", action="store_true", help="run the one-time migration (once per instance)")
+    mode.add_argument("--summary", action="store_true", help="one line for startup; nothing when clean")
+    parser.add_argument("--force", action="store_true", help="with --migrate: run again even when done")
+    parser.add_argument("--max-seconds", type=float, default=None, help="stop walking after this many seconds")
+    parser.add_argument("--json", action="store_true", help="machine-readable report")
+    args = parser.parse_args()
+
+    if args.summary:
+        if os.environ.get("BSMART_KNOWLEDGE_CHECK", "").strip().lower() in OFF_VALUES:
+            return 0
+        if args.max_seconds is None:
+            args.max_seconds = STARTUP_SECONDS
+    content, roots, budget = resolve_roots(args)
+    if args.summary:
+        line = summary_line(content, roots, budget)
+        if line:
+            print(line)
+        return 0
+    if args.migrate:
+        return run_migration(content, roots, args.force, args.json)
+    reports: list[bk.RootReport] = []
+    for label, root in roots:
+        if args.fix:
+            changes = bk.fix_root(root, SYSTEM_ROOT)
+            report = bk.check_root(root, label, budget)
+            report.changes = changes
+        else:
+            report = bk.check_root(root, label, budget)
+        reports.append(report)
+    if not roots and not args.json:
+        print("bKnowledgeCheck: no knowledge roots found (no Library, no project knowledge/)")
+        return 0
+    print_reports(reports, args.json)
+    return 1 if any(r.problems for r in reports) else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

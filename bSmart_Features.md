@@ -416,7 +416,7 @@ included_capabilities:
   - Verification notes
   - Workdoc archive flow
 notes:
-  - Archive completed workdocs into the Library only after operator choice and category selection.
+  - Archive a completed workdoc into the Library only after operator choice; the agent picks the Library topic and saves the durable lessons as knowledge notes on its own.
 ```
 
 ### Library
@@ -429,21 +429,28 @@ visibility: user-facing
 short_description: Store and reuse durable knowledge.
 files:
   - /workspace/bSmart/Library/
-description: Stores reusable notes, references, templates, completed outputs, and curated knowledge so they can be browsed, improved, and reused later.
+  - /workspace/bSmart-System/bSmart_Protocols/knowledge.md
+  - /workspace/bSmart-System/scripts/bKnowledgeCheck
+description: Stores reusable notes, references, templates, completed outputs, and curated knowledge so they can be browsed, improved, and reused later. Agents look here before guessing an unfamiliar name, save useful findings on their own, and keep notes in indexed topic folders.
 commands:
   - show library
   - search library <query>
   - create bKnowledge <source>
+  - python ./scripts/bKnowledgeCheck [--fix]
 included_capabilities:
   - Reusable knowledge storage
   - Concise project code-knowledge/navigation items
   - Reference material
   - Templates and examples
   - Archived completed outputs
+  - Look before guessing, save on your own, corrections as glossary notes
+  - Topic folders (defaults code/, tools/, general/) with a two-level index
+  - bKnowledgeCheck layout check, safe fixes, change log, one-time migration
 notes:
   - Library is top-level because exposing it encourages active user interaction and curation.
   - `bSmart_Docs/roles-deprecated.md` is a library-style note: roles are deprecated, project handoffs replaced them, and old role files are historical.
-  - Project-local bKnowledge is stored under the active project's `knowledge/general/` or `knowledge/code/`; it is not placed in the global Library by default.
+  - Project-specific knowledge goes in the project's `knowledge/` topics, knowledge useful beyond the project in the Library; both use the same layout (`bSmart_Protocols/knowledge.md`).
+  - Startup runs a fast, non-blocking layout check; the agent fixes findings itself and logs them in the root's CHANGELOG.md.
   - Archive is an action or state within Projects, Workdocs, and Library, not a separate top-level feature.
 ```
 

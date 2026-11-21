@@ -373,6 +373,50 @@ def release_news_lines(system: Path, content: Path, *, record: bool) -> list[str
     return [line for line in (proc.stdout or "").splitlines() if line.strip()]
 
 
+KNOWLEDGE_CHECK_TIMEOUT_SECONDS = 5
+
+
+def knowledge_check_script() -> Path | None:
+    """This file is also copied to the workspace root, so search both layouts."""
+    for path in (
+        SCRIPT_ROOT / "scripts" / "bKnowledgeCheck",
+        SCRIPT_ROOT / "bSmart-System" / "scripts" / "bKnowledgeCheck",
+    ):
+        if path.is_file():
+            return path
+    return None
+
+
+def knowledge_check_lines(content: Path, root: Path | None) -> list[str]:
+    """One non-blocking line about the knowledge layout, or nothing.
+
+    bKnowledgeCheck --summary stops walking after about a second, so a slow
+    mount cannot stall startup; a hard timeout backs that up. The agent
+    fixes findings itself (bSmart_Protocols/knowledge.md). Set
+    BSMART_KNOWLEDGE_CHECK=0 to skip it. A failure here never fails startup.
+    """
+    if os.environ.get("BSMART_KNOWLEDGE_CHECK", "").strip().lower() in {"0", "off", "false", "no"}:
+        return []
+    script = knowledge_check_script()
+    if script is None:
+        return []
+    command = [sys.executable, str(script), "--summary", "--content-root", str(content)]
+    if root is not None:
+        command += ["--projects-root", str(root)]
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    env["PYTHONUTF8"] = "1"
+    try:
+        proc = subprocess.run(command, text=True, encoding="utf-8", errors="replace",
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
+                              timeout=KNOWLEDGE_CHECK_TIMEOUT_SECONDS, check=False)
+    except subprocess.TimeoutExpired:
+        return ["Knowledge: check skipped (timed out; slow disk?). Run scripts/bKnowledgeCheck when convenient."]
+    except OSError:
+        return []
+    return [line for line in (proc.stdout or "").splitlines() if line.strip()][:1]
+
+
 def session_lines() -> tuple[str, str]:
     """Show this process's session. An unset variable is Free mode, not a guess."""
     project = os.environ.get("BSMART_SESSION_PROJECT", "").strip()
@@ -438,6 +482,7 @@ def main() -> int:
         selected = os.environ.get("BSMART_SESSION_PROJECT", "").strip()
         if selected and selected.lower() not in {"none", "free"} and not (root / selected).is_dir():
             warnings.append(f"Project {selected} is not in the projects root.")
+    knowledge_lines = knowledge_check_lines(content, root)
     for path in context_files:
         try:
             loaded_context.append((path, path.read_text(encoding="utf-8", errors="replace")))
@@ -464,6 +509,8 @@ def main() -> int:
     print(git_status(content, "bSmart-Instance"))
     print(update_line)
     for line in integrity:
+        print(line)
+    for line in knowledge_lines:
         print(line)
     for warning in warnings:
         print(f"> {warning}")
