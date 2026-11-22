@@ -113,6 +113,10 @@ features:
     status: draft
     summary: Optionally sharpen an idea with short questions, one at a time.
     detail_lookup: python ./scripts/bFeature bAsk
+  - name: bTeach
+    status: draft
+    summary: Optionally get one thing explained at your level, or a short course on request.
+    detail_lookup: python ./scripts/bFeature bTeach
   - name: bCoder
     status: draft
     summary: Optionally code by a short checklist that keeps knowledge in step.
@@ -185,6 +189,7 @@ commands:
 20. bCoder — Optionally code by a short checklist that keeps knowledge in step.
 21. bArchitect — Optionally plan a code change for a coder and close it with a knowledge check.
 22. bCritic — Optionally review a plan, code, or any document with a score and a kept review file.
+23. bTeach — Optionally get one thing explained at your level, or a short course on request.
 
 ## Feature index
 
@@ -210,6 +215,7 @@ commands:
 20. bCoder
 21. bArchitect
 22. bCritic
+23. bTeach
 
 ## Features by group
 
@@ -229,6 +235,7 @@ commands:
 - History — Keep a concise diary of completed work.
 - Dreaming — Improve local bSmart content while you sleep.
 - Improvement Scout — Find external ideas to improve bSmart itself.
+- bTeach — Optionally get one thing explained at your level, or a short course on request.
 
 ### Finance
 - bAccountant — Optionally turn an agent into a cautious accountant assistant.
@@ -325,6 +332,32 @@ included_capabilities:
 notes:
   - For a formal build brief, use bQAbuild. For multi-session work, use bMap.
   - Asking questions never gives permission to edit, build, commit, or publish.
+```
+
+### bTeach
+
+```yaml
+name: bTeach
+group: Knowledge
+status: draft
+visibility: user-facing
+optional: true
+short_description: Optionally get one thing explained at your level, or a short course on request.
+files:
+  - /workspace/bSmart-System/bSmart-Extensions/bTeach/
+  - /workspace/bSmart-System/bSmart-Extensions/bTeach/teach.md
+description: User-invoked teaching. By default the agent explains one code area, concept, or glossary term in short plain sentences at the user's level, points to the glossary entry, ADR, or source it rests on, and checks understanding with one question. A multi-session course of short markdown lessons only on request, kept outside the product repo (instance Workdocs/learn/<topic>/ by default). Never runs during a build; it is offered afterwards.
+commands:
+  - teach me <area, concept, or term> (natural-language request)
+  - start a course on <topic> (natural-language request)
+included_capabilities:
+  - One explanation at the user's level, then one check question
+  - Glossary entries and ADRs looked up and named
+  - Optional course with goal, sources, short lessons, and a progress list
+notes:
+  - Deferred while a bSwarm run or coding task is in progress.
+  - Teaching never gives permission to edit, build, commit, or publish.
+
 ```
 
 ### Projects
@@ -772,7 +805,7 @@ included_capabilities:
   - Bundled role skills (`bCoder`, `bArchitect`, `bCritic`)
   - Bundled selective source-context retrieval (`bSelective`)
   - Bundled multi-agent orchestration protocol (`bSwarm`)
-  - Bundled multi-session planning maps (`bMap`) and short interviews (`bAsk`)
+  - Bundled multi-session planning maps (`bMap`), short interviews (`bAsk`), and teaching (`bTeach`)
 notes:
   - Extensions are discovered from /workspace/bSmart-Extensions subfolders.
 ```
