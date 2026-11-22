@@ -201,9 +201,41 @@ final report; nothing else in the run changes.
   review file (bCritic) and in the job report.
 - This check does not change permissions, models, or round limits.
 
+### Design context and change risk
+
+The roles follow `bSmart_Protocols/design-context.md` (strategic note, ADR
+consult, glossary, change risk). bSwarm adds:
+
+- The parent checks that the architect plan has `strategic_note` and
+  `change_risk` before the coder stage, and sends it back if not.
+- Child prompts for the coder carry the copied ADR rules, `glossary_terms`,
+  and `standards_rules` only, never ADR, glossary, or standards files, plus the
+  `test_plan`.
+- The programmer critic and any code auditor always review on two axes: spec
+  and coding standards (that protocol, section 5). The parent collects
+  standards candidates into the report; they are report-only.
+- Tests follow that protocol, section 6: the coder writes the planned tests,
+  the critics flag test bloat. A suite prune or an architecture review is a
+  separate job the operator asks for; it writes a proposal report and stops.
+  bSwarm never deletes tests, applies a proposal, or opens a pull request from
+  it.
+- When the class is `one-way`, the parent applies the escalation table in
+  that protocol for the rest of the run: a stricter critic brief (add a
+  critic review when the workflow has none), and at `medium` or `large` blast
+  radius an extra design and code audit with the first model in the instance
+  audit list (section 3), even when the keyword is not `cascade critic
+  audit`. An empty list or a tool that cannot select the model records the
+  audit as `not launched` and the run continues; this is not a preflight
+  block.
+- The parent sends the short heads-up from that protocol when the class is
+  set or raised to `one-way`, and repeats the `Change risk` block in the
+  report and the handoff. No new pause: only `decision` items and a HOLD
+  stop the run.
+
 ## 3. Cascade audit rules
 
-These rules apply only to `cascade critic audit`. Internal critics remain
+These rules apply to `cascade critic audit` and to the extra audit a
+`one-way` change risk adds (section 2). Internal critics remain
 same-model; external auditors use other models from the ordered instance-local
 list.
 
@@ -574,6 +606,8 @@ role_output:
   changed_files: [<paths or none>]
   knowledge_changes: [<path: one-line change> or "no knowledge changes needed"]
   required_reading: not_declared | acknowledged <plan path> | missing  # section 2, Required reading check
+  change_risk: <door>/<blast_radius>, set by <role> | raised by <role>: <why>  # section 2, Design context
+  adrs_consulted: [<ADR id> or none matched or no ADRs]  # architect and critic
   coder_checks: [<check: passed | failed> or none]  # coder only, when a bundle is declared
   artifacts: [<architect-plan.md/branch-output.md/etc.>]
   evidence: [top 3-5]
@@ -664,7 +698,11 @@ Keep the report quick-glance:
 - key evidence;
 - unresolved disagreements;
 - open `decision` issues by ID, and the count of new backlog entries;
-- knowledge changes, or "no knowledge changes needed";
+- knowledge changes, or "no knowledge changes needed", and glossary changes
+  when the project has a glossary;
+- change risk: one line, or the `Change risk` block when escalated;
+- review axes (spec, standards) and any standards candidates;
+- tests: new tests against the plan's budget, and test issues flagged;
 - stage and branch statistics summary;
 - budget/limit status;
 - one next action.

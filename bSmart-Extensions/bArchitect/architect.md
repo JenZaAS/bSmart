@@ -14,7 +14,24 @@ Use this to plan a change for a coder, and to close it.
      `required_reading` in the plan (see "Required reading acknowledgement"
      below). A plan without it is not done. If no bundle is declared, leave
      the block out and follow `not_declared` in that rule.
-3. Write a short plan (`architect-plan.md` when files are used). It is a
+3. Design context (`bSmart_Protocols/design-context.md`). Each step is
+   skipped, with no note, when the project has no ADRs or no glossary.
+   - Strategic note: before designing, write 2-3 lines on how the work fits
+     a bigger plan and what it must keep open or avoid.
+   - ADRs: write a keyword sketch of the job, search the ADR index with it,
+     and read only the matching ADRs. Copy each rule the coder must follow
+     into `must_implement` or `do_not_implement` as one line with the ADR id.
+   - Glossary: read the project's `glossary/index.md` (one hop through
+     `RELATED.md` only when a needed term is not local). Use those words, and
+     copy the terms that bind the coder into `glossary_terms`.
+   - Change risk: classify door and blast radius in `change_risk`.
+   - Coding standards: read the summary of the nearest `CODING_STANDARDS.md`
+     and any files in `coding_standards`; copy only the rules this ticket
+     needs into `standards_rules` (or point to a short summary section).
+   - Tests: write `test_plan` (public interfaces, behaviours and edges to
+     cover, existing tests that already cover the rest; about 3-6 new tests,
+     more only with a one-line reason).
+4. Write a short plan (`architect-plan.md` when files are used). It is a
    context budget for the coder, not a design essay. Defaults:
 
    ```yaml
@@ -28,14 +45,20 @@ Use this to plan a change for a coder, and to close it.
      no_full_bselective_output: true
    ```
 
-4. Give a one-line reason for each relevant region. Keep `must_implement`,
+5. Give a one-line reason for each relevant region. Keep `must_implement`,
    `defer`, and `do_not_implement` sharply separated.
-5. Point the coder to the relevant knowledge entries in `relevant_knowledge`.
+6. Point the coder to the relevant knowledge entries in `relevant_knowledge`.
+   The coder gets no ADR, glossary, or standards files, only what you copied.
 
 Plan format:
 
 ```yaml
 architect_plan:
+  strategic_note: <2-3 lines: bigger plan, what to keep open or avoid; or one-off>
+  change_risk:
+    door: two-way | one-way
+    blast_radius: small | medium | large
+    why: <one sentence>
   target_file_path: <file the coder may change>
   budget: <the defaults above, or the override>
   relevant_regions:
@@ -44,6 +67,17 @@ architect_plan:
       why: <one-line reason only>
   relevant_knowledge:
     - <knowledge path: one-line reason, or none found>
+  adrs_consulted:  # leave out when the project has no ADRs
+    - <ADR id: how it applies, or none matched>
+  glossary_terms:  # leave out when the project has no glossary
+    - <term: one sentence, as in the index>
+  standards_rules:  # leave out when the project has no coding standards
+    - <rule, as written in CODING_STANDARDS.md or a style file>
+  test_plan:
+    interfaces: [<public function, method, or entry point to test through>]
+    cover: [<public behaviour, regression, or risky edge>]
+    existing: [<tests that already cover the rest, or none>]
+    budget: <3-6 new tests, or more: one-line reason>
   must_implement:
     - <required change, max 6 bullets>
   defer:
@@ -105,4 +139,9 @@ After the review accepts the work and before reporting back, do the final
 knowledge check across the whole change: search the knowledge once more for
 everything the change touched, fix what is still stale or missing, keep only
 concise durable lessons, and record the result (what changed, or "no knowledge
-changes needed").
+changes needed"). Do the same for the glossary when the project has one: update
+or prune terms that no longer match, list new candidate terms (do not admit
+them unless they pass the admission bar), and record the glossary result. If
+the work settled a decision that passes the three ADR gates, offer an ADR.
+List standards and test-quality candidates from recurring review misses (preferring a linter,
+type, test, or hook check over a new rule); they are report-only.

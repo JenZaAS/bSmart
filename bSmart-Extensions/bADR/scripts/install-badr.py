@@ -7,16 +7,26 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = ROOT / "templates"
+# (file in the project's ADR folder, template it is copied from)
+FILES = (
+    ("README.md", "README.template.md"),
+    ("template.md", "template.md"),
+    ("template-short.md", "template-short.md"),
+)
 
 
-def install(project_root: Path, force: bool = False) -> list[Path]:
-    target = project_root.resolve() / "docs" / "adr"
+DEFAULT_ADR_PATH = "docs/adr"
+
+
+def install(project_root: Path, force: bool = False, adr_path: str = DEFAULT_ADR_PATH) -> list[Path]:
+    target = project_root.resolve() / Path(adr_path)
     target.mkdir(parents=True, exist_ok=True)
     created = []
-    for name in ("README.md", "template.md"):
+    for name, source in FILES:
         dst = target / name
         if force or not dst.exists():
-            dst.write_text((TEMPLATES / ("README.template.md" if name == "README.md" else name)).read_text(encoding="utf-8"), encoding="utf-8")
+            text = (TEMPLATES / source).read_text(encoding="utf-8")
+            dst.write_text(text, encoding="utf-8", newline="\n")
             created.append(dst)
     return created
 
@@ -25,8 +35,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("project_root", nargs="?", default=".")
     parser.add_argument("--force", action="store_true", help="overwrite bADR-managed files")
+    parser.add_argument("--adr-path", default=DEFAULT_ADR_PATH,
+                        help="ADR folder relative to the project (match adr_path in project.md); default docs/adr")
     args = parser.parse_args()
-    created = install(Path(args.project_root), args.force)
+    if Path(args.adr_path).is_absolute() or ".." in Path(args.adr_path).parts:
+        parser.error("--adr-path must be a relative path inside the project")
+    created = install(Path(args.project_root), args.force, args.adr_path)
     for path in created:
         print(f"created {path}")
     if not created:

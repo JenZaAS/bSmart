@@ -63,12 +63,17 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | `./bSmart-System/bSmart_Protocols/` | Detailed operational protocols | low | need to know |
 | `./bSmart-System/bSmart_Protocols/protocols.md` | Compact protocol index and ownership map | low | compact startup |
 | `./bSmart-System/bSmart_Protocols/hermes-runtime-onboarding.md` | Hermes runtime setup and update. Orchestrated Docker rules cover live Compose and host-local image pull policy | low | Hermes runtime setup or update |
+| `./bSmart-System/bSmart_Protocols/design-context.md` | Strategic note, ADR consult, project glossary, change risk (one-way doors, blast radius), coding standards with the two-axis review, and black-box tests | low | designing, planning, or reviewing project work |
 | `./bSmart-System/bSmart_Protocols/roles-and-concurrency.md` | Deprecated roles, session-scoped projects, and `.bLock` file concurrency | low | concurrency or old role files |
 | `./bSmart-System/bSmart_Templates/` | Templates for instance and project files | low | generation only |
 | `./bSmart-System/bSmart_Templates/role.template.md` | Historical role-file shape. Roles are deprecated | low | reading old instance data |
 | `./bSmart-System/bSmart_Templates/current-role.template.md` | Historical current-role selector. Not a session project | low | reading old instance data |
 | `./bSmart-System/bSmart_Templates/knowledge-index.template.md` | Top index of a knowledge root: topics only | low | new knowledge root |
 | `./bSmart-System/bSmart_Templates/knowledge-topic-index.template.md` | Topic index: one line per note or subtopic | low | new topic |
+| `./bSmart-System/bSmart_Templates/glossary-index.template.md` | Project glossary index: one line per term | low | first glossary term |
+| `./bSmart-System/bSmart_Templates/glossary-letter.template.md` | Project glossary letter file: longer term entries | low | term needs more than its index line |
+| `./bSmart-System/bSmart_Templates/glossary-related.template.md` | Links from one glossary folder to others, with a label | low | first glossary link |
+| `./bSmart-System/bSmart_Templates/coding-standards.template.md` | Optional CODING_STANDARDS.md for a repo or module, with a short summary | low | first coding standard |
 | `./bSmart-System/bSmart_Templates/required-reading-default.md` | Default when a project declares no required reading: how to declare a list | low | no list declared; adding one |
 | `./bSmart-System/bSmart_Docs/roles-deprecated.md` | Library-style note: what replaced roles and how to read old role files | low | old role files |
 | `./bSmart-System/bSmart_Templates/CLAUDE.md` | Claude launcher hook; identical redirect content to AGENTS.md | low | launcher only |
@@ -151,6 +156,8 @@ It should describe only that project’s:
 | `./projects/<project>/AGENTS.md` | Project/client-specific instructions | selected project |
 | `./projects/<project>/knowledge/` | Project-specific reusable knowledge in topic folders; `index.md` lists topics | relevant task only |
 | `./projects/<project>/decisions.md` | Project decisions and approvals | relevant task only |
+| `./projects/<project>/glossary/` | Optional project (parent) glossary: `index.md`, `RELATED.md`, letter files; modules keep their own `glossary/` in their code repo (`bSmart_Protocols/design-context.md`) | architect and critic read the index |
+| `./projects/<project>/docs/adr/` | Optional ADRs (bADR) and their index, or the folder in `adr_path` | architect and critic keyword search |
 | `./projects/<project>/workdocs/` | Larger project work | relevant task only |
 | `./projects/<project>/data/` | Supporting project material | relevant task only |
 | `./projects/<project>/sandbox/` | Project-local derived material when required | task-dependent |

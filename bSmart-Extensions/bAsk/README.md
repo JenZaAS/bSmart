@@ -20,7 +20,8 @@ Say "bAsk me about <idea>", or "ask me questions about this". The agent reads
 ## bAsk, bQAbuild, and bMap
 
 - **bAsk**: a quick talk to sharpen an idea. Nothing to set up; the result is
-  a short list of decisions.
+  a short list of decisions. Confirmed domain terms go to the project
+  glossary (`bSmart_Protocols/design-context.md`).
 - **bQAbuild**: a fixed list of questions, stored answers, and a build brief.
   Use it when the result must be a formal brief.
 - **bMap**: work too big for one session. Each explore ticket is one bAsk.

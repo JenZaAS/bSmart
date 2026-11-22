@@ -13,6 +13,16 @@ bSmart_Protocols/knowledge.md and reports:
   general_note       note under general/ (move it if a better topic fits)
   placeholder        index line still has the placeholder description
 
+It also checks project and module glossaries: glossary_path, any glossary/
+folder under a project (skipping knowledge/, dependency and build folders),
+and any glossary/ in the repos listed in project.md module_repos
+(glossary_missing_index,
+glossary_stray_file, glossary_unindexed, glossary_broken_link,
+glossary_empty_file, glossary_conflict, advisory glossary_long_line). Those
+are report-only: --fix never writes a glossary (design-context.md). It also
+reports coding_standards paths in project.md that do not exist
+(standards_missing_file, report-only).
+
 --fix makes the safe mechanical fixes only: create a missing index.md, add
 missing index lines with a placeholder description, remove broken links.
 It never moves a note; sorting notes into topics is the agent's call.
@@ -60,17 +70,18 @@ def script_command() -> str:
     return f"python {Path(__file__).absolute()}"
 
 
-def resolve_roots(args) -> tuple[Path, list[tuple[str, Path]], bk.Budget | None]:
+def resolve_roots(args) -> tuple[Path, list[tuple[str, Path]], Path | None, bk.Budget | None]:
+    """(content root, knowledge roots, projects root for glossary discovery, budget)."""
     content = Path(args.content_root).expanduser()
     budget = bk.Budget(seconds=args.max_seconds) if args.max_seconds else None
     if args.root:
         roots = [(f"root {Path(r).name}", Path(r).expanduser()) for r in args.root]
-        return content, roots, budget
+        return content, roots, None, budget
     if args.projects_root:
         projects = Path(args.projects_root).expanduser()
     else:
         projects = select_instance_project_root(content.parent)
-    return content, bk.knowledge_roots(content, projects, args.project, budget), budget
+    return content, bk.knowledge_roots(content, projects, args.project, budget), projects, budget
 
 
 def print_reports(reports: list[bk.RootReport], as_json: bool) -> None:
@@ -79,8 +90,8 @@ def print_reports(reports: list[bk.RootReport], as_json: bool) -> None:
             "label": r.label,
             "root": str(r.root),
             "partial": r.partial,
-            "findings": [{"kind": f.kind, "path": f.rel, "fixable": f.fixable, "advisory": f.advisory}
-                         for f in r.findings],
+            "findings": [{"kind": f.kind, "path": f.rel, "detail": f.detail, "fixable": f.fixable,
+                          "advisory": f.advisory} for f in r.findings],
             "changes": r.changes,
         } for r in reports]
         print(json.dumps(payload, indent=2))
@@ -88,7 +99,10 @@ def print_reports(reports: list[bk.RootReport], as_json: bool) -> None:
     total = sum(len(r.problems) for r in reports)
     fixable = sum(1 for r in reports for f in r.findings if f.fixable)
     advisory = sum(1 for r in reports for f in r.findings if f.advisory)
-    print(f"bKnowledgeCheck: {len(reports)} knowledge root(s), {total} finding(s), "
+    glossaries = sum(1 for r in reports if r.label.startswith("glossary "))
+    knowledge = sum(1 for r in reports if not r.label.startswith(("glossary ", "standards ")))
+    print(f"bKnowledgeCheck: {knowledge} knowledge root(s), {glossaries} glossary folder(s), "
+          f"{total} finding(s), "
           f"{fixable} fixable with --fix, {advisory} advisory")
     for report in reports:
         print(f"[{report.label}] {report.root}")
@@ -100,13 +114,20 @@ def print_reports(reports: list[bk.RootReport], as_json: bool) -> None:
             print("  ok")
         for finding in report.findings:
             prefix = "advisory " if finding.advisory else ""
-            print(f"  {prefix}{finding.kind}: {finding.rel} - {bk.KIND_HINTS[finding.kind]}")
+            detail = f" ({finding.detail})" if finding.detail else ""
+            print(f"  {prefix}{finding.kind}: {finding.rel}{detail} - {bk.KIND_HINTS[finding.kind]}")
     if total:
         print("next: fix the findings yourself (bSmart_Protocols/knowledge.md); log moves in the root's CHANGELOG.md")
 
 
-def summary_line(content: Path, roots: list[tuple[str, Path]], budget: bk.Budget | None) -> str:
-    """One line for startup. Empty when there is nothing to say."""
+def summary_line(content: Path, roots: list[tuple[str, Path]], budget: bk.Budget | None,
+                 projects: Path | None = None, project: str | None = None) -> str:
+    """One line for startup. Empty when there is nothing to say.
+
+    Knowledge roots come first. Module glossaries are found and checked with
+    the time that is left; running out there only skips the rest of the
+    glossaries and never prints the time-limit line.
+    """
     if roots and not bk.migration_done(content):
         return (f"Knowledge: one-time layout migration pending. Run `{script_command()} --migrate`, "
                 "sort the files it lists into topics, then run it again. No user approval needed.")
@@ -119,6 +140,14 @@ def summary_line(content: Path, roots: list[tuple[str, Path]], budget: bk.Budget
         partial = partial or report.partial
         if partial:
             break
+    if not partial:
+        for label, root in bk.glossary_roots(projects, project, budget):
+            if budget is not None and budget.exhausted:
+                break
+            report = bk.check_glossary(root, label, budget)
+            if not report.partial:
+                total += len(report.problems)
+        total += sum(len(r.problems) for r in bk.check_standards(projects, project))
     if partial:
         return f"Knowledge: check stopped at the startup time limit (slow disk?). Run `{script_command()}` when convenient."
     if total:
@@ -179,9 +208,9 @@ def main() -> int:
             return 0
         if args.max_seconds is None:
             args.max_seconds = STARTUP_SECONDS
-    content, roots, budget = resolve_roots(args)
+    content, roots, projects, budget = resolve_roots(args)
     if args.summary:
-        line = summary_line(content, roots, budget)
+        line = summary_line(content, roots, budget, projects, args.project)
         if line:
             print(line)
         return 0
@@ -196,7 +225,11 @@ def main() -> int:
         else:
             report = bk.check_root(root, label, budget)
         reports.append(report)
-    if not roots and not args.json:
+    glossaries = bk.glossary_roots(projects, args.project, budget)
+    for label, root in glossaries:
+        reports.append(bk.check_glossary(root, label, budget))  # report-only, also with --fix
+    reports += bk.check_standards(projects, args.project)  # report-only
+    if not reports and not args.json:
         print("bKnowledgeCheck: no knowledge roots found (no Library, no project knowledge/)")
         return 0
     print_reports(reports, args.json)

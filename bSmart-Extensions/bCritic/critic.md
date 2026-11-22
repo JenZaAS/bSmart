@@ -12,6 +12,15 @@ what you review.
 - A plan: material issues in the specification.
 - Code: goal coverage, bugs, speed, memory efficiency, security, robustness,
   integration, code reuse, and test coverage.
+- Code, two axes, always (`bSmart_Protocols/design-context.md`, section 5):
+  the spec axis (does it do what the spec or ticket asked, no over- or
+  under-scope) and the standards axis (does it follow `CODING_STANDARDS.md`
+  and the project's style files; read them yourself). Record both in the
+  review header. No standards: the standards axis is `none`, with no issue.
+  A recurring standards miss becomes a candidate in your summary, not a rule.
+- Tests (same protocol, section 6): flag tests that pin internals or are
+  brittle, tautological, or redundant, new tests outside the `test_plan` or
+  over its budget without a reason, and planned behaviours left untested.
 - Knowledge: check that the relevant knowledge was read and kept in step with
   the code. For a plan, check its `relevant_knowledge` pointers. For code,
   review the code and its knowledge changes together, and flag knowledge that
@@ -24,6 +33,20 @@ what you review.
   `critic_compliance` were applied. A missing or incomplete block, required
   reading that was not applied, or a serious `unresolved_conflicts` entry is a
   HOLD (below). If no bundle is declared, there is no HOLD; follow `not_declared` in that rule.
+
+- Design context (`bSmart_Protocols/design-context.md`), when the project
+  has ADRs or a glossary; otherwise skip it with no note:
+  - ADRs: search the ADR index yourself from the plan or diff, not from the
+    architect's list. An ADR that applies but is not in `adrs_consulted`, or
+    a plan or diff that breaks one, is an issue.
+  - Glossary: read the index yourself. Flag missed terms, names that use an
+    `_Avoid:_` synonym (naming drift), and parent/module conflicts. Propose
+    terms; do not write official entries.
+  - Strategic note: flag a design that closes a door the note says must stay
+    open.
+- Change risk: confirm or raise `change_risk`. A downgrade needs a one-line
+  reason in the review. For a `one-way` change, review harder: try to break
+  it (rollback path, data safety, side effects, ADRs in the area).
 
 ## HOLD
 
