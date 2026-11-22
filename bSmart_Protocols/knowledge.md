@@ -29,7 +29,7 @@ These run on their own. Do not ask the user to approve them or to organise knowl
 3. **Pick the place.** Project-specific: the project's `knowledge/`. Useful beyond the project: the instance Library. When in doubt, the project; move it to the Library when a second project needs it.
 4. **Topic folders only.** Put each note in a topic folder (see "Layout"). Never put a note directly in a knowledge root, or directly in `tools/` or `general/`. Create a new topic when nothing fits.
 5. **Index in the same step.** A new note gets its line in its topic's `index.md`, and a new topic gets its line in the parent index, in the same step that creates it.
-6. **Corrections become knowledge.** When the user corrects a term, name, or reference, save the correction in the Library `glossary/` topic (create it the first time): one note per term with the right meaning, the wrong reading to avoid, the source ("user correction"), and the date. Then every agent finds it with habit 1.
+6. **Corrections become knowledge.** When the user corrects a term, name, or reference, save the correction in the Library `glossary/` topic (create it the first time): one note per term with the right meaning, the wrong reading to avoid, the source ("user correction"), and the date. Then every agent finds it with habit 1. A correction of a word in a project's own glossary goes to that project's `glossary/` folder instead (`bSmart_Protocols/design-context.md`); do not write the same definition in both.
 7. **Keep it tidy.** Run `bKnowledgeCheck` (below) when startup reports a Knowledge line and before a handoff. Fix the findings yourself and log what you change.
 
 ## Layout
@@ -106,6 +106,8 @@ The rest is yours, without asking the user: move loose notes into topics (create
 **Change log.** Every change goes to `<knowledge root>/CHANGELOG.md`: `bKnowledgeCheck --fix` and the migration write it themselves; you add a line for each move or rename you make, in the same form (`- <date> <who>: moved <old> to <new>`).
 
 **When it runs.** `bStart.py` runs `bKnowledgeCheck --summary` at startup. It prints one `Knowledge:` line only when there is something to do, stops walking after about one second, and never blocks startup. When you see that line, fix the findings during the session. Before writing a handoff, run the check for the project (and the Library if you touched it) and fix what it finds.
+
+**Project and module glossaries.** The check also looks at each project's `glossary/` folder (a sibling of `knowledge/`) and at module glossaries in the project folder and in the repos listed in `module_repos` (discovery and rules in `bSmart_Protocols/design-context.md`), and reports `glossary_missing_index`, `glossary_stray_file`, `glossary_unindexed` (a letter file the index never points to), `glossary_broken_link` (in `index.md` or `RELATED.md`), `glossary_empty_file`, `glossary_conflict` (a term also in a linked `parent` glossary), and, as advisory only, `glossary_long_line` (an index line over 25 words). It also reports a `coding_standards` path in `project.md` that does not exist (`standards_missing_file`). It only reports: `--fix` never writes a glossary or standards file, because only the architect or bAsk writes terms and standards change only when accepted. Use the same moments (a Knowledge startup line, before a handoff) for a short slimming pass over the glossary index.
 
 ## One-time migration (0.1.56)
 

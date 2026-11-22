@@ -11,6 +11,12 @@ project:
   # Optional: files that must be read before architecture or code work.
   # Format and rule: bSmart_Templates/required-reading-default.md.
   required_reading_bundle: []
+  # Optional design context (bSmart_Protocols/design-context.md):
+  # adr_path: docs/adr/          # ADR folder; default docs/adr/
+  # glossary_path: glossary/     # project (parent) glossary; default glossary/
+  # module_repos: []             # module code repos outside this folder; their glossary/ folders are checked too
+  # coding_standards: []         # existing style files to review against, besides CODING_STANDARDS.md
+  # one_way_examples: []         # changes that are always one-way doors
 ```
 
 ## Project structure
@@ -25,6 +31,8 @@ project:
   - `knowledge/general/` — last resort when no better topic fits.
   - Rules: `bSmart_Protocols/knowledge.md`.
 - `decisions.md` — project-specific decisions and approvals.
+- `glossary/` — optional; the project's shared language, created with the first confirmed term. Not inside `knowledge/`.
+- `docs/adr/` — optional; Architecture Decision Records (bADR), or the folder in `adr_path`.
 - `workdocs/` — project-local working documents, investigations, and handoffs; not the final home for concise knowledge items.
 - `sandbox/` — disposable/derived execution or test area; not the source of truth.
 

@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.56-draft
-updated: 2026-11-21 09:30 UTC
+current_version: 0.1.57-draft
+updated: 2026-11-22 22:30 UTC
 status: draft
 ```
 
@@ -26,6 +26,52 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.57-draft
+
+```yaml
+release_type: design_context
+news: |
+  New: design context for project work. Before designing, the architect
+  writes a short note on how the work fits the bigger plan, searches the
+  project's ADRs (decision records) by keyword and reads only the ones that
+  match, and uses the words in the project glossary. The coder gets only the
+  rules and terms copied into its task. The critic checks ADRs and words on
+  its own. Every plan now says whether a change can be undone (two-way or
+  one-way door) and how much it could hit (blast radius). A one-way change
+  gets a stricter review, and an extra audit when the impact is medium or
+  large, and you get a short heads-up. Nothing new to approve. Modules can
+  keep their own glossary next to their code, linked to the project glossary,
+  which wins on conflicts. For general AI-coding words, agents can look up
+  The AI Coding Dictionary when needed. A repo or module can add a
+  CODING_STANDARDS.md (or point to existing style files); the critic then
+  reviews every code change on two axes, the spec and the standards, and
+  repeated review misses come back as suggested checks or rules for you to
+  accept. Tests stay few and black-box: the architect plans which public
+  behaviours to test (about 3-6 new tests per ticket), the critic flags
+  redundant or brittle tests, and an occasional test prune or architecture
+  review only proposes changes for you to pick. Projects without ADRs, a
+  glossary, or standards work as before.
+scope:
+  - new bSmart_Protocols/design-context.md, the one home for the strategic note, ADR consult (keyword sketch, index search, read matching ADRs only; coder gets copied rules only; critic checks independently; no ADRs = skip with no note), the three ADR gates, the project glossary (glossary/ next to knowledge/, index.md one line per term, letter files on demand, RELATED.md links with a label, local lookup then one hop, parent wins on conflict, admission bar, only architect or bAsk writes, critic flags naming drift, upkeep through knowledge_upkeep), and change risk (door and blast radius; architect classifies, coder may only raise, critic confirms; one-way gets a stricter critic, at medium or large blast an extra audit with the first model in the instance audit list, and a four-line heads-up; no new approval gate; empty audit list = audit not launched, run continues)
+  - bSmart.md design_context core habit; knowledge_upkeep also searches the project glossary index; protocols.md row
+  - bArchitect plan gains strategic_note, change_risk, adrs_consulted, glossary_terms, and a glossary/ADR step in the final knowledge check; bCoder gets no ADR or glossary files, follows copied rules and terms, may only raise change_risk; bCritic checks ADRs and glossary independently, confirms or raises change_risk, reviews one-way changes harder; bAsk writes confirmed terms to the project glossary and offers an ADR only when the three gates pass
+  - bSwarm protocol section 2 "Design context and change risk" (parent checks the plan fields, escalation even without cascade critic audit, heads-up, no new pause); section 3 also covers the escalation audit; role output gains change_risk and adrs_consulted; final report and job plan/report templates gain a Change risk block and glossary/ADR lines
+  - bADR README and index template adopt the three gates and a keyword records list; new short ADR template (template-short.md); install-badr.py copies it and accepts --adr-path
+  - new templates glossary-index, glossary-letter, glossary-related; projects.md lists glossary/ and docs/adr/ as optional, the glossary templates, and the optional project.md fields adr_path, glossary_path, module_repos, coding_standards, one_way_examples; project.template.md shows them commented out
+  - module glossaries: a module keeps glossary/ in its code repo next to its code, RELATED.md links to the project (parent) glossary with the label parent; discovery covers glossary_path (or <project>/glossary/), every glossary/ under the project folder, and every glossary/ in the repos listed in the new optional project.md field module_repos; skips hidden folders, knowledge/, dependency and build folders, data/, sandbox/; max 6 folders deep; at startup only the time left after the knowledge check is used and running out never prints the time-limit line
+  - default external AI coding vocabulary reference https://www.aicodingdictionary.com/ (open only when a term is unclear, never auto-loaded, not part of the one-hop lookup), linked from design-context.md and as an optional example line in the glossary-related template
+  - suggested glossary terms appear only in task reports, not at startup
+  - coding standards (design-context.md section 5): optional CODING_STANDARDS.md per repo or module next to glossary/, plus existing style files listed in the new optional project.md field coding_standards; nearer module file wins for its code; missing = skip, never fail; new template coding-standards.template.md with a Summary of at most 10 rules; the architect copies only the relevant rules into standards_rules (or a short summary); the coder never loads the files; the critic always reviews code on two axes (spec, standards) and records both in the review header (critique template Axes line); recurring misses or user review comments become report-only standards candidates with a strict bar, preferring a linter, type, test, or pre-commit check over a prompt line; nothing is written until accepted; bSwarm child prompts, programmer critic, auditors, final report, and job plan/report templates updated
+  - black-box tests and test economy (design-context.md section 6): tests go through public interfaces (public functions, class methods, entry points) and earn their place only by locking a public contract or behaviour, a real regression, or a risky edge; not internals, trivial getters, tautologies, or duplicates; the architect writes a test_plan on each ticket (interfaces, behaviours and edges, existing tests) with a default budget of about 3-6 new tests unless justified; the coder follows it and adds one regression test only for a real bug found on the way; the critic flags internal, brittle, tautological, redundant, out-of-plan, or over-budget tests; recurring test-quality misses become report-only candidates; optional operator-invoked suite prune and deep-module architecture review write a markdown proposal and stop (never delete tests, change code, apply proposals, or open pull requests); bArchitect, bCoder, bCritic, bSwarm, bSmart.md, and the job plan/report templates updated
+  - bKnowledgeCheck reports coding_standards paths in project.md that do not exist (standards_missing_file, report-only, counted in the startup line)
+  - bKnowledgeCheck and bsmart_knowledge.py also check each discovered glossary/ (glossary_missing_index, glossary_stray_file, glossary_unindexed, glossary_broken_link, glossary_empty_file, glossary_conflict, advisory glossary_long_line); report-only, --fix never writes a glossary; the startup Knowledge line counts them; links inside HTML comments (template examples) are no longer read as index links
+  - knowledge.md habit 6 separates Library glossary/ corrections from project glossary terms; Check section lists the glossary findings
+  - bSmart_Map.md, README core habit
+verification:
+  - new tests/test_design_context.py (glossary check findings and clean folder, parent conflict one hop, commented template examples, report-only under --fix, glossary_path, module glossary discovery under the project and in module_repos (inline and block lists, skipped folders, depth limit, duplicates), module conflict with parent, startup count and time budget, coding_standards pointer check (inline and block lists, startup count, never written), coding standards docs and templates, black-box test rules in the protocol, roles, bSwarm, and templates, ADR installer files, --adr-path and its guard, ADR folder inside knowledge/ passes the layout check, protocol and role wording, no model names in shared rules, templates, version and news); test_knowledge_check no longer pins current_version
+  - python and node tests pass, including the public-tree privacy guard
+```
 
 ## 0.1.56-draft
 

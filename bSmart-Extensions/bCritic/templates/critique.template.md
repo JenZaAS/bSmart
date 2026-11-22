@@ -12,6 +12,7 @@
 - Date: `<YYYY-MM-DD>`
 - Reviewed artifact: `<relative path, commit, or plan file>`
 - Previous round: `<relative path to r<n-1> file or none>`
+- Axes (code reviews): spec `ok` | `issues`; standards `ok` | `issues` | `none`
 
 ## Issues
 

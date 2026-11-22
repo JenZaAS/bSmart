@@ -66,6 +66,7 @@ knowledge_upkeep:
   rule:
     - search the knowledge files (project knowledge/ and the instance Library) for the files, functions, and features you touched
     - update or remove any entries that no longer match the code
+    - when the project has a glossary/, also search its index.md for the touched names; the architect updates or prunes terms, the critic flags naming drift, new terms are listed as candidates (rules in bSmart_Protocols/design-context.md)
     - your report states what knowledge changed, or "no knowledge changes needed"
   code_reference: Knowledge entries that describe code name it in a `Code:` line (file and function) so they can be found. Format in bSmart_Protocols/knowledge.md.
   why: Knowledge that drifts from the code gives agents conflicting sources of truth.
@@ -81,6 +82,19 @@ knowledge_handling:
     - when bStart prints a Knowledge line, and before a handoff, run scripts/bKnowledgeCheck and fix the findings yourself; log changes in the root's CHANGELOG.md
   details: bSmart_Protocols/knowledge.md
   why: Agents that guess instead of looking repeat old mistakes; unsorted notes are not found.
+
+design_context:
+  applies_to: Architecture, code, and review work in a project. Every part is optional; a project without ADRs, a glossary/, or coding standards skips that part with no note and never fails.
+  rule:
+    - the architect writes a 2-3 line strategic note before designing
+    - the architect keyword-searches the ADR index and reads only matching ADRs; the critic checks the ADRs independently
+    - the architect and critic read the project glossary index; only the architect or bAsk writes confirmed terms
+    - the coder gets no ADRs, glossary, or coding-standards files, only single rules and terms copied into the plan
+    - the architect puts a short test plan on each ticket (public behaviours to cover, about 3-6 new tests); tests go through public interfaces and earn their place only by locking a public contract, a real regression, or a risky edge; the critic flags redundant, brittle, or internal tests; occasional suite prunes and architecture reviews only propose, never delete or apply
+    - the critic reviews every code change on two axes, the spec and the coding standards (CODING_STANDARDS.md and the project's style files); recurring misses become report-only candidates, preferring a linter, type, test, or hook check over a new rule
+    - every plan classifies change risk (one-way or two-way door, blast radius); one-way changes get a stricter critic, an extra audit at medium or large blast, and a short heads-up to the user; no new approval gate
+  details: bSmart_Protocols/design-context.md
+  why: Models plan tactically; past decisions and shared words keep later changes easy, and hard-to-undo changes deserve more scrutiny.
 
 required_reading:
   applies_to: Architecture or code work in a project whose knowledge/task-context-routing.md or project.md declares a required reading bundle. Then it is mandatory; without one the task continues with a one-line note.

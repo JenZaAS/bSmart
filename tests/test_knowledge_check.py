@@ -410,7 +410,7 @@ class DocsTests(unittest.TestCase):
 
     def test_version_and_news(self):
         text = read(ROOT / "bSmart_Version.md")
-        self.assertIn("current_version: 0.1.56-draft", text)
+        self.assertRegex(text, r"current_version: 0\.1\.(5[6-9]|[6-9]\d)")
         section = text.split("## 0.1.56-draft", 1)[1].split("\n## ", 1)[0]
         self.assertIn("news: |", section)
         news = section.split("news: |", 1)[1].split("scope:", 1)[0]

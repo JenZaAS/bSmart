@@ -18,18 +18,30 @@ Use this to implement a change, alone or from a plan.
      such block, stop and report it; do not make up the architecture.
    - Without a plan: read the bundle yourself before coding and put the same
      block in your report.
+5. Design context (`bSmart_Protocols/design-context.md`):
+   - With a plan: do not open ADRs, the glossary, or the coding standards.
+     Follow the ADR rules, `glossary_terms`, and `standards_rules` copied into
+     the plan, and run the project's linters and type checks. Write the tests
+     in `test_plan`, through the public interface only; no extra tests "for
+     coverage". A real bug found on the way gets one regression test, named
+     in the report. Keep the plan's `change_risk`, or
+     raise it with one line why; never lower it.
+   - Without a plan: you are also the architect, so do bArchitect step 3
+     yourself and put `change_risk` in your report.
+   - Report a new domain word for the architect; never write the glossary.
 
 ## Coding
 
-5. Edit only the files you are allowed to edit.
-6. Run the relevant tests or checks, and record what ran.
+6. Edit only the files you are allowed to edit.
+7. Run the relevant tests or checks, and record what ran.
 
 ## Before handing in
 
-7. Update the knowledge before handing in your work: apply `knowledge_upkeep`
+8. Update the knowledge before handing in your work: apply `knowledge_upkeep`
    in `bSmart.md` to the files, functions, and features you touched.
-8. Check: no conflict markers, only allowed files changed, diff stat ready,
+9. Check: no conflict markers, only allowed files changed, diff stat ready,
    test or runtime status recorded if available.
-9. Report briefly: summary, changed files, diff stat, knowledge changes (or
-   "no knowledge changes needed"), tests, extra reads, caveats, and, when a
+10. Report briefly: summary, changed files, diff stat, knowledge changes (or
+   "no knowledge changes needed"), tests, extra reads, caveats, a raised
+   `change_risk` if any, new tests against the plan's budget, and, when a
    bundle is declared, the `coder_checks` results.

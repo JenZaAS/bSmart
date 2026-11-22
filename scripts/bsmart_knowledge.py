@@ -5,6 +5,10 @@ bSmart_Protocols/knowledge.md. This module only does mechanical work. It
 never guesses a topic for a loose note; it lists those notes so the agent
 can sort them.
 
+It also checks each project's glossary/ folder (rules in
+bSmart_Protocols/design-context.md). Glossary checks only report; nothing
+here writes a glossary.
+
 A knowledge root is the instance Library (<content>/Library) or a project's
 knowledge/ folder. Every folder below a root is a topic. Each topic has an
 index.md (an existing README.md also counts) that lists its notes and its
@@ -64,11 +68,34 @@ KIND_HINTS = {
     "broken_link": "index link to a missing file (--fix removes it)",
     "general_note": "note under general/; recategorise it when a better topic fits",
     "placeholder": "index line still has the placeholder description; write one line",
+    "glossary_missing_index": "glossary folder without index.md; the architect writes it (no --fix)",
+    "glossary_stray_file": "only index.md, RELATED.md, and letter files (A.md-Z.md, 0.md) belong in a glossary folder",
+    "glossary_unindexed": "letter file the index never points to; add index lines for its terms",
+    "glossary_broken_link": "glossary link to a missing file or folder; fix or remove it",
+    "glossary_empty_file": "letter file without a '## <term>' entry; delete it or add the entry",
+    "glossary_conflict": "term also defined in a linked parent glossary; the parent wins, flag it as a decision",
+    "glossary_long_line": "index line over 25 words; slim it and move detail to the letter file",
+    "standards_missing_file": "coding_standards in project.md lists a file that does not exist; fix the path",
 }
 FIXABLE = frozenset({"missing_index", "unindexed", "broken_link"})
 # Advisory findings are listed but do not change the exit code or the startup line:
 # a note may stay in general/ when no better topic exists yet.
-ADVISORY = frozenset({"general_note"})
+ADVISORY = frozenset({"general_note", "glossary_long_line"})
+
+GLOSSARY_NAME = "glossary"
+GLOSSARY_RELATED = "RELATED.md"
+GLOSSARY_LETTER = re.compile(r"^[A-Za-z0]\.md$")
+GLOSSARY_TERM = re.compile(r"^\s*(?:[-*+])\s+\*\*([^*]+)\*\*")
+GLOSSARY_MAX_WORDS = 25
+# Module glossaries are found by walking the project folder and its module
+# repos. These folders are never walked: knowledge roots, dependencies,
+# build output, and caches.
+GLOSSARY_SKIP_DIRS = frozenset({
+    "knowledge", "node_modules", "vendor", "venv", "env", "site-packages",
+    "bower_components", "build", "dist", "out", "target", "bin", "obj",
+    "coverage", "__pycache__", "sandbox", "data",
+})
+GLOSSARY_MAX_DEPTH = 6
 
 
 @dataclass
@@ -76,6 +103,7 @@ class Finding:
     kind: str
     root: Path
     path: Path
+    detail: str = ""
 
     @property
     def rel(self) -> str:
@@ -196,10 +224,18 @@ def mentioned(text: str, name: str, folder: bool) -> bool:
     return re.search(pattern, text, re.MULTILINE) is not None
 
 
+COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
+
+
+def blank_comments(text: str) -> str:
+    """Blank HTML comments (template examples), keeping line numbers."""
+    return COMMENT.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), text)
+
+
 def link_targets(text: str) -> list[tuple[int, str, str]]:
-    """(line number, full match, target) for each relative link."""
+    """(line number, full match, target) for each relative link outside HTML comments."""
     found = []
-    for number, line in enumerate(text.splitlines()):
+    for number, line in enumerate(blank_comments(text).splitlines()):
         for match in LINK.finditer(line):
             target = match.group(2)
             if target.startswith(("#", "/", "\\")) or SCHEME.match(target):
@@ -497,6 +533,198 @@ def write_state(content_root: Path, status: str, pending: list[str]) -> None:
     tmp = path.with_suffix(".tmp")
     tmp.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     os.replace(tmp, path)
+
+
+# ------------------------------------------------------------- glossary
+
+def glossary_terms(index: Path) -> list[str]:
+    """Term names from an index's '- **Term** - ...' lines."""
+    return [m.group(1).strip() for line in blank_comments(read_text(index)).splitlines()
+            if (m := GLOSSARY_TERM.match(line))]
+
+
+def description_words(line: str) -> int:
+    """Words in an index line's sentence, without the term, _Avoid:_, or pointer."""
+    text = GLOSSARY_TERM.sub("", line, count=1)
+    for cut in ("_Avoid", "->", "\u2192"):
+        text = text.split(cut, 1)[0]
+    return len(re.findall(r"[^\s\-\u2013\u2014]+", text))
+
+
+def linked_index(folder: Path, target: str) -> Path | None:
+    path = resolve_target(folder, target)
+    if path.is_dir():
+        path = path / INDEX_NAME
+    return path if path.is_file() else None
+
+
+def check_glossary(root: Path, label: str, budget: Budget | None = None) -> RootReport:
+    """Report-only check of one glossary folder (design-context.md, section 3)."""
+    report = RootReport(label=label, root=root)
+    if not root.is_dir():
+        return report
+    findings = report.findings
+    dirs, files = list_dir(root, budget)
+    index = root / INDEX_NAME
+    related = root / GLOSSARY_RELATED
+    letters = [p for p in files if GLOSSARY_LETTER.match(p.name)]
+    for path in [*dirs, *files]:
+        if path.name not in (INDEX_NAME, GLOSSARY_RELATED) and path not in letters:
+            findings.append(Finding("glossary_stray_file", root, path))
+    if not index.is_file():
+        if files or dirs:
+            findings.append(Finding("glossary_missing_index", root, root))
+        return report
+    text = read_text(index)
+    for letter in letters:
+        if not mentioned(text, letter.name, False):
+            findings.append(Finding("glossary_unindexed", root, letter))
+        if not any(line.startswith("## ") for line in read_text(letter).splitlines()):
+            findings.append(Finding("glossary_empty_file", root, letter))
+    for source in (index, related):
+        if source.is_file():
+            for target in broken_links(source):
+                findings.append(Finding("glossary_broken_link", root,
+                                        root / target.split("#", 1)[0], source.name))
+    for line in blank_comments(text).splitlines():
+        match = GLOSSARY_TERM.match(line)
+        if match and description_words(line) > GLOSSARY_MAX_WORDS:
+            findings.append(Finding("glossary_long_line", root, index, match.group(1).strip()))
+    if related.is_file():
+        local = {t.casefold(): t for t in glossary_terms(index)}
+        for line in blank_comments(read_text(related)).splitlines():
+            if "parent" not in line.casefold():
+                continue
+            for _, _, target in link_targets(line):
+                parent = linked_index(root, target)
+                if parent is None or parent.resolve() == index.resolve():
+                    continue
+                for term in glossary_terms(parent):
+                    if term.casefold() in local:
+                        findings.append(Finding("glossary_conflict", root, index, local[term.casefold()]))
+    if budget is not None and budget.exhausted:
+        report.partial = True
+    return report
+
+
+def project_glossary(project: Path) -> Path:
+    """The project's glossary folder: glossary_path in project.md, else glossary/."""
+    for line in read_text(project / "project.md").splitlines():
+        match = re.match(r"^\s*glossary_path:\s*['\"]?([^'\"#\s]+)", line)
+        if match:
+            value = Path(match.group(1))
+            if not value.is_absolute() and ".." not in value.parts:
+                return project / value
+    return project / GLOSSARY_NAME
+
+
+def project_list(project: Path, key: str) -> list[str]:
+    """Values of a list field in project.md: inline [a, b] or a block of '- a' lines."""
+    values: list[str] = []
+    lines = read_text(project / "project.md").splitlines()
+    for number, line in enumerate(lines):
+        match = re.match(rf"^\s*{re.escape(key)}:\s*(.*)$", line)
+        if not match:
+            continue
+        rest = match.group(1).split("#", 1)[0].strip()
+        if rest.startswith("["):
+            values = rest.strip("[]").split(",")
+        elif not rest:
+            for item in lines[number + 1:]:
+                found = re.match(r"^\s*-\s+(.*)$", item)
+                if not found:
+                    break
+                values.append(found.group(1).split("#", 1)[0])
+        break
+    cleaned = [v.strip().strip("'\"").strip() for v in values]
+    return [v for v in cleaned if v and not v.startswith("<")]
+
+
+def project_paths(project: Path, key: str) -> list[Path]:
+    """project_list values as paths: relative to the project, or absolute."""
+    paths = []
+    for value in project_list(project, key):
+        path = Path(value).expanduser()
+        paths.append(Path(os.path.normpath(path if path.is_absolute() else project / path)))
+    return paths
+
+
+def module_repos(project: Path) -> list[Path]:
+    """Folders listed under module_repos in project.md (relative to the project, or absolute)."""
+    return project_paths(project, "module_repos")
+
+
+def check_standards(projects_root: Path | None, project: str | None = None,
+                    budget: Budget | None = None) -> list[RootReport]:
+    """Report coding_standards paths in project.md that do not exist. Report-only."""
+    reports: list[RootReport] = []
+    if projects_root is None or not projects_root.is_dir():
+        return reports
+    candidates = [projects_root / project] if project else list_dir(projects_root, budget)[0]
+    for folder in candidates:
+        missing = [p for p in project_paths(folder, "coding_standards") if not p.exists()]
+        if missing:
+            report = RootReport(label=f"standards {folder.name}", root=folder)
+            report.findings = [Finding("standards_missing_file", folder, p) for p in missing]
+            reports.append(report)
+    return reports
+
+
+def find_glossaries(start: Path, budget: Budget | None = None,
+                    max_depth: int = GLOSSARY_MAX_DEPTH) -> list[Path]:
+    """Every glossary/ folder under start, skipping hidden, dependency, build, and knowledge folders."""
+    found: list[Path] = []
+
+    def walk(folder: Path, depth: int) -> None:
+        if budget is not None and budget.exhausted:
+            return
+        dirs, _ = list_dir(folder, budget)
+        for d in dirs:
+            if d.name == GLOSSARY_NAME:
+                found.append(d)  # do not look inside a glossary
+            elif d.name.lower() not in GLOSSARY_SKIP_DIRS and depth < max_depth:
+                walk(d, depth + 1)
+
+    if start.is_dir():
+        if start.name == GLOSSARY_NAME:
+            return [start]
+        walk(start, 1)
+    return found
+
+
+def glossary_roots(projects_root: Path | None, project: str | None = None,
+                   budget: Budget | None = None) -> list[tuple[str, Path]]:
+    """Project and module glossaries: glossary_path, any glossary/ under the
+    project folder, and any glossary/ in the repos listed in module_repos."""
+    roots: list[tuple[str, Path]] = []
+    if projects_root is None or not projects_root.is_dir():
+        return roots
+    if project:
+        candidates = [projects_root / project]
+    else:
+        candidates, _ = list_dir(projects_root, budget)
+    seen: set[str] = set()
+
+    def add(name: str, base: Path, glossary: Path, project_level: bool = False) -> None:
+        key = os.path.normcase(str(glossary.resolve()))
+        if key in seen or not glossary.is_dir():
+            return
+        seen.add(key)
+        try:
+            rel = glossary.parent.relative_to(base).as_posix()
+        except ValueError:
+            rel = glossary.parent.as_posix()
+        module = "" if project_level or rel in ("", ".") else f":{rel}"
+        roots.append((f"glossary {name}{module}", glossary))
+
+    for folder in candidates:
+        add(folder.name, folder, project_glossary(folder), project_level=True)
+        for glossary in find_glossaries(folder, budget):
+            add(folder.name, folder, glossary)
+        for repo in module_repos(folder):
+            for glossary in find_glossaries(repo, budget):
+                add(folder.name, repo.parent, glossary)
+    return roots
 
 
 # ------------------------------------------------------------- discovery

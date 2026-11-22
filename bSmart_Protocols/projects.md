@@ -90,6 +90,9 @@ project_structure:
     decisions: A single project decision file for choices, approvals, rejected options, and migration/design decisions specific to this project.
     workdocs: Project-local working documents for larger or multi-session work within this project.
     sandbox: Disposable or derived execution/build/test workspace notes; not the source of truth.
+  optional:
+    glossary/: The project's shared language (index.md, optional RELATED.md and letter files). A sibling of knowledge/, never inside it. Created when the first term is confirmed, not at project creation. Modules keep their own glossary/ in their code repo, linked to this one as parent. Rules in bSmart_Protocols/design-context.md.
+    docs/adr/: Architecture Decision Records (bADR), or the folder set in adr_path. Rules in bSmart_Protocols/design-context.md.
   onboarding_rule: Create these defaults for new projects to reduce friction. If a folder stays empty, keep its README as guidance rather than asking the operator to decide up front.
   existing_project_rule: Existing projects do not need a forced migration, except the one-time knowledge layout migration (0.1.56), which adds the knowledge defaults and indexes on its own (`bSmart_Protocols/knowledge.md`). If an existing project lacks `decisions.md` or `workdocs/` and the operator asks to add one, create it from the corresponding template.
 ```
@@ -104,6 +107,10 @@ templates:
   knowledge_topic_index: /workspace/bSmart-System/bSmart_Templates/knowledge-topic-index.template.md
   project_decisions: /workspace/bSmart-System/bSmart_Templates/project-decisions.template.md
   project_workdocs_readme: /workspace/bSmart-System/bSmart_Templates/project-workdocs.README.template.md
+  glossary_index: /workspace/bSmart-System/bSmart_Templates/glossary-index.template.md
+  glossary_letter: /workspace/bSmart-System/bSmart_Templates/glossary-letter.template.md
+  glossary_related: /workspace/bSmart-System/bSmart_Templates/glossary-related.template.md
+  coding_standards: /workspace/bSmart-System/bSmart_Templates/coding-standards.template.md
 ```
 
 ```yaml
@@ -120,6 +127,11 @@ project_md_optional_fields:
   deferred_issues: project | workstream  # level of deferred-issues.md and critiques/; rule in bSmart-Extensions/bCritic/critic.md. Old name bswarm_deferred_issues is still accepted.
   required_reading_bundle: [<path relative to the project>, ...]  # optional; files that must be read before architecture or code work; rule in required_reading_bundle below. Empty or missing = none.
   bmap_maps: project | workstream  # where bMap keeps maps/ and its REGISTRY.md; default follows deferred_issues, then the old name bswarm_deferred_issues, else project.
+  adr_path: <folder relative to the project>  # ADR folder and its README.md index; default docs/adr/. Missing folder = no ADRs. Rule in bSmart_Protocols/design-context.md.
+  glossary_path: <folder relative to the project>  # project (parent) glossary folder; default glossary/. Missing folder = no glossary.
+  module_repos: [<path to a module code repo, relative to the project or absolute>, ...]  # optional; repos outside the project folder whose glossary/ folders bKnowledgeCheck also checks.
+  coding_standards: [<path to an existing style or standards file, relative to the project>, ...]  # optional; used with any CODING_STANDARDS.md next to the code. Rule in bSmart_Protocols/design-context.md, section 5.
+  one_way_examples: [<change that is always a one-way door>, ...]  # optional; helps agents classify change risk.
 ```
 
 ```yaml

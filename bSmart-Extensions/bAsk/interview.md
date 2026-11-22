@@ -20,7 +20,9 @@ questions. Standalone, or for a bMap explore ticket.
 6. **Ask in order.** Ask first what other questions depend on. Each answer can
    open or close later questions.
 7. **Use the project's words.** If the human uses a term that clashes with the
-   project's knowledge or glossary, say so in one line and ask which is meant.
+   project's glossary (`glossary/index.md`, one hop through `RELATED.md`) or
+   knowledge, say so in one line and ask which is meant. When a fuzzy word
+   needs a canonical name, propose one.
 8. **Plain language**, in the human's own language. Explain jargon in a few
    words.
 9. **Show the way.** Now and then say roughly how many questions are left.
@@ -37,7 +39,15 @@ questions. Standalone, or for a bMap explore ticket.
      wants it kept;
    - bMap explore ticket: in the ticket's `## Answer`, with `decided_by`
      set to the human.
-4. If a build brief is needed, offer bQAbuild. If the idea turns out too big
+4. Glossary: for each term the human confirmed that passes the admission
+   bar (`bSmart_Protocols/design-context.md`, section 3), write the index
+   line and the letter entry in the same step, in the right folder. Create
+   `glossary/` with the first term. Offer, do not start, a rename of code or
+   docs to match.
+5. ADR: offer one only when a decision passes all three gates (same
+   protocol, section 2).
+6. If a build brief is needed, offer bQAbuild. If the idea turns out too big
    for one session, offer bMap.
 
 Asking questions never gives permission to edit, build, commit, or publish.
+Writing confirmed glossary terms in step 4 is the one exception.
