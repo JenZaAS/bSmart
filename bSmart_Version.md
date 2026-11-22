@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.57-draft
-updated: 2026-11-22 22:30 UTC
+current_version: 0.1.58-draft
+updated: 2026-11-22 23:40 UTC
 status: draft
 ```
 
@@ -26,6 +26,31 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.58-draft
+
+```yaml
+release_type: optional_extension
+news: |
+  New optional extension: bTeach. Say "teach me" plus a code area, concept,
+  or term, and the agent explains that one thing in short plain sentences at
+  your level, names the glossary entry, ADR, or source it rests on, and asks
+  one question to check it landed. Ask for a course and it writes short
+  markdown lessons over several sessions in Workdocs/learn/<topic>/, never in
+  the code repo. It never starts while a build is running; it offers to
+  explain afterwards. Off until you install it.
+scope:
+  - new bSmart-Extensions/bTeach/ (README.md, teach.md, templates/course.template.md, templates/lesson.template.md); user-invoked, optional, no install script
+  - explain mode (default): find the user's level (profile, memory, earlier corrections; one question if unknown), look up the project glossary index and matching ADRs first via design-context.md, explain one thing in short plain sentences, name the source, one check question, re-explain a gap once, then stop
+  - course mode (only on request): folder outside any code repo, <content-root>/Workdocs/learn/<topic>/ by default or a Library topic; course.md with goal, level, sources, and a one-line-per-lesson progress list; one short lesson at a time in lessons/; goal changes only after the user confirms
+  - never during a bSwarm run or coding task in progress: defer in one line and offer afterwards; the coder never runs it; teaching gives no permission to edit, build, commit, or publish; writes only its own course folder
+  - registered in bSmart.md extensions.known, bSmart_Features.md (registry, lists, Knowledge group, detail card, Extensions card), bSmart_Docs/extensions.md, bSmart-Extensions/README.md, README.md, bSmart_Map.md
+verification:
+  - python3 -m unittest discover -s tests
+  - node --test tests/test-project.mjs
+  - python3 -m unittest bSmart-Extensions/bSwarm/tests/test_bswarm_protocol.py
+  - new tests/test_bteach.py
+```
 
 ## 0.1.57-draft
 

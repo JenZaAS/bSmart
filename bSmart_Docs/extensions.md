@@ -166,6 +166,24 @@ install_model: copy_or_sync_from_bundled_source
 setup_default: no
 ```
 
+## bTeach
+
+```yaml
+name: bTeach
+path: /workspace/bSmart-Extensions/bTeach
+source_path: /workspace/bSmart-System/bSmart-Extensions/bTeach
+license: MIT (bSmart)
+status: optional_bundled_extension
+purpose:
+  - explain one code area, concept, or glossary term at the user's level, with one check question
+  - multi-session markdown course only on request, outside the product repo
+  - never during a build; offered afterwards
+install_model: copy_or_sync_from_bundled_source
+setup_default: no
+```
+
+bTeach courses are instance content. They live in `<content-root>/Workdocs/learn/<topic>/` (or a Library topic), never in the extension folder or a code repo.
+
 ## bQAbuild
 
 ```yaml

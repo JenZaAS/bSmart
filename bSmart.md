@@ -360,6 +360,12 @@ extensions:
       packaging: bundled_optional
       source_path: /workspace/bSmart-System/bSmart-Extensions/bAsk
       purpose: Short one-question-at-a-time interview that sharpens any idea; bMap uses it for explore tickets.
+    bTeach:
+      path: /workspace/bSmart-Extensions/bTeach
+      optional: true
+      packaging: bundled_optional
+      source_path: /workspace/bSmart-System/bSmart-Extensions/bTeach
+      purpose: User-invoked teaching. Explains one code area, concept, or glossary term at the user's level with one check question; a markdown course outside the product repo only on request; never during a build.
     bQAbuild:
       path: /workspace/bSmart-Extensions/bQAbuild
       optional: false

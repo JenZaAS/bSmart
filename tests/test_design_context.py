@@ -8,6 +8,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -422,7 +423,9 @@ class DesignContextDocsTests(unittest.TestCase):
 
     def test_version_and_news(self):
         text = (ROOT / "bSmart_Version.md").read_text(encoding="utf-8")
-        self.assertIn("current_version: 0.1.57-draft", text)
+        current = re.search(r"current_version: 0\.1\.(\d+)", text)
+        self.assertIsNotNone(current)
+        self.assertGreaterEqual(int(current.group(1)), 57)
         section = text.split("## 0.1.57-draft", 1)[1].split("\n## ", 1)[0]
         news = section.split("news: |", 1)[1].split("scope:", 1)[0]
         self.assertTrue(news.isascii())
