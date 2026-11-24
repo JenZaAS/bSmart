@@ -201,7 +201,7 @@ step.
 change, also search `glossary/index.md` for the touched names. A term that no
 longer matches is updated or pruned by the architect (or the critic flags it).
 New candidates go into the report as one line each (term, sentence, why it
-passes the bar); they are not admitted automatically. "Save on your own" does
+passes the bar); they are not admitted automatically. "Save before replying" does
 not apply to the glossary. Rename code to an admitted term only in files
 already being changed; offer a wider rename, never start one. The report says
 what glossary changed, or "no glossary changes needed". When a term is

@@ -1,7 +1,7 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.59-draft
+current_version: 0.1.60-draft
 updated: 2026-11-24 12:00 UTC
 status: draft
 ```
@@ -26,6 +26,27 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.60-draft
+
+```yaml
+release_type: knowledge_handling
+news: |
+  Agents now save what they learn before they reply, even when you only asked
+  a question. When a finding has both general facts (how a tool or service
+  works) and project facts, they write two notes: a neutral one in the
+  Library, with no project or client names, and one in the project's
+  knowledge. You should see more Library notes and fewer facts that stay only
+  in chat.
+scope:
+  - bSmart_Protocols/knowledge.md habit 2 renamed "Save before replying": save a short note before the final reply; general facts to the Library, project facts to project knowledge; Library notes carry no project or client names or local decisions
+  - habit 3 "Pick the place": the project fallback applies only to single facts whose reuse is unclear; a mixed finding gets both notes; the Library note is required even when the project note repeats the general facts
+  - first change proposed by bImprove: a made-up knowledge case went from 18/27 to 26/27 (3 runs per round, separate checker model, operator approval)
+  - habit name updated in design-context.md, protocols.md, bSmart_Features.md, and the knowledge-check test
+verification:
+  - python3 -m unittest discover -s tests
+  - node --test tests/test-project.mjs
+```
 
 ## 0.1.59-draft
 

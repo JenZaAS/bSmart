@@ -374,7 +374,7 @@ class StartupTests(KnowledgeBase):
 class DocsTests(unittest.TestCase):
     def test_protocol_covers_the_seven_habits_and_layout(self):
         text = flat(ROOT / "bSmart_Protocols" / "knowledge.md")
-        for term in ["Look before guessing", "not found in knowledge", "Save on your own", "`Source:`", "`Date:`",
+        for term in ["Look before guessing", "not found in knowledge", "Save before replying", "`Source:`", "`Date:`",
                      "Pick the place", "Topic folders only", "Index in the same step", "Corrections become knowledge",
                      "`glossary/`", "Keep it tidy", "`code/`, `tools/`, and `general/` are the defaults",
                      "last resort", "Topics nest to any depth", "`CATEGORIES.md`", "CHANGELOG.md",
