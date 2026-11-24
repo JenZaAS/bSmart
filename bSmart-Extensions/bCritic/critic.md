@@ -48,6 +48,14 @@ what you review.
   reason in the review. For a `one-way` change, review harder: try to break
   it (rollback path, data safety, side effects, ADRs in the area).
 
+- MD cause: for every `automatic` or `decision` issue and every knowledge
+  miss, ask "could a better core MD have prevented this?" Fill the `MD
+  cause` line in the review header: `none`, `possible`, or `likely`, with
+  the file and section, what it said or left out, the smallest change, and
+  the issue IDs. A cause without a file and section is `none`. This never
+  changes the score or the rounds; the parent collects `likely` causes for
+  bImprove's end-of-run card (`bSmart-Extensions/bImprove/improve.md`).
+
 ## HOLD
 
 HOLD is the one exception to the rule that a review never blocks the work.

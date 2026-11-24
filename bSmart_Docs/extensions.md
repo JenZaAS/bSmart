@@ -184,6 +184,24 @@ setup_default: no
 
 bTeach courses are instance content. They live in `<content-root>/Workdocs/learn/<topic>/` (or a Library topic), never in the extension folder or a code repo.
 
+## bImprove
+
+```yaml
+name: bImprove
+path: /workspace/bSmart-Extensions/bImprove
+source_path: /workspace/bSmart-System/bSmart-Extensions/bImprove
+license: MIT (bSmart)
+status: optional_bundled_extension
+purpose:
+  - improve core MDs from real mistakes, level 2 (AI proposes, operator approves)
+  - baseline rerun, coach loop, checker on another model, side-by-side approval
+  - one pull request per approved change; never pushes without approval
+install_model: copy_or_sync_from_bundled_source
+setup_default: no
+```
+
+bImprove settings, denylist, and cases are instance content: `<content-root>/State/bimprove-settings.json`, `<content-root>/State/bimprove-denylist.txt`, and a case folder the operator picks. Models are set in `<content-root>/State/bswarm-role-models.yaml`.
+
 ## bQAbuild
 
 ```yaml

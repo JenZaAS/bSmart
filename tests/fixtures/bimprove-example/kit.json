@@ -1,0 +1,37 @@
+{
+  "name": "knowledge-ab",
+  "version": "1",
+  "about": "Unit-test fixture for bimprove.py (made-up project; never run against a model). Real cases live in the operator's own project. Knowledge-only test, no coding. Phase A: does the worker store key facts on its own, in the right place, without noise or leaks? Phase B: does it look in knowledge first when asked about the topic? Made-up project and API.",
+  "targets": [
+    "bSmart_Protocols/knowledge.md"
+  ],
+  "system_dir": "bSmart-System",
+  "system_files": [
+    "bSmart_Protocols/knowledge.md",
+    "bSmart_Templates/knowledge-index.template.md",
+    "bSmart_Templates/knowledge-topic-index.template.md"
+  ],
+  "instance_dir": "instance",
+  "estimate_coach_tokens": 80000,
+  "estimate_coach_minutes": 3,
+  "estimate_checker_tokens": 60000,
+  "estimate_checker_minutes": 3,
+  "phases": {
+    "A": {
+      "prompt": "phaseA/prompt.md",
+      "answer_key": "phaseA/answer-key.json",
+      "estimate_tokens_per_run": 150000,
+      "estimate_minutes_per_run": 4
+    },
+    "B": {
+      "prompt": "phaseB/prompt.md",
+      "answer_key": "phaseB/answer-key.json",
+      "overlay": "phaseB/overlay",
+      "regression_phases": [
+        "A"
+      ],
+      "estimate_tokens_per_run": 80000,
+      "estimate_minutes_per_run": 2
+    }
+  }
+}

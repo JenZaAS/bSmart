@@ -366,6 +366,12 @@ extensions:
       packaging: bundled_optional
       source_path: /workspace/bSmart-System/bSmart-Extensions/bTeach
       purpose: User-invoked teaching. Explains one code area, concept, or glossary term at the user's level with one check question; a markdown course outside the product repo only on request; never during a build.
+    bImprove:
+      path: /workspace/bSmart-Extensions/bImprove
+      optional: true
+      packaging: bundled_optional
+      source_path: /workspace/bSmart-System/bSmart-Extensions/bImprove
+      purpose: Level 2 self-improvement of core MDs from real mistakes; baseline rerun, coach loop with one change per round, checker on another model, operator approves a side-by-side diff; one PR per approved change.
     bQAbuild:
       path: /workspace/bSmart-Extensions/bQAbuild
       optional: false

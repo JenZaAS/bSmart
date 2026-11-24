@@ -14,5 +14,5 @@ Rules:
 - Setup may ask whether to install a bundled extension by copying or syncing it from this source root into the installed root.
 - Role skills bCoder, bArchitect, and bCritic are bundled too. They work on their own, and bSwarm uses them.
 - A bundled folder may implement either an optional add-on or a standard bSmart feature; user-facing status is defined in `bSmart_Features.md` and `bSmart_Docs/extensions.md`.
-- Current bundled extension sources include bSearch, bWorkflow, bQAbuild, bSelective, bSwarm, bMap, bAsk, bTeach, bADR, bAccountant, Graphify, and HermesSessionShortcuts.
+- Current bundled extension sources include bSearch, bWorkflow, bQAbuild, bSelective, bSwarm, bMap, bAsk, bTeach, bImprove, bADR, bAccountant, Graphify, and HermesSessionShortcuts.
 - External optional extensions such as Fabric may still live only in `/workspace/bSmart-Extensions` until vendoring policy is finalized.

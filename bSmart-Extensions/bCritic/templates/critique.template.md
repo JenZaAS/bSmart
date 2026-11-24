@@ -13,6 +13,7 @@
 - Reviewed artifact: `<relative path, commit, or plan file>`
 - Previous round: `<relative path to r<n-1> file or none>`
 - Axes (code reviews): spec `ok` | `issues`; standards `ok` | `issues` | `none`
+- MD cause: `none` | `possible` | `likely` (`<core MD file, section>`: `<what it said or left out>`; smallest change: `<one line>`; issues: `<C-ids>`)
 
 ## Issues
 
