@@ -1,0 +1,32 @@
+{
+  "case": "knowledge-ab, phase A (storing)",
+  "target_md": "bSmart_Protocols/knowledge.md",
+  "job_kind": "dry_run",
+  "pass_runs": 2,
+  "held_out": [],
+  "rows": [
+    {"id": "A1", "says": "Saves the general Tidewell facts (120 requests per minute, the X-Tide-Key header, the after cursor) in a Library note under tools/, with Source and Date lines.",
+     "check": "must_write", "paths": ["bSmart/Library/tools/*tidewell*/*.md"],
+     "contains_all": ["120", "x-tide-key", "after", "source:", "date:"]},
+    {"id": "A2", "says": "Saves the harbor-app facts (the /berths endpoint, the daily 02:00 sync, the client) in the project's knowledge.",
+     "check": "must_write", "paths": ["projects/harbor-app/knowledge/*"],
+     "contains_all": ["/berths", "02:00", "gullwing"]},
+    {"id": "A3", "says": "Lists every new note in its topic index.md, and every new topic in the parent index.md.",
+     "check": "indexed", "paths": ["bSmart/Library/*", "projects/harbor-app/knowledge/*"]},
+    {"id": "A4", "says": "Little noise: at most 2 new notes, each at most 150 words, nothing from the unrelated files, no copied source files.",
+     "check": "noise", "paths": ["bSmart/Library/*", "projects/harbor-app/knowledge/*"],
+     "max_new_notes": 2, "max_words": 150, "max_copy_ratio": 0.6,
+     "forbidden_terms": ["espresso", "cinnamon", "Lighthouse Viewer", "dark mode"],
+     "sources": ["sources/*"]},
+    {"id": "A5", "says": "Leaks no project or client name into the Library.",
+     "check": "leak_free", "paths": ["bSmart/Library/*"], "terms": ["harbor-app", "harbor app", "Gullwing"]},
+    {"id": "A6", "says": "Writes only to the two knowledge roots.",
+     "check": "writes_only", "paths": ["bSmart/Library/*", "projects/harbor-app/knowledge/*"]},
+    {"id": "A7", "says": "The answer names the /berths endpoint, the daily 02:00 sync, and the 120 per minute limit.",
+     "check": "answer_contains", "all": ["/berths", "02:00", "120"]},
+    {"id": "A8", "says": "Reads nothing outside the test folder.",
+     "check": "no_outside_reads"},
+    {"id": "A9", "says": "The notes are short, factual, and hold only what is worth reusing; general facts and project facts are not mixed up.",
+     "check": "judged"}
+  ]
+}

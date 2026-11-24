@@ -18,3 +18,9 @@ role_models:
   architect: session
   coder: session
   critic: same_as_reviewed
+  # bImprove (optional, bSmart-Extensions/bImprove/improve.md). No defaults:
+  # set each to "<provider-model-id> [effort]" before a bImprove case. The
+  # checker must differ from improve_worker and coach.
+  improve_worker: unset
+  coach: unset
+  checker: unset

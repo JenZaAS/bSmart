@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.58-draft
-updated: 2026-11-22 23:40 UTC
+current_version: 0.1.59-draft
+updated: 2026-11-24 12:00 UTC
 status: draft
 ```
 
@@ -26,6 +26,34 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.59-draft
+
+```yaml
+release_type: optional_extension
+news: |
+  New optional extension: bImprove. When a review finds a mistake that a
+  better instruction file could have prevented, you get one card at the end
+  of the run with its size in tokens and minutes. Say start and the failing
+  part is rerun unchanged 3 times; only a mistake that repeats goes to the
+  coach, who changes one thing in a copy of the file. Another model checks
+  the result. You approve the old and new file side by side, and a change
+  to bSmart becomes one pull request. Off until you set it up.
+scope:
+  - new bSmart-Extensions/bImprove/ (README.md, improve.md, coach.md, checker.md, bimprove.py, templates/ incl. a blank case; unit-test fixture in tests/fixtures/bimprove-example/)
+  - bCritic MD cause line in the review header; bSwarm report collects likely causes for the end-of-run card
+  - bswarm role-models template gains improve_worker, coach, checker with no default model; the checker must differ from both
+  - bimprove.py (standard library, Windows/macOS/Linux) - fresh instance per run, agent CLI through an instance command template, at most 2 parallel runs at lower priority with no console window, token cap, stop on plan or rate limit, API-key variables stripped, answer-key grading, hash guard, side-by-side HTML diff, leak check against an instance denylist, approval card, neutral PR text
+  - generic: any bSmart MD as target (one or more per case), one-phase or multi-phase cases; real cases and score history live in the operator's project
+  - regression suite: `regress` reruns a case without coach and compares with the last score; `history` lists scores; the score history lives in the instance (or the operator's project), never here
+  - models under `roles` in the instance settings or in the shared role-model file; operator-only `--stall-limit` to allow a third round
+  - registered in bSmart.md extensions.known, bSmart_Features.md, bSmart_Docs/extensions.md, bSmart-Extensions/README.md, README.md, bSmart_Map.md
+verification:
+  - python3 -m unittest discover -s tests
+  - node --test tests/test-project.mjs
+  - python3 -m unittest bSmart-Extensions/bSwarm/tests/test_bswarm_protocol.py
+  - new tests/test_bimprove.py (mock agent CLI; no model calls), including a check that the extension names no model ids
+```
 
 ## 0.1.58-draft
 

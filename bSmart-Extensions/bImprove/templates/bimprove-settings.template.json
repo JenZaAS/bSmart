@@ -1,0 +1,17 @@
+{
+  "_about": "bImprove instance settings. Copy to <content-root>/State/bimprove-settings.json. Models: set improve_worker, coach and checker under roles (for example \"<model id> high\"), or leave roles empty to use the instance's shared role-model file (State/bswarm-role-models.yaml, or role_models_file). There are no defaults. The command below is an example for Codex CLI; check every flag with `codex exec --help` before use.",
+  "command": ["codex", "exec", "--json", "--ephemeral", "--skip-git-repo-check", "--ignore-user-config",
+              "--sandbox", "{sandbox}", "-m", "{model}", "-c", "model_reasoning_effort={effort}",
+              "-C", "{workdir}", "-o", "{last_message_file}", "-"],
+  "roles": {},
+  "history_file": "bimprove-history.jsonl",
+  "default_effort": "medium",
+  "quota_pool": "plan quota of the agent CLI's signed-in account",
+  "token_cap_case": 1250000,
+  "parallel": 2,
+  "timeout_seconds": 1200,
+  "strip_env": ["OPENAI_API_KEY", "CODEX_API_KEY"],
+  "quota_stop_patterns": ["usage limit", "rate limit", "quota", "insufficient_quota", "429",
+                          "purchase more credits", "upgrade your plan"],
+  "environment_stop_patterns": ["blocked by policy", "sandbox denied", "access is denied"]
+}

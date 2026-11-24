@@ -1,0 +1,8 @@
+{
+  "pass_runs": 2,
+  "rows": [
+    {"id": "R1", "says": "<what a correct run does, in plain English>", "check": "answer_contains", "all": ["<word>"]},
+    {"id": "R2", "says": "<a decoy the worker must not use>", "check": "answer_excludes", "any": ["<decoy word>"]},
+    {"id": "R3", "says": "<quality the checker judges>", "check": "judged"}
+  ]
+}

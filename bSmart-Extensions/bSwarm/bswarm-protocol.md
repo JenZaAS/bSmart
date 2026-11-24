@@ -704,6 +704,9 @@ Keep the report quick-glance:
 - review axes (spec, standards) and any standards candidates;
 - tests: new tests against the plan's budget, and test issues flagged;
 - stage and branch statistics summary;
+- MD causes: when a critic marked one `likely` and bImprove is set up, one
+  card per case at the end (bImprove `improve.md`, "The loop"); never a
+  loop back to the worker during the run;
 - budget/limit status;
 - one next action.
 

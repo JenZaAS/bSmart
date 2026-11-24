@@ -18,7 +18,7 @@ bSmart is a lightweight **AI harness**: an operating layer around an AI assistan
 - [Extensions](#extensions) — add optional packs such as bSearch, bSelective, Graphify, or Fabric.
 - [Features](#features) — show the feature list and drill into details from chat.
 - [bProtective](#bprotective) — optionally block catastrophic commands and escalate risky ones. Off until the operator confirms it.
-- [Optional skills](#optional-skills) — bPrivate, bAccountant, bADR, bQAbuild, bSwarm, bMap, bAsk, bTeach, bCoder, bArchitect, and bCritic.
+- [Optional skills](#optional-skills) — bPrivate, bAccountant, bADR, bQAbuild, bSwarm, bMap, bAsk, bTeach, bImprove, bCoder, bArchitect, and bCritic.
 
 The full, current list is in [`bSmart_Features.md`](bSmart_Features.md). In chat, `python ./scripts/bFeature <name>` shows one feature card.
 
@@ -547,6 +547,7 @@ Each is off until you turn it on. The rules live in the skill's folder under `bS
 - **bMap** (`bMap/`): plan big work over several sessions as a map of decisions; nothing is built while the map is open, and a finished map goes to bSwarm.
 - **bAsk** (`bAsk/`): sharpen an idea with short questions, one at a time.
 - **bTeach** (`bTeach/`): get one code area, concept, or term explained at your level, with one check question; a short markdown course outside the product repo only on request.
+- **bImprove** (`bImprove/`): improve bSmart's own instruction files from real mistakes; one change per round, checked by another model, and you approve a side-by-side diff.
 - **bCoder** (`bCoder/`): a short coding checklist that keeps knowledge in step.
 - **bArchitect** (`bArchitect/`): plan a code change for a coder and close it with a knowledge check.
 - **bCritic** (`bCritic/`): review a plan, code, or any document with a score and a kept review file.

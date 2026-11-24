@@ -117,6 +117,10 @@ features:
     status: draft
     summary: Optionally get one thing explained at your level, or a short course on request.
     detail_lookup: python ./scripts/bFeature bTeach
+  - name: bImprove
+    status: draft
+    summary: Optionally improve bSmart's own instruction files from real mistakes, with your approval.
+    detail_lookup: python ./scripts/bFeature bImprove
   - name: bCoder
     status: draft
     summary: Optionally code by a short checklist that keeps knowledge in step.
@@ -190,6 +194,7 @@ commands:
 21. bArchitect — Optionally plan a code change for a coder and close it with a knowledge check.
 22. bCritic — Optionally review a plan, code, or any document with a score and a kept review file.
 23. bTeach — Optionally get one thing explained at your level, or a short course on request.
+24. bImprove — Optionally improve bSmart's own instruction files from real mistakes, with your approval.
 
 ## Feature index
 
@@ -216,6 +221,7 @@ commands:
 21. bArchitect
 22. bCritic
 23. bTeach
+24. bImprove
 
 ## Features by group
 
@@ -236,6 +242,7 @@ commands:
 - Dreaming — Improve local bSmart content while you sleep.
 - Improvement Scout — Find external ideas to improve bSmart itself.
 - bTeach — Optionally get one thing explained at your level, or a short course on request.
+- bImprove — Optionally improve bSmart's own instruction files from real mistakes, with your approval.
 
 ### Finance
 - bAccountant — Optionally turn an agent into a cautious accountant assistant.
@@ -358,6 +365,34 @@ notes:
   - Deferred while a bSwarm run or coding task is in progress.
   - Teaching never gives permission to edit, build, commit, or publish.
 
+```
+
+### bImprove
+
+```yaml
+name: bImprove
+group: Knowledge
+status: draft
+visibility: user-facing
+optional: true
+short_description: Optionally improve bSmart's own instruction files from real mistakes, with your approval.
+files:
+  - /workspace/bSmart-System/bSmart-Extensions/bImprove/
+  - /workspace/bSmart-System/bSmart-Extensions/bImprove/improve.md
+  - /workspace/bSmart-System/bSmart-Extensions/bImprove/bimprove.py
+description: Level 2 self-improvement. A bCritic review notes when a better core MD could have prevented a mistake. At the end of the run the operator gets one card per likely case with its size in tokens, plan quota, and minutes. On start, the trimmed job is rerun unchanged 3 times; only a mistake that repeats goes to the coach, who writes one change into a candidate copy. The worker retries and a checker on another model grades it against an answer key, for at most 3 rounds, stopping after 2 rounds with no improvement or with "not an MD problem". The operator approves an old-vs-new side-by-side diff; a bSmart-System change becomes one pull request, pushed only after approval.
+commands:
+  - improve <core MD> from <critique> (natural-language request)
+  - python bSmart-Extensions/bImprove/bimprove.py config|case|card|diff|leak|pr-text
+included_capabilities:
+  - MD cause field in bCritic reviews and an end-of-run card in bSwarm
+  - Fresh-instance runner with a configurable agent CLI command and no hard-coded models
+  - Answer-key grading, hash guard, side-by-side diff, leak check against an instance denylist
+  - Token caps; stops before on-demand spend
+  - Example knowledge-only test kit (made-up project)
+notes:
+  - Models, caps, denylist, and case results are instance data, never in the system.
+  - Never pushes, merges, or edits a live MD without the operator's approval.
 ```
 
 ### Projects
@@ -805,7 +840,7 @@ included_capabilities:
   - Bundled role skills (`bCoder`, `bArchitect`, `bCritic`)
   - Bundled selective source-context retrieval (`bSelective`)
   - Bundled multi-agent orchestration protocol (`bSwarm`)
-  - Bundled multi-session planning maps (`bMap`), short interviews (`bAsk`), and teaching (`bTeach`)
+  - Bundled multi-session planning maps (`bMap`), short interviews (`bAsk`), teaching (`bTeach`), and core-MD improvement (`bImprove`)
 notes:
   - Extensions are discovered from /workspace/bSmart-Extensions subfolders.
 ```

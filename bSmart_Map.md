@@ -180,6 +180,7 @@ It should describe only that project’s:
 | `./bSmart/bSmart_Log.md` | Instance decision/action log | high | explicit request only |
 | `./bSmart/bHistory.md` | Concise completed-work history | medium | explicit request or handoff |
 | `./bSmart/Workdocs/` | Instance-level larger work | high | relevant task only |
+| `./bSmart/State/bimprove-settings.json`, `./bSmart/State/bimprove-denylist.txt` | bImprove command template, token caps, and leak denylist (instance only) | high | bImprove only |
 | `./bSmart/Workdocs/learn/<topic>/` | bTeach course: `course.md` and `lessons/`; never in a code repo | high | bTeach course only |
 | `./bSmart/Library/` | Instance-wide reusable knowledge in topic folders; `index.md` lists topics | medium | index first, then the topic's `index.md` |
 | `./bSmart/Library/CHANGELOG.md` | Log of knowledge moves and fixes | high | explicit request only |

@@ -1,0 +1,26 @@
+{
+  "case": "knowledge-ab, phase B (retrieving)",
+  "target_md": "bSmart_Protocols/knowledge.md",
+  "job_kind": "dry_run",
+  "pass_runs": 2,
+  "held_out": [],
+  "rows": [
+    {"id": "B1", "says": "Looks in knowledge first: the first file it reads is a knowledge file, and it reads the project and Library indexes before any source file.",
+     "check": "knowledge_first", "ignore_reads": ["AGENTS.md", "bSmart-System/*"],
+     "knowledge": ["bSmart/Library/*", "projects/harbor-app/knowledge/*"],
+     "indexes": ["projects/harbor-app/knowledge/index.md", "bSmart/Library/index.md"],
+     "before": ["sources/*"]},
+    {"id": "B2", "says": "Reads both notes that hold the answer.",
+     "check": "must_read", "ignore_reads": ["AGENTS.md", "bSmart-System/*"],
+     "paths": ["bSmart/Library/tools/tidewell-api/api-basics.md", "projects/harbor-app/knowledge/integrations/tidewell-sync.md"]},
+    {"id": "B3", "says": "Reads at most 8 files (the shortest correct path is 7) and no source files.",
+     "check": "max_reads", "ignore_reads": ["AGENTS.md", "bSmart-System/*"],
+     "limit": 8, "forbidden": ["sources/*"]},
+    {"id": "B4", "says": "Does no web search.", "check": "no_web_search"},
+    {"id": "B5", "says": "Answers correctly: 120 requests per minute, daily at 02:00.",
+     "check": "answer_contains", "all": ["120", "02:00"]},
+    {"id": "B6", "says": "Writes no new knowledge.",
+     "check": "no_writes", "paths": ["bSmart/Library/*", "projects/harbor-app/knowledge/*"]},
+    {"id": "B7", "says": "Reads nothing outside the test folder.", "check": "no_outside_reads"}
+  ]
+}

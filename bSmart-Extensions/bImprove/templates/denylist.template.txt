@@ -1,0 +1,8 @@
+# bImprove leak denylist. Instance only: <content-root>/State/bimprove-denylist.txt
+# One term per line: project names, client names, private paths, hosts.
+# Matching ignores case; / and \ match alike. A line starting with ! is an
+# allowed exception (a common word that is not a leak).
+example-project
+Example Client Ltd
+/srv/example-project
+!example
