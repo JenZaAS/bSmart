@@ -511,7 +511,7 @@ included_capabilities:
   - Reference material
   - Templates and examples
   - Archived completed outputs
-  - Look before guessing, save on your own, corrections as glossary notes
+  - Look before guessing, save before replying, corrections as glossary notes
   - Topic folders (defaults code/, tools/, general/) with a two-level index
   - bKnowledgeCheck layout check, safe fixes, change log, one-time migration
 notes:
