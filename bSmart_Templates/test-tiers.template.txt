@@ -1,0 +1,7 @@
+# Test tiers manifest (bSmart_Protocols/test-tiers.md)
+# One line per test or glob: <tier> <likelihood>/<severity> <fix or -> <test id>
+#   tier: normal | special     likelihood: main | edge     severity: high | med | low
+#   fix: #<issue or PR> when the test guards a found or reported bug, else -
+#   test id: <file>::<test name> as the runner reports it; * and ? match like file globs
+# Exact ids win over globs; the first matching glob wins. Untagged: ?/?
+# Fill with: bTestTiers init --manifest test-tiers.txt --report <junit.xml>

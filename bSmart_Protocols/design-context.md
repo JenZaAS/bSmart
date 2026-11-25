@@ -363,6 +363,10 @@ issues (usually `automatic`).
 same way as a standards miss (section 5); prefer a check (for example a lint
 rule against testing private names) over a prompt line.
 
+**Test tiers (optional).** A project with a tag manifest also tags each test
+(likelihood, severity, and `fix` for a bug) and runs rare, low-severity, or
+slow tests in a slower special tier: `bSmart_Protocols/test-tiers.md`.
+
 **Occasional reviews that only propose.** Two optional passes, run when the
 operator asks, or offered before a large change or after a retro when the
 shape of the code is the problem. Not every session, and not part of startup.

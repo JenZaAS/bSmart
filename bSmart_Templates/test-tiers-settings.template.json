@@ -1,0 +1,12 @@
+{
+  "demote_after_runs": 100,
+  "demote_after_weeks": 4,
+  "special_every_days": 14,
+  "pause_after_days": 60,
+  "slow_seconds": 2,
+  "retire_after_special_runs": 100,
+  "retire_after_weeks": 26,
+  "main_branch": "main",
+  "keep_months": 12,
+  "projects": {}
+}
