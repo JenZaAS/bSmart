@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.60-draft
-updated: 2026-11-24 12:00 UTC
+current_version: 0.1.61-draft
+updated: 2026-11-25 11:15 UTC
 status: draft
 ```
 
@@ -26,6 +26,17 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.61-draft
+
+```yaml
+release_type: hosted_service_fallback
+scope:
+  - bSmart_Protocols/operations.md: when hosted CI fails with a billing, quota, or "job not started" error, check the project's CI notes for a configured self-hosted runner before waiting on billing
+verification:
+  - python3 -m unittest discover -s tests
+  - node --test tests/test-project.mjs
+```
 
 ## 0.1.60-draft
 

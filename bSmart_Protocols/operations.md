@@ -273,5 +273,10 @@ orchestrator_compose_visibility:
 ```
 
 ```yaml
+hosted_service_fallback:
+  rule: When hosted CI fails with a billing, quota, or "job not started" error, check the project's CI notes for a configured self-hosted runner before waiting on billing.
+```
+
+```yaml
 log_target: /workspace/bSmart/bSmart_Log.md
 ```
