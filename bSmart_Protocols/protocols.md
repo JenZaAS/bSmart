@@ -18,6 +18,7 @@ protocol_index:
 | `project-storage.md` | Project and sandbox roots, mounts, setup prompts, and storage checks | Configuring or troubleshooting project storage |
 | `workdocs.md` | Structured workdocs and larger multi-session work | Creating or maintaining a workdoc |
 | `knowledge.md` | Knowledge handling: look before guessing, save before replying, topic layout, two-level indexes, bKnowledgeCheck, one-time migration | An unfamiliar name; saving or searching knowledge; a Knowledge startup line; before a handoff |
+| `test-tiers.md` | Test tags (likelihood, severity, fix), pass/fail history in the instance, and normal/special run tiers with automatic moves | Adding or reviewing tagged tests; wiring the special tier; a tier review |
 | `design-context.md` | Strategic note, ADR consult, project glossary, change risk (one-way doors, blast radius), coding standards with the two-axis review, and black-box tests for architect, coder, critic, bAsk, and bSwarm | Designing, planning, or reviewing project work; writing an ADR or a glossary term |
 | `history.md` | Concise completed-work diary rules | Recording or reviewing completed work |
 | `dreaming.md` | Scheduled instance-content maintenance and Dreaming safety | Configuring, running, or reviewing Dreaming |

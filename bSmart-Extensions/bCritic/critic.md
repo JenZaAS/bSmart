@@ -21,6 +21,9 @@ what you review.
 - Tests (same protocol, section 6): flag tests that pin internals or are
   brittle, tautological, or redundant, new tests outside the `test_plan` or
   over its budget without a reason, and planned behaviours left untested.
+  With a test tiers manifest (`bSmart_Protocols/test-tiers.md`): new tests
+  are tagged, tags fit the behaviour, a regression test has its `fix`, and no
+  `high` or `fix` test sits in the special tier; run `bTestTiers check`.
 - Knowledge: check that the relevant knowledge was read and kept in step with
   the code. For a plan, check its `relevant_knowledge` pointers. For code,
   review the code and its knowledge changes together, and flag knowledge that

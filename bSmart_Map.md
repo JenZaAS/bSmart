@@ -63,6 +63,7 @@ These are logical paths. A runtime may implement them as ordinary folders, mount
 | `./bSmart-System/bSmart_Protocols/` | Detailed operational protocols | low | need to know |
 | `./bSmart-System/bSmart_Protocols/protocols.md` | Compact protocol index and ownership map | low | compact startup |
 | `./bSmart-System/bSmart_Protocols/hermes-runtime-onboarding.md` | Hermes runtime setup and update. Orchestrated Docker rules cover live Compose and host-local image pull policy | low | Hermes runtime setup or update |
+| `./bSmart-System/bSmart_Protocols/test-tiers.md` | Test tags, instance pass/fail history, and normal/special run tiers with automatic moves (`scripts/bTestTiers`) | low | tagged tests, the special tier, a tier review |
 | `./bSmart-System/bSmart_Protocols/design-context.md` | Strategic note, ADR consult, project glossary, change risk (one-way doors, blast radius), coding standards with the two-axis review, and black-box tests | low | designing, planning, or reviewing project work |
 | `./bSmart-System/bSmart_Protocols/roles-and-concurrency.md` | Deprecated roles, session-scoped projects, and `.bLock` file concurrency | low | concurrency or old role files |
 | `./bSmart-System/bSmart_Templates/` | Templates for instance and project files | low | generation only |
@@ -184,6 +185,7 @@ It should describe only that project’s:
 | `./bSmart/Workdocs/learn/<topic>/` | bTeach course: `course.md` and `lessons/`; never in a code repo | high | bTeach course only |
 | `./bSmart/Library/` | Instance-wide reusable knowledge in topic folders; `index.md` lists topics | medium | index first, then the topic's `index.md` |
 | `./bSmart/Library/CHANGELOG.md` | Log of knowledge moves and fixes | high | explicit request only |
+| `./bSmart/State/test-tiers/` | Test tiers settings (`settings.json`) and per project/repo pass/fail history (`history.json`, `runs.jsonl`) and run logs (`log-normal.md`, `log-special.md`) (instance only) | medium | bTestTiers only |
 | `./bSmart/State/knowledge-migration.yaml` | One-time knowledge layout migration marker | low | bKnowledgeCheck only |
 | `./bSmart/State/` | Instance configuration and machine/runtime state | high | bStart/tools as required |
 | `./bSmart/State/bprotective.json` | bProtective on/off state when the instance content root is used | high | execution only |

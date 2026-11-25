@@ -24,7 +24,8 @@ Use this to implement a change, alone or from a plan.
      the plan, and run the project's linters and type checks. Write the tests
      in `test_plan`, through the public interface only; no extra tests "for
      coverage". A real bug found on the way gets one regression test, named
-     in the report. Keep the plan's `change_risk`, or
+     in the report. With a test tiers manifest, add each new test to it with
+     its tag, in the normal tier (`bSmart_Protocols/test-tiers.md`). Keep the plan's `change_risk`, or
      raise it with one line why; never lower it.
    - Without a plan: you are also the architect, so do bArchitect step 3
      yourself and put `change_risk` in your report.

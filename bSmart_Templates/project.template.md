@@ -17,6 +17,9 @@ project:
   # module_repos: []             # module code repos outside this folder; their glossary/ folders are checked too
   # coding_standards: []         # existing style files to review against, besides CODING_STANDARDS.md
   # one_way_examples: []         # changes that are always one-way doors
+  # Optional test tiers (bSmart_Protocols/test-tiers.md):
+  # test_tiers_manifest: test-tiers.txt   # tag manifest in the code repo
+  # test_tiers_trigger: routine           # what starts the special tier: routine (default) or ci
 ```
 
 ## Project structure

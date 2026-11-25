@@ -1,8 +1,8 @@
 # bSmart version and changelog
 
 ```yaml
-current_version: 0.1.61-draft
-updated: 2026-11-25 11:15 UTC
+current_version: 0.1.62-draft
+updated: 2026-11-25 11:45 UTC
 status: draft
 ```
 
@@ -26,6 +26,35 @@ The record is `bSmart/State/bsmart-release-notice.yaml`. It has existed since 0.
 `bsmart-bootstrap-workspace`, and the manual installer in `README.md`, write a fresh baseline (`baseline: fresh`, the current version, empty `seen_news`) and retry that write. Neither creates `bSmart_State.md`. A new instance therefore does not replay historical news, including when the baseline write fails. When the record is absent, the only existing-instance signals are `Roles/`, legacy `bSmart_State.md`, and `State/role-migration.json`. Those show every flagged news item through the current version once. Other files under `State/`, including `container-storage.yaml` and `bsmart-system-update.yaml`, are not signals. `ORIG_HEAD` is not a signal. An instance that already migrated before `seen_news` existed still gets the 0.1.45 note once, from `bStart`.
 
 Only interactive `bStart` marks news seen. It runs the notice before its update check writes state. A Hermes cron job or other automation that loads `HERMES.md` and runs `bStart` should pass `--no-record` or set `BSMART_NEWS_NO_RECORD=1` (`true`, `yes`, and `on` also count). That still prints the news and does not mark it seen, so the next interactive session can relay it. `bsmart-instance-upgrade` (and therefore `bsmart-update`) and `bsmart-startup-check` may print a preview and do not record it. A failed notice does not fail the upgrade. The state file is replaced atomically, and a short lock keeps two startups from both printing.
+
+## 0.1.62-draft
+
+```yaml
+release_type: feature_update
+news: |
+  New optional test tiers for code in a repo with a main branch. Each test
+  gets two short tags, how likely the case is (main or edge) and how bad a
+  failure would be (high, med, low), plus "fix #NN" when it guards a bug.
+  Normal tests run on every change; rare, low-severity, or slow tests run
+  every two weeks on main, started by an agent routine. Tests move between
+  the tiers by their own history (100 passes over 4 weeks to move down, any
+  special failure moves back), and high and fix tests never move down. A
+  special failure does not block a release; the agent opens an issue for
+  the next version. Quiet repos pause after 60 days and wake up on the next
+  run. Each run adds a short entry to a log per tier in your instance.
+scope:
+  - new bSmart_Protocols/test-tiers.md (scope, tags, two tiers, release gate, special-failure issue flow, agent-routine trigger with CI as an option, inactivity pause and re-activation, instance history, settings and run log, automatic moves, roles, one-time classification, trial in one project first)
+  - new scripts/bTestTiers and scripts/bsmart_test_tiers.py (standard library; init, check, place, record, review, due, gate, issue, note; reads JUnit XML or a JSON list)
+  - defaults - move down after 100 passes in a row over at least 4 weeks (not high, no fix); any special failure moves back and resets the streak; special every 14 days on main when main changed; pause after 60 days with no change on main
+  - only normal-tier failures block a release or a merge to main (`gate`); a special failure prints a ready-made issue body and the issue link goes into the run log
+  - run log per tier (log-normal.md, log-special.md in the instance; full runs in the special log marked (all)): date, commit, totals, duration, new failures, tier moves, slowest tests, notes
+  - blank templates bSmart_Templates/test-tiers.template.txt, test-tiers-settings.template.json, and test-tiers-log.template.md; optional test_tiers_manifest and test_tiers_trigger in project.template.md
+  - pointers in design-context.md section 6, bArchitect test_plan tags, bCoder, bCritic tests line, bSwarm programmer critic and merge gate; indexed in protocols.md, bSmart_Map.md, bSmart_Features.md
+  - history, settings, and logs only under <content-root>/State/test-tiers/; nothing project-specific in the system
+verification:
+  - python3 -m unittest discover -s tests
+  - node --test tests/test-project.mjs
+```
 
 ## 0.1.61-draft
 

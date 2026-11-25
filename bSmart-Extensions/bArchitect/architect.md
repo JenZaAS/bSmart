@@ -30,7 +30,9 @@ Use this to plan a change for a coder, and to close it.
      needs into `standards_rules` (or point to a short summary section).
    - Tests: write `test_plan` (public interfaces, behaviours and edges to
      cover, existing tests that already cover the rest; about 3-6 new tests,
-     more only with a one-line reason).
+     more only with a one-line reason). With a test tiers manifest, tag each
+     new test in `cover`, for example `[main/high]` or `[edge/low fix #12]`
+     (`bSmart_Protocols/test-tiers.md`).
 4. Write a short plan (`architect-plan.md` when files are used). It is a
    context budget for the coder, not a design essay. Defaults:
 

@@ -214,6 +214,11 @@ consult, glossary, change risk). bSwarm adds:
 - The programmer critic and any code auditor always review on two axes: spec
   and coding standards (that protocol, section 5). The parent collects
   standards candidates into the report; they are report-only.
+- When the project has a test tiers manifest, the programmer critic also
+  checks the test tags, and before a merge to main the full run is gated
+  with `bTestTiers gate`: only normal-tier failures block; a special-tier
+  failure becomes an issue for the next version
+  (`bSmart_Protocols/test-tiers.md`, Roles).
 - Tests follow that protocol, section 6: the coder writes the planned tests,
   the critics flag test bloat. A suite prune or an architecture review is a
   separate job the operator asks for; it writes a proposal report and stops.

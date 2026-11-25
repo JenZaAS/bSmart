@@ -133,6 +133,10 @@ features:
     status: draft
     summary: Optionally review a plan, code, or any document with a score and a kept review file.
     detail_lookup: python ./scripts/bFeature bCritic
+  - name: Test Tiers
+    status: draft
+    summary: Optionally tag tests and run rare or slow ones every two weeks, moved between tiers by their history.
+    detail_lookup: python ./scripts/bFeature "Test Tiers"
 ```
 
 
@@ -195,6 +199,7 @@ commands:
 22. bCritic — Optionally review a plan, code, or any document with a score and a kept review file.
 23. bTeach — Optionally get one thing explained at your level, or a short course on request.
 24. bImprove — Optionally improve bSmart's own instruction files from real mistakes, with your approval.
+25. Test Tiers — Optionally tag tests and run rare or slow ones every two weeks, moved between tiers by their history.
 
 ## Feature index
 
@@ -222,6 +227,7 @@ commands:
 22. bCritic
 23. bTeach
 24. bImprove
+25. Test Tiers
 
 ## Features by group
 
@@ -234,6 +240,7 @@ commands:
 - bCoder — Optionally code by a short checklist that keeps knowledge in step.
 - bArchitect — Optionally plan a code change for a coder and close it with a knowledge check.
 - bCritic — Optionally review a plan, code, or any document with a score and a kept review file.
+- Test Tiers — Optionally tag tests and run rare or slow ones every two weeks, moved between tiers by their history.
 
 ### Knowledge
 - Library — Store and reuse durable knowledge.
@@ -815,6 +822,39 @@ files:
 description: The critic role as a standalone skill. Scores 1-10, tags each issue, keeps review files as a development log, and keeps a deferred-issues backlog. It also checks that knowledge was read and kept in step with the code. bSwarm's critics follow it.
 commands:
   - bCritic <file or plan> (natural-language request)
+```
+
+### Test Tiers
+
+```yaml
+name: Test Tiers
+group: Work
+status: draft
+visibility: user-facing
+optional: true
+short_description: Optionally tag tests and run rare or slow ones every two weeks, moved between tiers by their history.
+files:
+  - /workspace/bSmart-System/bSmart_Protocols/test-tiers.md
+  - /workspace/bSmart-System/scripts/bTestTiers
+  - /workspace/bSmart-System/bSmart_Templates/test-tiers.template.txt
+  - /workspace/bSmart-System/bSmart_Templates/test-tiers-settings.template.json
+  - /workspace/bSmart-System/bSmart_Templates/test-tiers-log.template.md
+  - /workspace/bSmart/State/test-tiers/
+description: Each test carries a likelihood (main or edge), a severity (high, med, low), and an optional fix tag, kept in a manifest in the code repo. Normal tests run on every change; special tests (rare, low-severity, or slow) run every two weeks on main when main changed, started by an agent routine. Both run in full before releases and merges to main, but only normal-tier failures block; a special failure becomes an issue for the next version. Pass/fail history lives in the instance. Tests that pass 100 times in a row over 4 weeks, are not high, and guard no bug move to special; any special failure moves a test back; removal is only ever suggested. Inactive repos pause and re-activate on the next run. For code in a repo with a main branch, not one-off agent scripts.
+commands:
+  - python ./scripts/bTestTiers init|check|place|record|review|due
+included_capabilities:
+  - Tag manifest that works with any language and test runner (JUnit XML or JSON reports)
+  - Instance-only history and settings
+  - One compact run log per tier (totals, time, new failures, moves, slowest tests) to judge and tune the tiers
+  - Automatic tier moves; high and fix tests never move down
+  - Special-tier due check for an agent routine (default) or a CI schedule; pauses after 60 days with no change on main and re-activates on the next run
+  - Release and merge gate where only normal-tier failures block; a special failure becomes an issue for the next version
+  - One-time classification of an existing suite
+notes:
+  - Optional per project; a project without a manifest runs its tests as before.
+  - Out of scope: one-off agent scripts and their throwaway tests.
+  - Rules in bSmart_Protocols/test-tiers.md; test economy stays in design-context.md section 6.
 ```
 
 ### Extensions
